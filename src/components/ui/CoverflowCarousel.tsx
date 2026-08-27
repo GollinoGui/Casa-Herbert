@@ -1,0 +1,232 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
+import { cn } from "@/lib/utils/cn";
+
+export interface CoverflowCarouselItem {
+  id: string;
+  tag?: string;
+  titleLine1: string;
+  titleLine2?: string;
+  desc?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  placeholderTone?: "sage" | "cream" | "gold";
+  /** Caminho de uma foto real (ex: "/images/servicos/x.jpg"). Sem isso, usa PlaceholderImage. */
+  imageSrc?: string;
+  /** object-position da foto real, útil quando a foto já tem marca/texto embutido a recortar. */
+  imagePosition?: string;
+}
+
+interface CoverflowCarouselProps {
+  items: CoverflowCarouselItem[];
+  autoplay?: boolean;
+  autoplayDelay?: number;
+  className?: string;
+}
+
+/**
+ * Carrossel 3D "coverflow". Cada item usa PlaceholderImage por padrão (ver
+ * CLAUDE.md > Fotos); passar `imageSrc` troca pela foto real do serviço.
+ */
+export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000, className }: CoverflowCarouselProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const touchStartX = useRef(0);
+  const total = items.length;
+
+  const nextSlide = useCallback(() => {
+    setCurrentIndex((prev) => (prev + 1) % total);
+  }, [total]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentIndex((prev) => (prev - 1 + total) % total);
+  }, [total]);
+
+  const goToSlide = (idx: number) => setCurrentIndex(idx % total);
+
+  useEffect(() => {
+    if (!autoplay || isHovered || total <= 1) return;
+    const interval = setInterval(nextSlide, autoplayDelay);
+    return () => clearInterval(interval);
+  }, [autoplay, autoplayDelay, isHovered, nextSlide, total]);
+
+  useEffect(() => {
+    if (total <= 1) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") prevSlide();
+      if (e.key === "ArrowRight") nextSlide();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [nextSlide, prevSlide, total]);
+
+  const handleTouchStart = (e: TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(diff) > 45) {
+      if (diff < 0) nextSlide();
+      else prevSlide();
+    }
+  };
+
+  if (total === 0) return null;
+
+  return (
+    <div
+      className={cn("relative w-full", className)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div
+        className="relative flex h-[480px] items-center justify-center overflow-hidden px-5 sm:px-8"
+        style={{ perspective: "1400px" }}
+      >
+        {items.map((item, idx) => {
+          const offset = (idx - currentIndex + total) % total;
+
+          let transform = "translateX(0px) scale(0.4) rotateY(0deg)";
+          let opacity = 0;
+          let zIndex = 0;
+          let filter = "brightness(0.5)";
+          const isCenter = offset === 0;
+
+          if (offset === 0) {
+            transform = "translateX(0px) scale(1) rotateY(0deg)";
+            opacity = 1;
+            zIndex = 30;
+            filter = "brightness(1)";
+          } else if (offset === 1) {
+            transform = "translateX(260px) scale(0.84) rotateY(-24deg)";
+            opacity = 0.65;
+            zIndex = 20;
+            filter = "brightness(0.85)";
+          } else if (offset === 2) {
+            transform = "translateX(460px) scale(0.68) rotateY(-38deg)";
+            opacity = 0.38;
+            zIndex = 10;
+            filter = "brightness(0.7)";
+          } else if (offset === total - 1) {
+            transform = "translateX(-260px) scale(0.84) rotateY(24deg)";
+            opacity = 0.65;
+            zIndex = 20;
+            filter = "brightness(0.85)";
+          } else if (offset === total - 2) {
+            transform = "translateX(-460px) scale(0.68) rotateY(38deg)";
+            opacity = 0.38;
+            zIndex = 10;
+            filter = "brightness(0.7)";
+          }
+
+          return (
+            <div
+              key={item.id}
+              onClick={() => !isCenter && goToSlide(idx)}
+              className={cn(
+                "absolute flex h-[420px] w-[290px] flex-col overflow-hidden rounded-2xl border border-brand-beige bg-white transition-all duration-[800ms] ease-[cubic-bezier(0.25,1,0.5,1)]",
+                isCenter ? "shadow-soft ring-2 ring-brand-forest/30" : "cursor-pointer shadow-softer"
+              )}
+              style={{ transform, opacity, zIndex, filter, transformOrigin: "center center" }}
+            >
+              <div className="relative h-[210px] w-full shrink-0">
+                {item.imageSrc ? (
+                  <Image
+                    src={item.imageSrc}
+                    alt={item.titleLine1}
+                    fill
+                    sizes="290px"
+                    className="object-cover"
+                    style={{ objectPosition: item.imagePosition ?? "center" }}
+                  />
+                ) : (
+                  <PlaceholderImage
+                    label={item.titleLine1}
+                    tone={item.placeholderTone ?? "sage"}
+                    className="h-full w-full rounded-none"
+                  />
+                )}
+
+                {item.tag ? (
+                  <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-brand-moss shadow-softer">
+                    {item.tag}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="flex flex-1 flex-col items-center justify-center gap-1 px-5 py-3 text-center">
+                <h3 className="font-serif text-lg text-brand-forest">{item.titleLine1}</h3>
+                <div
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 transition-opacity duration-500",
+                    isCenter ? "opacity-100" : "pointer-events-none opacity-0"
+                  )}
+                >
+                  {item.titleLine2 ? (
+                    <p className="text-sm font-medium text-brand-graphite/70">{item.titleLine2}</p>
+                  ) : null}
+                  <span className="gold-divider my-1" />
+                  {item.desc ? (
+                    <p className="line-clamp-2 max-w-[230px] text-xs italic text-brand-graphite/75">{item.desc}</p>
+                  ) : null}
+                  {item.ctaText && item.ctaUrl ? (
+                    <Link
+                      href={item.ctaUrl}
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand-forest px-5 py-2 text-xs font-semibold text-white shadow-soft transition-transform duration-200 hover:scale-105"
+                    >
+                      {item.ctaText}
+                      <ArrowRight size={13} />
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {total > 1 ? (
+          <>
+            <button
+              onClick={prevSlide}
+              aria-label="Cuidado anterior"
+              className="absolute left-0 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-brand-beige bg-white/90 text-brand-forest shadow-soft transition-colors duration-200 hover:bg-brand-forest hover:text-white"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={nextSlide}
+              aria-label="Próximo cuidado"
+              className="absolute right-0 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-brand-beige bg-white/90 text-brand-forest shadow-soft transition-colors duration-200 hover:bg-brand-forest hover:text-white"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </>
+        ) : null}
+      </div>
+
+      {total > 1 ? (
+        <div className="mt-8 flex items-center justify-center gap-2">
+          {items.map((item, idx) => (
+            <button
+              key={item.id}
+              onClick={() => goToSlide(idx)}
+              aria-label={`Ir para ${item.titleLine1}`}
+              className={cn(
+                "h-2 rounded-full transition-all duration-300",
+                idx === currentIndex ? "w-7 bg-brand-forest" : "w-2 bg-brand-beige"
+              )}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}

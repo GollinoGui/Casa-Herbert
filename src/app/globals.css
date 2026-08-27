@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #f7f3ea;
+  color: #2e2e2e;
+}
+
+::selection {
+  background-color: #cbb89a;
+  color: #2e2e2e;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+@layer components {
+  .container-herbert {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+
+  .section-padding {
+    @apply py-16 sm:py-24;
+  }
+
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.25em] text-brand-moss;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-forest px-7 py-3.5 text-sm font-medium text-brand-cream shadow-soft transition-all duration-300 hover:bg-brand-forestDark hover:shadow-md active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-forest/25 bg-transparent px-7 py-3.5 text-sm font-medium text-brand-forest transition-all duration-300 hover:border-brand-forest hover:bg-brand-forest/5 active:scale-[0.98];
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-gold px-7 py-3.5 text-sm font-medium text-brand-forestDark shadow-soft transition-all duration-300 hover:brightness-95 active:scale-[0.98];
+  }
+
+  .gold-divider {
+    @apply mx-auto h-px w-16 bg-gradient-to-r from-transparent via-brand-gold to-transparent;
+  }
+}
+
+/* Scrollbar discreta, combinando com a paleta */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f7f3ea;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #a3b89a;
+  border-radius: 9999px;
+  border: 2px solid #f7f3ea;
+}
