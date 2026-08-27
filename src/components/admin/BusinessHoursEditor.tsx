@@ -103,16 +103,18 @@ export function BusinessHoursEditor({ businessHours }: { businessHours: Business
                     type="time"
                     value={range.startTime}
                     onChange={(e) => updateRange(weekday, index, "startTime", e.target.value)}
+                    className="min-w-0 flex-1"
                   />
-                  <span className="text-brand-graphite/50">até</span>
+                  <span className="shrink-0 text-brand-graphite/50">até</span>
                   <Input
                     type="time"
                     value={range.endTime}
                     onChange={(e) => updateRange(weekday, index, "endTime", e.target.value)}
+                    className="min-w-0 flex-1"
                   />
                   <button
                     onClick={() => removeRange(weekday, index)}
-                    className="rounded-lg p-1.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
+                    className="shrink-0 rounded-lg p-1.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
                     aria-label="Remover intervalo"
                   >
                     <Trash2 size={16} />

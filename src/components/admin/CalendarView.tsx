@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -20,10 +20,13 @@ const STATUS_BG: Record<AppointmentStatus, string> = {
   COMPLETED: "#A3B89A",
 };
 
+const MOBILE_QUERY = "(max-width: 640px)";
+
 export function CalendarView() {
   const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const calendarRef = useRef<FullCalendar | null>(null);
 
   const load = useCallback(() => {
     listAppointmentsAction().then(setAppointments);
@@ -32,6 +35,17 @@ export function CalendarView() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const applyView = (isMobile: boolean) => {
+      calendarRef.current?.getApi().changeView(isMobile ? "timeGridDay" : "timeGridWeek");
+    };
+    applyView(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => applyView(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const events = appointments.map((a) => ({
     id: a.id,
@@ -53,6 +67,7 @@ export function CalendarView() {
         ))}
       </div>
       <FullCalendar
+        ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         headerToolbar={{

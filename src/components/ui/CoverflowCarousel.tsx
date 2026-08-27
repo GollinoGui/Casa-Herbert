@@ -15,6 +15,8 @@ export interface CoverflowCarouselItem {
   desc?: string;
   ctaText?: string;
   ctaUrl?: string;
+  /** Quando presente, o CTA vira um botão que dispara isso em vez de navegar para ctaUrl. */
+  onCtaClick?: () => void;
   placeholderTone?: "sage" | "cream" | "gold";
   /** Caminho de uma foto real (ex: "/images/servicos/x.jpg"). Sem isso, usa PlaceholderImage. */
   imageSrc?: string;
@@ -88,7 +90,7 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
       onTouchEnd={handleTouchEnd}
     >
       <div
-        className="relative flex h-[480px] items-center justify-center overflow-hidden px-5 sm:px-8"
+        className="relative flex h-[480px] items-center justify-center overflow-hidden px-3 sm:px-8"
         style={{ perspective: "1400px" }}
       >
         {items.map((item, idx) => {
@@ -177,7 +179,16 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
                   {item.desc ? (
                     <p className="line-clamp-2 max-w-[230px] text-xs italic text-brand-graphite/75">{item.desc}</p>
                   ) : null}
-                  {item.ctaText && item.ctaUrl ? (
+                  {item.ctaText && item.onCtaClick ? (
+                    <button
+                      type="button"
+                      onClick={item.onCtaClick}
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand-forest px-5 py-2 text-xs font-semibold text-white shadow-soft transition-transform duration-200 hover:scale-105"
+                    >
+                      {item.ctaText}
+                      <ArrowRight size={13} />
+                    </button>
+                  ) : item.ctaText && item.ctaUrl ? (
                     <Link
                       href={item.ctaUrl}
                       className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand-forest px-5 py-2 text-xs font-semibold text-white shadow-soft transition-transform duration-200 hover:scale-105"

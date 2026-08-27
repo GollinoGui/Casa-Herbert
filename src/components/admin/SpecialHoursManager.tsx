@@ -163,13 +163,23 @@ function SpecialHoursFormModal({
             <FieldLabel>Horários de atendimento</FieldLabel>
             {ranges.map((range, index) => (
               <div key={index} className="flex items-center gap-2">
-                <Input type="time" value={range.startTime} onChange={(e) => updateRange(index, "startTime", e.target.value)} />
-                <span className="text-brand-graphite/50">até</span>
-                <Input type="time" value={range.endTime} onChange={(e) => updateRange(index, "endTime", e.target.value)} />
+                <Input
+                  type="time"
+                  value={range.startTime}
+                  onChange={(e) => updateRange(index, "startTime", e.target.value)}
+                  className="min-w-0 flex-1"
+                />
+                <span className="shrink-0 text-brand-graphite/50">até</span>
+                <Input
+                  type="time"
+                  value={range.endTime}
+                  onChange={(e) => updateRange(index, "endTime", e.target.value)}
+                  className="min-w-0 flex-1"
+                />
                 <button
                   type="button"
                   onClick={() => removeRange(index)}
-                  className="rounded-lg p-1.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
+                  className="shrink-0 rounded-lg p-1.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
                   aria-label="Remover intervalo"
                 >
                   <X size={16} />

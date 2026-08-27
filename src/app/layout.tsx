@@ -5,6 +5,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFloatingButton } from "@/components/layout/WhatsAppFloatingButton";
+import { ScrollRestoration } from "@/components/layout/ScrollRestoration";
 import { getSettings } from "@/lib/data/settings";
 
 const playfair = Playfair_Display({
@@ -94,6 +95,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <ScrollRestoration />
         {isAdminRoute ? (
           children
         ) : (

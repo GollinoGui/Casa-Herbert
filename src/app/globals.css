@@ -50,6 +50,21 @@ body {
   }
 }
 
+/* FullCalendar (agenda do admin): cabeçalho quebra em telas estreitas em vez de estourar a largura */
+.fc .fc-toolbar {
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+@media (max-width: 640px) {
+  .fc .fc-toolbar-title {
+    font-size: 1rem;
+  }
+  .fc .fc-button {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.75rem;
+  }
+}
+
 /* Scrollbar discreta, combinando com a paleta */
 ::-webkit-scrollbar {
   width: 10px;

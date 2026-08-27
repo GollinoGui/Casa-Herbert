@@ -31,9 +31,11 @@ interface BookingWizardProps {
   services: Service[];
   minAdvanceDays: number;
   preselectedServiceId?: string;
+  /** Quando presente (uso dentro de um modal), a confirmação fecha o modal em vez de navegar para "/". */
+  onClose?: () => void;
 }
 
-export function BookingWizard({ services, minAdvanceDays, preselectedServiceId }: BookingWizardProps) {
+export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, onClose }: BookingWizardProps) {
   const [step, setStep] = useState<Step>("service");
   const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -388,9 +390,15 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId }
               </Card>
 
               <div className="mt-10">
-                <LinkButton href="/" variant="secondary">
-                  Voltar para o início
-                </LinkButton>
+                {onClose ? (
+                  <Button type="button" variant="secondary" onClick={onClose}>
+                    Concluir
+                  </Button>
+                ) : (
+                  <LinkButton href="/" variant="secondary">
+                    Voltar para o início
+                  </LinkButton>
+                )}
               </div>
             </div>
           )}

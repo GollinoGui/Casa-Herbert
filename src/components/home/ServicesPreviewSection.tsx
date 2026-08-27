@@ -1,9 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import type { Service } from "@/types";
 import { SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { CoverflowCarousel, type CoverflowCarouselItem } from "@/components/ui/CoverflowCarousel";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { formatServiceDuration } from "@/lib/utils/service-format";
+import { ServiceDetailModal } from "@/components/services/ServiceDetailModal";
+import { BookingModal } from "@/components/booking/BookingModal";
 
 const placeholderTones: CoverflowCarouselItem["placeholderTone"][] = ["sage", "cream", "gold"];
 
@@ -13,7 +18,16 @@ const serviceImages: Record<string, { src: string; position?: string }> = {
   velaterapia: { src: "/images/servicos/velaterapia.jpg", position: "bottom" },
 };
 
-export function ServicesPreviewSection({ services }: { services: Service[] }) {
+interface ServicesPreviewSectionProps {
+  services: Service[];
+  whatsappNumber: string;
+  minAdvanceDays: number;
+}
+
+export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDays }: ServicesPreviewSectionProps) {
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [bookingServiceId, setBookingServiceId] = useState<string | null>(null);
+
   const preview = services.slice(0, 6);
   if (preview.length === 0) return null;
 
@@ -25,7 +39,7 @@ export function ServicesPreviewSection({ services }: { services: Service[] }) {
       titleLine1: service.name,
       desc: service.description,
       ctaText: "Saiba mais",
-      ctaUrl: "/servicos",
+      onCtaClick: () => setSelectedService(service),
       placeholderTone: placeholderTones[idx % placeholderTones.length],
       imageSrc: image?.src,
       imagePosition: image?.position,
@@ -33,7 +47,7 @@ export function ServicesPreviewSection({ services }: { services: Service[] }) {
   });
 
   return (
-    <section className="section-padding bg-brand-cream">
+    <section id="nossos-cuidados" className="section-padding scroll-mt-28 bg-brand-cream">
       <div className="container-herbert">
         <FadeIn>
           <SectionHeading
@@ -57,6 +71,24 @@ export function ServicesPreviewSection({ services }: { services: Service[] }) {
           </LinkButton>
         </FadeIn>
       </div>
+
+      <ServiceDetailModal
+        service={selectedService}
+        whatsappNumber={whatsappNumber}
+        onClose={() => setSelectedService(null)}
+        onSchedule={(service) => {
+          setSelectedService(null);
+          setBookingServiceId(service.id);
+        }}
+      />
+
+      <BookingModal
+        open={bookingServiceId !== null}
+        onClose={() => setBookingServiceId(null)}
+        services={services}
+        minAdvanceDays={minAdvanceDays}
+        preselectedServiceId={bookingServiceId ?? undefined}
+      />
     </section>
   );
 }

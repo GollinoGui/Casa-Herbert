@@ -35,7 +35,11 @@ export default async function HomePage() {
     <>
       <HeroSection />
       <PresentationSection />
-      <ServicesPreviewSection services={services} />
+      <ServicesPreviewSection
+        services={services}
+        whatsappNumber={settings.whatsappNumber}
+        minAdvanceDays={settings.minAdvanceDays}
+      />
       <PersonalizedEvaluationSection />
       <TherapyHighlightSection />
       <PhotobiomodulationSection />
