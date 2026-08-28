@@ -55,14 +55,7 @@ export function Header() {
       if (targetPath !== pathname) return;
       event.preventDefault();
       if (hash) {
-        const target = document.getElementById(hash);
-        target?.scrollIntoView({ behavior: "smooth" });
-        // O primeiro scroll que cruza o ENTER_THRESHOLD dispara o re-render que anima
-        // o pill do header (layout do framer-motion): a medição de um elemento sticky
-        // faz o framer-motion chamar window.scrollTo internamente, o que cancela o
-        // smooth scroll em andamento. Repetir a chamada depois que esse re-render já
-        // aconteceu retoma o scroll até o destino certo.
-        window.setTimeout(() => target?.scrollIntoView({ behavior: "smooth" }), 300);
+        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
       } else {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -72,35 +65,32 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full">
       <ScrollProgressScissors />
-      <motion.div
-        layout
-        transition={{ layout: HEADER_LAYOUT_TRANSITION }}
+      <div
         className={cn(
-          "mx-auto flex items-center justify-between gap-8 overflow-hidden transition-[background-color,border-color,border-radius,box-shadow,backdrop-filter] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "mx-auto flex items-center justify-between gap-8 overflow-hidden transition-[background-color,border-color,border-radius,box-shadow,backdrop-filter,width,height,margin,padding] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
           scrolled
             ? "mt-4 h-[4.5rem] w-fit max-w-[95vw] rounded-full border border-brand-beige/70 bg-brand-cream/95 px-8 shadow-soft backdrop-blur-md sm:px-10"
             : "mt-0 h-20 w-full max-w-6xl rounded-none border border-transparent bg-transparent px-5 sm:px-8"
         )}
       >
         <Link href="/" onClick={handleNavClick("/")} className="flex min-w-0 shrink-0 items-center gap-2.5">
-          <motion.span
-            layout
-            transition={{ layout: HEADER_LAYOUT_TRANSITION }}
+          <span
             className={cn(
-              "relative shrink-0 overflow-hidden rounded-full ring-1 ring-brand-beige",
+              "relative shrink-0 overflow-hidden rounded-full ring-1 ring-brand-beige transition-[height,width] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
               scrolled ? "h-11 w-11" : "h-12 w-12"
             )}
           >
             <Image src="/logo.jpg" alt="Casa Herbert" fill sizes="48px" className="object-cover" priority />
-          </motion.span>
+          </span>
           <span className="flex min-w-0 flex-col leading-tight">
-            <motion.span
-              layout
-              transition={{ layout: HEADER_LAYOUT_TRANSITION }}
-              className={cn("whitespace-nowrap font-serif text-brand-forest", scrolled ? "text-base" : "text-xl sm:text-2xl")}
+            <span
+              className={cn(
+                "whitespace-nowrap font-serif text-brand-forest transition-[font-size] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+                scrolled ? "text-base" : "text-xl sm:text-2xl"
+              )}
             >
               Casa Herbert
-            </motion.span>
+            </span>
             <AnimatePresence initial={false}>
               {!scrolled && (
                 <motion.span
@@ -131,14 +121,14 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          <motion.div layout transition={{ layout: HEADER_LAYOUT_TRANSITION }} className="shrink-0">
+          <div className="shrink-0">
             <Link
               href="/agendar"
               className="btn-primary whitespace-nowrap !px-6 !py-2.5 text-sm"
             >
               Agendar avaliação
             </Link>
-          </motion.div>
+          </div>
         </nav>
 
         <button
@@ -148,7 +138,7 @@ export function Header() {
         >
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
-      </motion.div>
+      </div>
 
       <AnimatePresence>
         {menuOpen && (

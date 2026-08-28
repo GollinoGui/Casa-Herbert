@@ -16,6 +16,8 @@ const placeholderTones: CoverflowCarouselItem["placeholderTone"][] = ["sage", "c
 // até termos a foto correspondente (ver CLAUDE.md > Fotos).
 const serviceImages: Record<string, { src: string; position?: string }> = {
   velaterapia: { src: "/images/servicos/velaterapia.jpg", position: "bottom" },
+  "terapia-capilar": { src: "/images/servicos/terapia-capilar.jpg" },
+  fotobiomodulacao: { src: "/images/servicos/fotobiomodulacao.jpg" },
 };
 
 interface ServicesPreviewSectionProps {

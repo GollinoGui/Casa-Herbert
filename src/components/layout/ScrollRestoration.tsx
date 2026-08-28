@@ -25,15 +25,7 @@ export function ScrollRestoration() {
       return;
     }
 
-    const scrollToTarget = () => {
-      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
-    };
-    scrollToTarget();
-    // Mesmo workaround usado no Header para o clique de mesma página: a animação
-    // de layout do pill do header (framer-motion) chama window.scrollTo internamente
-    // ao cruzar o threshold de "scrolled", cancelando o smooth scroll em andamento.
-    const timeout = window.setTimeout(scrollToTarget, 300);
-    return () => window.clearTimeout(timeout);
+    document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
   }, [pathname]);
 
   return null;
