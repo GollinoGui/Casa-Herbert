@@ -1,7 +1,8 @@
-import { Star } from "lucide-react";
+import { Leaf, Star } from "lucide-react";
 import type { Testimonial } from "@/types";
 import { Marquee } from "@/components/ui/Marquee";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 
 function getInitials(name: string) {
   return name
@@ -41,11 +42,16 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
   const secondRow = useTwoRows ? testimonials.slice(splitAt) : [];
 
   return (
-    <section className="section-padding overflow-hidden bg-brand-forest text-brand-cream">
-      <div className="container-herbert">
+    <section className="section-padding relative overflow-hidden bg-brand-forest text-brand-cream">
+      <ParallaxLeaf className="pointer-events-none absolute -left-4 top-8 opacity-50" size={60} tone="moss" speed="slow" />
+      <ParallaxLeaf className="pointer-events-none absolute -right-2 bottom-4 opacity-50" size={46} variant="branch" tone="moss" />
+      <div className="container-herbert relative">
         <FadeIn>
           <div className="text-center">
-            <p className="eyebrow mb-3 !text-brand-sage">Depoimentos</p>
+            <p className="eyebrow mb-3 inline-flex items-center gap-1.5 !text-brand-sage">
+              <Leaf size={12} aria-hidden="true" />
+              Depoimentos
+            </p>
             <h2 className="font-serif text-3xl text-brand-cream sm:text-4xl">
               Quem já vive a experiência Casa Herbert
             </h2>

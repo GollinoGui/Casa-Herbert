@@ -1,6 +1,7 @@
 import { MessageCircle, Search, Sparkles } from "lucide-react";
 import { SectionHeading } from "@/components/ui/Card";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
 
 const STEPS = [
@@ -23,8 +24,10 @@ const STEPS = [
 
 export function PersonalizedEvaluationSection() {
   return (
-    <section className="section-padding bg-white">
-      <div className="container-herbert">
+    <section className="section-padding relative overflow-hidden bg-gradient-to-b from-white via-brand-sage/10 to-white">
+      <ParallaxLeaf className="pointer-events-none absolute left-[6%] top-6 hidden sm:block" size={44} tone="moss" speed="slow" />
+      <ParallaxLeaf className="pointer-events-none absolute right-[8%] bottom-4 hidden sm:block" size={52} variant="leaf" />
+      <div className="container-herbert relative">
         <FadeIn>
           <SectionHeading
             eyebrow="O diferencial Casa Herbert"
@@ -37,7 +40,7 @@ export function PersonalizedEvaluationSection() {
           {STEPS.map((step, index) => (
             <StaggerItem key={step.title}>
               <div className="flex flex-col items-center text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-sage/20 text-brand-forest">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-1 ring-brand-moss/25">
                   <step.icon size={26} strokeWidth={1.5} />
                 </div>
                 <p className="mt-5 text-xs font-medium uppercase tracking-[0.2em] text-brand-gold">

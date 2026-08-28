@@ -4,6 +4,7 @@ import { getActiveServices } from "@/lib/data/services";
 import { Card, SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
 import { formatServiceDuration, formatServicePrice } from "@/lib/utils/service-format";
 
@@ -18,8 +19,10 @@ export default async function ServicosPage() {
 
   return (
     <>
-      <section className="section-padding bg-brand-cream">
-        <div className="container-herbert">
+      <section className="section-padding relative overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-sage/10">
+        <ParallaxLeaf className="pointer-events-none absolute -right-6 top-10 hidden sm:block" size={70} speed="slow" />
+        <ParallaxLeaf className="pointer-events-none absolute -left-4 bottom-10 hidden md:block" size={46} tone="moss" />
+        <div className="container-herbert relative">
           <FadeIn>
             <SectionHeading
               eyebrow="Nossos cuidados"

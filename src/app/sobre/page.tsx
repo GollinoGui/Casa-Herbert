@@ -56,8 +56,9 @@ export default function SobrePage() {
         </div>
       </section>
 
-      <section className="section-padding bg-white">
-        <div className="container-herbert max-w-3xl">
+      <section className="section-padding relative overflow-hidden bg-white">
+        <ParallaxLeaf className="pointer-events-none absolute -right-4 top-10 hidden sm:block" size={46} tone="moss" />
+        <div className="container-herbert relative max-w-3xl">
           <FadeIn>
             <SectionHeading
               eyebrow="Nossa forma de cuidar"
@@ -88,8 +89,9 @@ export default function SobrePage() {
         </div>
       </section>
 
-      <section className="section-padding bg-brand-cream">
-        <div className="container-herbert">
+      <section className="section-padding relative overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-beige/50">
+        <div className="pointer-events-none absolute -left-16 bottom-0 h-64 w-64 rounded-full bg-brand-sage/20 blur-3xl" />
+        <div className="container-herbert relative">
           <FadeIn>
             <SectionHeading eyebrow="O que nos guia" title="Valores que estão em cada atendimento" />
           </FadeIn>
@@ -97,7 +99,7 @@ export default function SobrePage() {
             {VALUES.map((value) => (
               <StaggerItem key={value.title}>
                 <div className="flex flex-col items-center text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-sage/20 text-brand-forest">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-1 ring-brand-moss/25">
                     <value.icon size={26} strokeWidth={1.5} />
                   </div>
                   <h3 className="mt-5 font-serif text-lg text-brand-forest">{value.title}</h3>
@@ -109,8 +111,9 @@ export default function SobrePage() {
         </div>
       </section>
 
-      <section className="section-padding bg-white text-center">
-        <div className="container-herbert max-w-xl">
+      <section className="section-padding relative overflow-hidden bg-white text-center">
+        <ParallaxLeaf className="pointer-events-none absolute left-[10%] bottom-6 hidden sm:block" size={40} variant="leaf" />
+        <div className="container-herbert relative max-w-xl">
           <FadeIn>
             <GoldDivider className="mb-8" />
             <h2 className="font-serif text-2xl text-brand-forest sm:text-3xl">

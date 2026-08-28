@@ -306,6 +306,8 @@ export function buildSeedData(): MockDatabase {
     { id: randomUUID(), caption: "Ambiente Casa Herbert", category: "espaco", isPublished: true, displayOrder: 4, createdAt: now() },
     { id: randomUUID(), caption: "Cuidado do couro cabeludo", category: "resultados", isPublished: true, displayOrder: 5, createdAt: now() },
     { id: randomUUID(), caption: "Velaterapia", category: "espaco", isPublished: true, displayOrder: 6, createdAt: now() },
+    { id: randomUUID(), caption: "Protocolo de hidratação", category: "resultados", isPublished: true, displayOrder: 7, createdAt: now() },
+    { id: randomUUID(), caption: "Reforço da fibra capilar", category: "resultados", isPublished: true, displayOrder: 8, createdAt: now() },
   ];
 
   const settings: Settings = { ...DEFAULT_SETTINGS_SEED, messageTemplates: { ...DEFAULT_SETTINGS_SEED.messageTemplates } };

@@ -3,6 +3,7 @@ import { Clock, Instagram, MapPin, MessageCircle } from "lucide-react";
 import { getSettings } from "@/lib/data/settings";
 import { SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
+import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { formatPhoneDisplay } from "@/lib/utils/phone";
 
 export const metadata: Metadata = {
@@ -20,8 +21,10 @@ export default async function ContatoPage() {
   const settings = await getSettings();
 
   return (
-    <section className="section-padding bg-brand-cream">
-      <div className="container-herbert">
+    <section className="section-padding relative overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-sage/10">
+      <ParallaxLeaf className="pointer-events-none absolute -right-6 top-10 hidden sm:block" size={64} speed="slow" />
+      <ParallaxLeaf className="pointer-events-none absolute left-4 bottom-8 hidden md:block" size={44} tone="moss" />
+      <div className="container-herbert relative">
         <SectionHeading
           eyebrow="Contato"
           title="Fale com a Casa Herbert"
@@ -42,7 +45,9 @@ export default async function ContatoPage() {
           <div className="flex flex-col gap-6">
             <div className="rounded-2xl border border-brand-beige bg-white p-7">
               <div className="flex items-start gap-3">
-                <MapPin size={20} className="mt-0.5 shrink-0 text-brand-moss" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss">
+                  <MapPin size={17} />
+                </span>
                 <div>
                   <p className="text-sm font-medium text-brand-forest">Endereço</p>
                   <p className="mt-1 text-sm text-brand-graphite/80">{settings.salonAddress}</p>
@@ -52,7 +57,9 @@ export default async function ContatoPage() {
 
             <div className="rounded-2xl border border-brand-beige bg-white p-7">
               <div className="flex items-start gap-3">
-                <Clock size={20} className="mt-0.5 shrink-0 text-brand-moss" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss">
+                  <Clock size={17} />
+                </span>
                 <div className="w-full">
                   <p className="text-sm font-medium text-brand-forest">Horário de atendimento</p>
                   <table className="mt-2 w-full text-sm text-brand-graphite/80">
@@ -74,7 +81,9 @@ export default async function ContatoPage() {
 
             <div className="rounded-2xl border border-brand-beige bg-white p-7">
               <div className="flex items-start gap-3">
-                <Instagram size={20} className="mt-0.5 shrink-0 text-brand-moss" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss">
+                  <Instagram size={17} />
+                </span>
                 <div>
                   <p className="text-sm font-medium text-brand-forest">Instagram</p>
                   <a

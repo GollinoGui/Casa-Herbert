@@ -1,13 +1,18 @@
+import { Leaf } from "lucide-react";
 import { LinkButton } from "@/components/ui/Button";
 import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
 import { FadeIn } from "@/components/motion/FadeIn";
 
 export function PhotobiomodulationSection() {
   return (
-    <section className="section-padding bg-brand-sage/10">
-      <div className="container-herbert grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+    <section className="section-padding relative overflow-hidden bg-gradient-to-bl from-brand-gold/15 via-brand-cream to-white">
+      <div className="pointer-events-none absolute left-1/4 top-0 h-56 w-56 rounded-full bg-brand-gold/20 blur-3xl" />
+      <div className="container-herbert relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <FadeIn>
-          <p className="eyebrow mb-3">Fotobiomodulação</p>
+          <p className="eyebrow mb-3 inline-flex items-center gap-1.5">
+            <Leaf size={12} className="text-brand-moss" aria-hidden="true" />
+            Fotobiomodulação
+          </p>
           <h2 className="font-serif text-3xl text-brand-forest sm:text-4xl">
             Luz de baixa intensidade a favor do seu couro cabeludo
           </h2>

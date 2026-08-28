@@ -47,8 +47,12 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
   });
 
   return (
-    <section id="nossos-cuidados" className="section-padding scroll-mt-28 bg-brand-cream">
-      <div className="container-herbert">
+    <section
+      id="nossos-cuidados"
+      className="section-padding relative scroll-mt-28 overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-beige/60"
+    >
+      <div className="pointer-events-none absolute -left-20 top-1/3 h-64 w-64 rounded-full bg-brand-sage/20 blur-3xl" />
+      <div className="container-herbert relative">
         <FadeIn>
           <SectionHeading
             eyebrow="Nossos cuidados"

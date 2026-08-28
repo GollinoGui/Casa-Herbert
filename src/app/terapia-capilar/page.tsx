@@ -76,8 +76,9 @@ export default function TerapiaCapilarPage() {
         </div>
       </section>
 
-      <section className="section-padding bg-white">
-        <div className="container-herbert">
+      <section className="section-padding relative overflow-hidden bg-white">
+        <div className="pointer-events-none absolute -right-20 top-1/4 h-72 w-72 rounded-full bg-brand-sage/15 blur-3xl" />
+        <div className="container-herbert relative">
           <FadeIn>
             <SectionHeading
               eyebrow="Como cuidamos"
@@ -90,7 +91,7 @@ export default function TerapiaCapilarPage() {
             {FEATURES.map((feature) => (
               <StaggerItem key={feature.title}>
                 <div className="h-full rounded-2xl border border-brand-beige bg-brand-cream/60 p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-soft">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-sage/20 text-brand-forest">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss">
                     <feature.icon size={22} strokeWidth={1.5} />
                   </div>
                   <h3 className="mt-4 font-serif text-lg text-brand-forest">{feature.title}</h3>
@@ -124,8 +125,9 @@ export default function TerapiaCapilarPage() {
         </div>
       </section>
 
-      <section className="section-padding bg-white text-center">
-        <div className="container-herbert max-w-xl">
+      <section className="section-padding relative overflow-hidden bg-white text-center">
+        <ParallaxLeaf className="pointer-events-none absolute right-[10%] top-6 hidden sm:block" size={42} tone="moss" />
+        <div className="container-herbert relative max-w-xl">
           <FadeIn>
             <h2 className="font-serif text-2xl text-brand-forest sm:text-3xl">
               Comece com uma avaliação individual

@@ -6,8 +6,10 @@ import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 export function FinalCtaSection({ whatsappNumber }: { whatsappNumber: string }) {
   return (
     <section className="relative overflow-hidden bg-brand-forest py-20 text-center text-brand-cream sm:py-28">
-      <ParallaxLeaf className="pointer-events-none absolute -left-6 top-6 opacity-40" size={80} speed="slow" />
-      <ParallaxLeaf className="pointer-events-none absolute -right-4 bottom-4 opacity-40" size={64} variant="branch" />
+      <div className="pointer-events-none absolute -bottom-16 left-1/2 h-64 w-[36rem] -translate-x-1/2 rounded-full bg-brand-moss/25 blur-3xl" />
+      <ParallaxLeaf className="pointer-events-none absolute -left-6 top-6 opacity-40" size={80} speed="slow" tone="moss" />
+      <ParallaxLeaf className="pointer-events-none absolute -right-4 bottom-4 opacity-40" size={64} variant="branch" tone="moss" />
+      <ParallaxLeaf className="pointer-events-none absolute right-[15%] top-10 hidden opacity-30 sm:block" size={38} variant="leaf" />
 
       <div className="container-herbert relative mx-auto max-w-2xl">
         <FadeIn>

@@ -5,6 +5,7 @@ import { Card, SectionHeading } from "@/components/ui/Card";
 import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
 
 export const metadata: Metadata = {
@@ -45,8 +46,9 @@ export default async function ProdutosPage() {
 
   return (
     <>
-      <section className="section-padding bg-brand-cream">
-        <div className="container-herbert">
+      <section className="section-padding relative overflow-hidden bg-gradient-to-tr from-brand-beige/40 via-brand-cream to-brand-sage/10">
+        <ParallaxLeaf className="pointer-events-none absolute right-6 top-8 hidden sm:block" size={44} tone="moss" />
+        <div className="container-herbert relative">
           <FadeIn>
             <SectionHeading
               eyebrow="Produtos"
@@ -71,8 +73,9 @@ export default async function ProdutosPage() {
         </div>
       </section>
 
-      <section className="section-padding bg-white text-center">
-        <div className="container-herbert max-w-xl">
+      <section className="section-padding relative overflow-hidden bg-white text-center">
+        <ParallaxLeaf className="pointer-events-none absolute left-[8%] bottom-4 hidden sm:block" size={40} variant="leaf" />
+        <div className="container-herbert relative max-w-xl">
           <FadeIn>
             <h2 className="font-serif text-2xl text-brand-forest sm:text-3xl">
               Quer saber qual produto é indicado para você?

@@ -1,11 +1,14 @@
 import { FadeIn } from "@/components/motion/FadeIn";
 import { GoldDivider } from "@/components/motion/GoldDivider";
+import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { SectionHeading } from "@/components/ui/Card";
 
 export function PresentationSection() {
   return (
-    <section className="section-padding bg-white">
-      <div className="container-herbert max-w-3xl text-center">
+    <section className="section-padding relative overflow-hidden bg-white">
+      <ParallaxLeaf className="pointer-events-none absolute -left-4 top-10 hidden sm:block" size={46} tone="moss" />
+      <ParallaxLeaf className="pointer-events-none absolute -right-2 bottom-6 hidden sm:block" size={58} variant="branch" />
+      <div className="container-herbert relative max-w-3xl text-center">
         <FadeIn>
           <SectionHeading
             eyebrow="Sobre a Casa Herbert"
