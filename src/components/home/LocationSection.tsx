@@ -3,6 +3,7 @@ import type { Settings } from "@/types";
 import { SectionHeading } from "@/components/ui/Card";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
+import { MarginThread } from "@/components/motion/MarginThread";
 
 const HOURS = [
   { day: "Terça a sábado", hours: "09:00–11:00 e 14:00–19:00" },
@@ -13,6 +14,9 @@ export function LocationSection({ settings }: { settings: Settings }) {
   return (
     <section className="section-padding relative overflow-hidden bg-brand-beige/25">
       <ParallaxLeaf className="pointer-events-none absolute -left-2 top-4 hidden sm:block" size={40} tone="moss" />
+      <ParallaxLeaf className="pointer-events-none absolute -right-3 bottom-6 hidden sm:block" size={46} variant="branch" tone="moss" speed="slow" />
+      <MarginThread side="left" tone="sage" className="top-10 bottom-10" />
+      <MarginThread side="right" tone="sage" className="top-10 bottom-10" />
       <div className="container-herbert relative">
         <FadeIn>
           <SectionHeading eyebrow="Onde estamos" title="Venha nos visitar em Orlândia" />

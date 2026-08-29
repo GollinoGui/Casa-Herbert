@@ -3,12 +3,13 @@ import { getSettings } from "@/lib/data/settings";
 import { getActiveServices } from "@/lib/data/services";
 import { getPublishedTestimonials } from "@/lib/data/testimonials";
 import { getPublishedGallery } from "@/lib/data/gallery";
+import { IntroReveal } from "@/components/motion/IntroReveal";
 import { HeroSection } from "@/components/home/HeroSection";
+import { ManifestoSection } from "@/components/home/ManifestoSection";
 import { PresentationSection } from "@/components/home/PresentationSection";
 import { ServicesPreviewSection } from "@/components/home/ServicesPreviewSection";
 import { PersonalizedEvaluationSection } from "@/components/home/PersonalizedEvaluationSection";
-import { TherapyHighlightSection } from "@/components/home/TherapyHighlightSection";
-import { PhotobiomodulationSection } from "@/components/home/PhotobiomodulationSection";
+import { TherapyPhotobioSection } from "@/components/home/TherapyPhotobioSection";
 import { ResultsPreviewSection } from "@/components/home/ResultsPreviewSection";
 import { TestimonialsSection } from "@/components/home/TestimonialsSection";
 import { ProductsPreviewSection } from "@/components/home/ProductsPreviewSection";
@@ -32,8 +33,9 @@ export default async function HomePage() {
   ]);
 
   return (
-    <>
+    <IntroReveal>
       <HeroSection />
+      <ManifestoSection />
       <PresentationSection />
       <ServicesPreviewSection
         services={services}
@@ -41,13 +43,12 @@ export default async function HomePage() {
         minAdvanceDays={settings.minAdvanceDays}
       />
       <PersonalizedEvaluationSection />
-      <TherapyHighlightSection />
-      <PhotobiomodulationSection />
+      <TherapyPhotobioSection />
       <ResultsPreviewSection galleryItems={gallery} />
       <TestimonialsSection testimonials={testimonials} />
-      <ProductsPreviewSection />
+      <ProductsPreviewSection whatsappNumber={settings.whatsappNumber} />
       <LocationSection settings={settings} />
       <FinalCtaSection whatsappNumber={settings.whatsappNumber} />
-    </>
+    </IntroReveal>
   );
 }

@@ -2,6 +2,7 @@ import { HeartHandshake, Leaf, Sparkles } from "lucide-react";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { GoldDivider } from "@/components/motion/GoldDivider";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
+import { MarginThread } from "@/components/motion/MarginThread";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
 import { SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
@@ -15,8 +16,16 @@ const HIGHLIGHTS = [
 export function PresentationSection() {
   return (
     <section className="section-padding relative overflow-hidden bg-white">
+      <p
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-6 hidden -translate-x-1/2 whitespace-nowrap font-serif text-[9rem] italic leading-none text-brand-forest/[0.035] sm:block lg:text-[11rem]"
+      >
+        Casa Herbert
+      </p>
       <ParallaxLeaf className="pointer-events-none absolute -left-4 top-10 hidden sm:block" size={46} tone="moss" />
       <ParallaxLeaf className="pointer-events-none absolute -right-2 bottom-6 hidden sm:block" size={58} variant="branch" />
+      <MarginThread side="left" tone="sage" className="top-8 bottom-8" />
+      <MarginThread side="right" tone="sage" className="top-8 bottom-8" />
       <div className="container-herbert relative max-w-3xl text-center">
         <FadeIn>
           <SectionHeading

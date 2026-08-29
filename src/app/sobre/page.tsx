@@ -7,6 +7,7 @@ import { FadeIn } from "@/components/motion/FadeIn";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { GoldDivider } from "@/components/motion/GoldDivider";
+import { AttendanceJourneySection } from "@/components/sobre/AttendanceJourneySection";
 
 export const metadata: Metadata = {
   title: "Sobre",
@@ -88,6 +89,8 @@ export default function SobrePage() {
           </FadeIn>
         </div>
       </section>
+
+      <AttendanceJourneySection />
 
       <section className="section-padding relative overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-beige/50">
         <div className="pointer-events-none absolute -left-16 bottom-0 h-64 w-64 rounded-full bg-brand-sage/20 blur-3xl" />

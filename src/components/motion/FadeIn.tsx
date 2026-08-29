@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import { useIntroGate } from "@/components/motion/introGate";
 
 interface FadeInProps {
   children: ReactNode;
@@ -20,14 +21,15 @@ const directionOffset: Record<NonNullable<FadeInProps["direction"]>, { x: number
 };
 
 export function FadeIn({ children, delay = 0, className, direction = "up" }: FadeInProps) {
+  const introReady = useIntroGate();
   const offset = directionOffset[direction];
   return (
     <motion.div
       className={className}
       initial={{ opacity: 0, x: offset.x, y: offset.y }}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
+      whileInView={introReady ? { opacity: 1, x: 0, y: 0 } : undefined}
       viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.95, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>

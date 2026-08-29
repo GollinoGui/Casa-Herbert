@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Clock, Instagram, MapPin, MessageCircle } from "lucide-react";
+import { Clock, Facebook, Instagram, MapPin, MessageCircle } from "lucide-react";
 import { getSettings } from "@/lib/data/settings";
 import { SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
+import { PhoneCarousel, type PhoneCarouselItem } from "@/components/ui/PhoneCarousel";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
-import { formatPhoneDisplay } from "@/lib/utils/phone";
+import { formatPhoneDisplay, toWhatsAppDigits } from "@/lib/utils/phone";
 
 export const metadata: Metadata = {
   title: "Contato",
@@ -19,6 +20,33 @@ const HOURS = [
 
 export default async function ContatoPage() {
   const settings = await getSettings();
+
+  const socialChannels: PhoneCarouselItem[] = [
+    {
+      id: "instagram",
+      label: "Instagram",
+      handle: "@casaherbert",
+      href: "https://instagram.com",
+      icon: Instagram,
+      tone: "gold",
+    },
+    {
+      id: "whatsapp",
+      label: "WhatsApp",
+      handle: formatPhoneDisplay(settings.whatsappNumber),
+      href: `https://wa.me/${toWhatsAppDigits(settings.whatsappNumber)}`,
+      icon: MessageCircle,
+      tone: "sage",
+    },
+    {
+      id: "facebook",
+      label: "Facebook",
+      handle: "/casaherbert",
+      href: "https://facebook.com",
+      icon: Facebook,
+      tone: "cream",
+    },
+  ];
 
   return (
     <section className="section-padding relative overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-sage/10">
@@ -79,25 +107,6 @@ export default async function ContatoPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-brand-beige bg-white p-7">
-              <div className="flex items-start gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss">
-                  <Instagram size={17} />
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-brand-forest">Instagram</p>
-                  <a
-                    href="https://instagram.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 block text-sm text-brand-graphite/80 hover:text-brand-forest"
-                  >
-                    @casaherbert
-                  </a>
-                </div>
-              </div>
-            </div>
-
             <div className="flex flex-col gap-3 sm:flex-row">
               <LinkButton
                 href={`https://wa.me/${settings.whatsappNumber}`}
@@ -113,6 +122,15 @@ export default async function ContatoPage() {
               </LinkButton>
             </div>
           </div>
+        </div>
+
+        <div className="mt-20 text-center">
+          <p className="eyebrow mb-3">Nos siga</p>
+          <h2 className="font-serif text-2xl text-brand-forest sm:text-3xl">Fale por onde preferir</h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm text-brand-graphite/80">
+            Toque em um celular para abrir o Instagram, o WhatsApp ou o Facebook da Casa Herbert.
+          </p>
+          <PhoneCarousel items={socialChannels} className="mt-12" />
         </div>
       </div>
     </section>

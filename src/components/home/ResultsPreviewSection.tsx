@@ -3,6 +3,7 @@ import { SectionHeading } from "@/components/ui/Card";
 import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
+import { MarginThread } from "@/components/motion/MarginThread";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
 import { TiltCard } from "@/components/motion/TiltCard";
 
@@ -16,9 +17,12 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
   return (
     <section id="resultados" className="section-padding relative scroll-mt-28 overflow-hidden bg-white">
       <ParallaxLeaf className="pointer-events-none absolute -right-4 top-10 hidden sm:block" size={48} tone="moss" />
+      <ParallaxLeaf className="pointer-events-none absolute -left-3 bottom-14 hidden sm:block" size={40} variant="branch" speed="slow" />
       {highlightedResults.length > 0 && (
         <div className="pointer-events-none absolute -right-10 bottom-0 h-72 w-72 rounded-full bg-brand-gold/20 blur-3xl" />
       )}
+      <MarginThread side="left" tone="sage" className="top-10 bottom-10" />
+      <MarginThread side="right" tone="sage" className="top-10 bottom-10" />
       <div className="container-herbert relative">
         <FadeIn>
           <SectionHeading

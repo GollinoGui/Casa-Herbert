@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { smoothScrollToElementId, smoothScrollToY } from "@/lib/utils/scroll";
 import { ScrollProgressScissors } from "@/components/layout/ScrollProgressScissors";
 
 const NAV_LINKS = [
@@ -55,9 +56,9 @@ export function Header() {
       if (targetPath !== pathname) return;
       event.preventDefault();
       if (hash) {
-        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+        smoothScrollToElementId(hash);
       } else {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        smoothScrollToY(0);
       }
     };
   }

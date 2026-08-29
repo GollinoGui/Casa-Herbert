@@ -3,6 +3,8 @@ import type { Testimonial } from "@/types";
 import { Marquee } from "@/components/ui/Marquee";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
+import { EdgeBranchArt } from "@/components/motion/EdgeBranchArt";
+import { MarginThread } from "@/components/motion/MarginThread";
 
 function getInitials(name: string) {
   return name
@@ -43,8 +45,11 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
 
   return (
     <section className="section-padding relative overflow-hidden bg-brand-forest text-brand-cream">
+      <EdgeBranchArt tone="cream" className="top-0 h-40 opacity-[0.08]" />
       <ParallaxLeaf className="pointer-events-none absolute -left-4 top-8 opacity-50" size={60} tone="moss" speed="slow" />
       <ParallaxLeaf className="pointer-events-none absolute -right-2 bottom-4 opacity-50" size={46} variant="branch" tone="moss" />
+      <MarginThread side="left" tone="sage" className="top-8 h-44" />
+      <MarginThread side="right" tone="sage" className="top-8 h-44" />
       <div className="container-herbert relative">
         <FadeIn>
           <div className="text-center">

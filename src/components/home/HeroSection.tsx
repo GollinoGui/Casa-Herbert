@@ -3,12 +3,18 @@ import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { HeroPhoto } from "@/components/motion/HeroPhoto";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
+import { EdgeBranchArt } from "@/components/motion/EdgeBranchArt";
+import { MarginThread } from "@/components/motion/MarginThread";
 
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-sage/30 pb-16 pt-14 sm:pb-24 sm:pt-20">
+      <EdgeBranchArt tone="moss" className="top-0 h-56 opacity-70 sm:h-64" />
       <div className="pointer-events-none absolute -right-24 top-0 h-72 w-72 rounded-full bg-brand-sage/25 blur-3xl" />
       <div className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-brand-gold/15 blur-3xl" />
+
+      <MarginThread side="left" tone="gold" className="top-10 bottom-10" />
+      <MarginThread side="right" tone="gold" className="top-10 bottom-10" />
 
       <ParallaxLeaf className="pointer-events-none absolute -left-6 top-8 hidden sm:block" size={90} variant="leaf" speed="slow" tone="moss" />
       <ParallaxLeaf className="pointer-events-none absolute right-2 top-28 hidden md:block" size={68} variant="branch" />

@@ -2,12 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { smoothScrollToElementId } from "@/lib/utils/scroll";
 
 /**
- * Garante o padrão de scroll do site: toda troca de página rola suavemente até
- * o início. Se a nova URL já trouxer uma âncora (#secao), rola até essa seção
- * em vez do topo — a navegação entre páginas via next/link usa pushState, então
+ * Garante o padrão de scroll do site: toda troca de página começa no topo. Se
+ * a nova URL já trouxer uma âncora (#secao), rola suavemente até essa seção em
+ * vez do topo — a navegação entre páginas via next/link usa pushState, então
  * o navegador não faz o scroll-to-hash nativo sozinho, é preciso disparar aqui.
+ * O reset para o topo é instantâneo (não suave): é o que o usuário espera de
+ * uma troca de página, e uma animação aqui só faz a transição parecer lenta.
  */
 export function ScrollRestoration() {
   const pathname = usePathname();
@@ -21,11 +24,11 @@ export function ScrollRestoration() {
 
     const hash = window.location.hash.slice(1);
     if (!hash) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo(0, 0);
       return;
     }
 
-    document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+    smoothScrollToElementId(hash);
   }, [pathname]);
 
   return null;

@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { CoverflowCarousel, type CoverflowCarouselItem } from "@/components/ui/CoverflowCarousel";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { MarginThread } from "@/components/motion/MarginThread";
 import { formatServiceDuration } from "@/lib/utils/service-format";
 import { ServiceDetailModal } from "@/components/services/ServiceDetailModal";
 import { BookingModal } from "@/components/booking/BookingModal";
@@ -54,6 +55,9 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
       className="section-padding relative scroll-mt-28 overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-beige/60"
     >
       <div className="pointer-events-none absolute -left-20 top-1/3 h-64 w-64 rounded-full bg-brand-sage/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-brand-gold/15 blur-3xl" />
+      <MarginThread side="left" tone="gold" className="top-8 bottom-8" />
+      <MarginThread side="right" tone="gold" className="top-8 bottom-8" />
       <div className="container-herbert relative">
         <FadeIn>
           <SectionHeading
