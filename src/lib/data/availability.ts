@@ -1,6 +1,7 @@
 import type { AppointmentWithRelations, AvailabilityResult } from "@/types";
 import { bookingRequestSchema, type BookingRequestInput } from "@/lib/booking/validators";
 import { getAvailableSlots as computeAvailableSlots, type BusyInterval } from "@/lib/booking/engine";
+import { addDaysToDateStr } from "@/lib/utils/date-format";
 import { mutateDb, readDb } from "./store";
 import { findOrCreateCustomer } from "./customers";
 import { hydrateAppointment } from "./appointments";
@@ -33,6 +34,26 @@ export async function getAvailableSlotsForService(
     activeAppointments,
     settings: db.settings,
   });
+}
+
+const NEXT_AVAILABLE_SEARCH_DAYS = 60;
+
+/**
+ * Procura, a partir de (e incluindo) `fromDateStr`, a primeira data com horário livre —
+ * reaproveita getAvailableSlotsForService dia a dia (mesma regra, sem duplicar nada).
+ * Só serve de sugestão de UX; a data escolhida ainda passa pela revalidação normal.
+ */
+export async function findNextAvailableDate(
+  fromDateStr: string,
+  serviceId: string
+): Promise<string | null> {
+  let candidate = fromDateStr;
+  for (let i = 0; i < NEXT_AVAILABLE_SEARCH_DAYS; i++) {
+    const result = await getAvailableSlotsForService(candidate, serviceId);
+    if (result.bookable) return candidate;
+    candidate = addDaysToDateStr(candidate, 1);
+  }
+  return null;
 }
 
 export type CreateAppointmentResult =

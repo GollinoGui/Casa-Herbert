@@ -59,7 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     "@context": "https://schema.org",
     "@type": "HealthAndBeautyBusiness",
     name: "Casa Herbert Embelezamento e Saúde Capilar",
-    image: `${SITE_URL}/og-image.jpg`,
+    image: `${SITE_URL}/opengraph-image`,
     "@id": SITE_URL,
     url: SITE_URL,
     telephone: `+${settings.whatsappNumber}`,

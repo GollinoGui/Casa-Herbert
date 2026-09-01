@@ -5,6 +5,7 @@ import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { MarginThread } from "@/components/motion/MarginThread";
 import { PhoneFanReveal } from "@/components/motion/PhoneFanReveal";
+import { GrainOverlay } from "@/components/ui/GrainOverlay";
 import { formatPhoneDisplay, toWhatsAppDigits } from "@/lib/utils/phone";
 
 export function FinalCtaSection({ whatsappNumber }: { whatsappNumber: string }) {
@@ -35,6 +36,7 @@ export function FinalCtaSection({ whatsappNumber }: { whatsappNumber: string }) 
 
   return (
     <section className="relative overflow-hidden bg-brand-moss py-20 text-center text-brand-cream sm:py-28">
+      <GrainOverlay />
       <div className="pointer-events-none absolute -bottom-16 left-1/2 h-64 w-[36rem] -translate-x-1/2 rounded-full bg-brand-gold/20 blur-3xl" />
       <ParallaxLeaf className="pointer-events-none absolute -left-6 top-6 opacity-40" size={80} speed="slow" tone="sage" />
       <ParallaxLeaf className="pointer-events-none absolute -right-4 bottom-4 opacity-40" size={64} variant="branch" tone="sage" />

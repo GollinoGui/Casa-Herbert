@@ -1,4 +1,4 @@
-import { format, parse } from "date-fns";
+import { addDays, format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /** Parseia "YYYY-MM-DD" como data local (evita o shift de timezone do `new Date(iso)`, que interpreta como UTC). */
@@ -14,6 +14,10 @@ export function formatDateOnly(date: Date): string {
 /** Data de hoje (fuso local do processo) como "YYYY-MM-DD". Ver limitação de timezone no documentação.md. */
 export function todayDateStr(): string {
   return formatDateOnly(new Date());
+}
+
+export function addDaysToDateStr(dateStr: string, days: number): string {
+  return formatDateOnly(addDays(parseDateOnly(dateStr), days));
 }
 
 /** Diferença em dias de calendário (targetStr - baseStr). Positivo = no futuro. */

@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, Loader2 } from "lucide-react";
 import type { AvailabilityResult, Service, SlotUnavailableReason } from "@/types";
 import { bookingRequestSchema, type BookingRequestInput } from "@/lib/booking/validators";
-import { getAvailableSlotsAction, submitBookingAction } from "@/lib/actions/booking";
+import { getAvailableSlotsAction, getNextAvailableDateAction, submitBookingAction } from "@/lib/actions/booking";
 import { formatLongDatePtBR } from "@/lib/utils/date-format";
 import { formatServiceDuration, formatServicePrice } from "@/lib/utils/service-format";
 import { Card } from "@/components/ui/Card";
@@ -39,6 +39,8 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
   const [step, setStep] = useState<Step>("service");
   const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [nextAvailableDate, setNextAvailableDate] = useState<string | null>(null);
+  const [isLoadingNextDate, setIsLoadingNextDate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -76,10 +78,18 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
 
   async function fetchSlots(dateStr: string, svcId: string) {
     setIsLoadingSlots(true);
+    setNextAvailableDate(null);
     setStep("time");
     const result = await getAvailableSlotsAction(dateStr, svcId);
     setAvailability(result);
     setIsLoadingSlots(false);
+
+    if (!result.bookable) {
+      setIsLoadingNextDate(true);
+      const next = await getNextAvailableDateAction(dateStr, svcId);
+      setNextAvailableDate(next);
+      setIsLoadingNextDate(false);
+    }
   }
 
   function handleSelectDate(dateStr: string) {
@@ -254,9 +264,26 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
                       ? REASON_MESSAGES[availability.reason]
                       : "Não há horários disponíveis para essa data."}
                   </p>
-                  <Button type="button" variant="secondary" className="mt-5" onClick={() => setStep("date")}>
-                    Escolher outra data
-                  </Button>
+
+                  {isLoadingNextDate ? (
+                    <p className="mt-4 inline-flex items-center gap-2 text-sm text-brand-graphite/60">
+                      <Loader2 size={16} className="animate-spin" /> Procurando a próxima data livre…
+                    </p>
+                  ) : nextAvailableDate ? (
+                    <Button
+                      type="button"
+                      className="mt-5"
+                      onClick={() => handleSelectDate(nextAvailableDate)}
+                    >
+                      Ver {formatLongDatePtBR(nextAvailableDate)}
+                    </Button>
+                  ) : null}
+
+                  <div className="mt-3">
+                    <Button type="button" variant="secondary" onClick={() => setStep("date")}>
+                      Escolher outra data
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -275,12 +302,24 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
               <div className="space-y-5">
                 <div>
                   <FieldLabel htmlFor="customerName">Nome completo</FieldLabel>
-                  <Input id="customerName" placeholder="Seu nome completo" {...register("customerName")} />
+                  <Input
+                    id="customerName"
+                    placeholder="Seu nome completo"
+                    autoComplete="name"
+                    {...register("customerName")}
+                  />
                   <FieldError>{errors.customerName?.message}</FieldError>
                 </div>
                 <div>
                   <FieldLabel htmlFor="customerPhone">WhatsApp</FieldLabel>
-                  <Input id="customerPhone" placeholder="(16) 99999-9999" {...register("customerPhone")} />
+                  <Input
+                    id="customerPhone"
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="(16) 99999-9999"
+                    autoComplete="tel"
+                    {...register("customerPhone")}
+                  />
                   <FieldError>{errors.customerPhone?.message}</FieldError>
                 </div>
                 <div>
@@ -288,7 +327,10 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
                   <Input
                     id="customerEmail"
                     type="email"
+                    inputMode="email"
                     placeholder="seu@email.com"
+                    autoComplete="email"
+                    spellCheck={false}
                     {...register("customerEmail")}
                   />
                   <FieldError>{errors.customerEmail?.message}</FieldError>

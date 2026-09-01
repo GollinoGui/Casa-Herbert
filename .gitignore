@@ -41,3 +41,15 @@ next-env.d.ts
 
 # prototype mock database (runtime-generated; seed lives in src/lib/data/seed-data.ts)
 /.mockdata/
+
+# agent skills (installed locally via `npx skills add`, not part of the app)
+/.agents/
+/.claude/
+skills-lock.json
+.mcp.json
+
+# personal design reference notes (not part of the project's own design system)
+/docs/design-references/
+
+# Playwright MCP session artifacts (screenshots/snapshots from browser testing)
+/.playwright-mcp/

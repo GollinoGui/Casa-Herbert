@@ -108,7 +108,7 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 xl:flex">
+        <nav className="hidden items-center gap-6 lg:flex">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -133,9 +133,11 @@ export function Header() {
         </nav>
 
         <button
-          className="rounded-full p-2 text-brand-forest xl:hidden"
+          className="rounded-full p-2 text-brand-forest lg:hidden"
           onClick={() => setMenuOpen((v) => !v)}
-          aria-label="Abrir menu"
+          aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-nav"
         >
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -144,12 +146,13 @@ export function Header() {
       <AnimatePresence>
         {menuOpen && (
           <motion.nav
+            id="mobile-nav"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              "mx-auto overflow-hidden bg-brand-cream shadow-soft xl:hidden",
+              "mx-auto overflow-hidden bg-brand-cream shadow-soft lg:hidden",
               scrolled ? "mt-2 w-[92%] max-w-3xl rounded-3xl border border-brand-beige/70" : "w-full border-t border-brand-beige"
             )}
           >

@@ -2,7 +2,7 @@ import { MessageCircle, Search, Sparkles } from "lucide-react";
 import { LinkButton } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/Card";
 import { FadeIn } from "@/components/motion/FadeIn";
-import { GrowLine } from "@/components/motion/GrowLine";
+import { StepConnector } from "@/components/motion/StepConnector";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { FloatingIcon } from "@/components/motion/FloatingIcon";
 import { MarginThread } from "@/components/motion/MarginThread";
@@ -45,21 +45,12 @@ export function PersonalizedEvaluationSection() {
           />
         </FadeIn>
 
-        <div className="mt-14 flex items-center justify-center">
-          {STEPS.map((step, index) => (
-            <div key={step.title} className="flex items-center">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-1 ring-brand-moss/25">
-                <step.icon size={26} strokeWidth={1.5} />
-              </div>
-              {index < STEPS.length - 1 && (
-                <GrowLine
-                  direction="horizontal"
-                  className="mx-2 h-px w-10 bg-gradient-to-r from-brand-gold/70 to-brand-gold/15 sm:mx-4 sm:w-20"
-                />
-              )}
-            </div>
+        <StepConnector
+          icons={STEPS.map((step) => (
+            <step.icon key={step.title} size={26} strokeWidth={1.5} />
           ))}
-        </div>
+          className="mt-14 flex items-center justify-center"
+        />
 
         <div className="mt-8 grid gap-8 sm:grid-cols-3">
           {STEPS.map((step, index) => (

@@ -14,13 +14,15 @@ export function ManifestoSection() {
         <FadeIn>
           <GoldDivider className="mb-8" />
         </FadeIn>
-        <FadeIn delay={0.08}>
-          <p className="font-serif text-2xl leading-snug text-brand-forest sm:text-3xl lg:text-[2.1rem]">
-            Antes de qualquer protocolo, existe uma conversa.
-            <br className="hidden sm:block" /> Antes de qualquer fórmula, existe escuta.
-          </p>
-        </FadeIn>
-        <FadeIn delay={0.18}>
+        <div className="font-serif text-2xl leading-snug text-brand-forest sm:text-3xl lg:text-[2.1rem]">
+          <FadeIn delay={0.08}>
+            <p>Antes de qualquer protocolo, existe uma conversa.</p>
+          </FadeIn>
+          <FadeIn delay={0.3}>
+            <p>Antes de qualquer fórmula, existe escuta.</p>
+          </FadeIn>
+        </div>
+        <FadeIn delay={0.5}>
           <p className="mx-auto mt-6 max-w-xl text-brand-graphite/70">
             É assim que cuidamos da sua saúde capilar na Casa Herbert — sem pressa, sem fórmula
             fixa, sempre a partir de você.

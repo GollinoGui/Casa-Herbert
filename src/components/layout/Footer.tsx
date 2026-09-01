@@ -5,6 +5,7 @@ import { formatPhoneDisplay } from "@/lib/utils/phone";
 import { FloatingIcon } from "@/components/motion/FloatingIcon";
 import { MarginThread } from "@/components/motion/MarginThread";
 import { ScissorCombIcon } from "@/components/icons/ScissorCombIcon";
+import { GrainOverlay } from "@/components/ui/GrainOverlay";
 
 const HOURS = [
   { label: "Terça a sábado", value: "09:00–11:00 e 14:00–19:00" },
@@ -22,6 +23,7 @@ const NAV_LINKS = [
 export function Footer({ whatsappNumber, address }: { whatsappNumber: string; address: string }) {
   return (
     <footer className="relative overflow-hidden bg-brand-forest text-brand-cream">
+      <GrainOverlay />
       <div className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full bg-brand-forestDark/40 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 bottom-0 h-64 w-64 rounded-full bg-brand-gold/10 blur-3xl" />
 
@@ -126,6 +128,10 @@ export function Footer({ whatsappNumber, address }: { whatsappNumber: string; ad
           </div>
           <p className="text-center text-xs text-brand-cream/50">
             © {new Date().getFullYear()} Casa Herbert Embelezamento e Saúde Capilar — Orlândia/SP. Protótipo em desenvolvimento.
+            {" · "}
+            <Link href="/privacidade" className="underline-offset-2 hover:text-brand-cream/80 hover:underline">
+              Política de Privacidade
+            </Link>
           </p>
         </div>
       </div>

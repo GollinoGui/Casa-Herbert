@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* framer-motion's useScroll() sem `container` explícito mede offsets contra
+   document.documentElement — precisa de position não-static, senão avisa no
+   console (ver HeroPhotoParallax). Não afeta fixed/sticky (relative puro não
+   cria containing block pra eles). */
+html {
+  position: relative;
+}
+
 body {
   background-color: #f7f3ea;
   color: #2e2e2e;
@@ -30,15 +38,15 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-forest px-7 py-3.5 text-sm font-medium text-brand-cream shadow-soft transition-all duration-300 hover:bg-brand-forestDark hover:shadow-md active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-forest px-7 py-3.5 text-sm font-medium text-brand-cream shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-forestDark hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-forest/25 bg-transparent px-7 py-3.5 text-sm font-medium text-brand-forest transition-all duration-300 hover:border-brand-forest hover:bg-brand-forest/5 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-forest/25 bg-transparent px-7 py-3.5 text-sm font-medium text-brand-forest transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-forest hover:bg-brand-forest/5 hover:shadow-soft active:translate-y-0 active:scale-[0.98];
   }
 
   .btn-gold {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-gold px-7 py-3.5 text-sm font-medium text-brand-forestDark shadow-soft transition-all duration-300 hover:brightness-95 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-gold px-7 py-3.5 text-sm font-medium text-brand-forestDark shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-95 hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .gold-divider {

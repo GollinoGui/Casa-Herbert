@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
 import { cn } from "@/lib/utils/cn";
 
@@ -38,6 +38,7 @@ interface CoverflowCarouselProps {
 export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000, className }: CoverflowCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef(0);
   const total = items.length;
 
@@ -52,20 +53,23 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
   const goToSlide = (idx: number) => setCurrentIndex(idx % total);
 
   useEffect(() => {
-    if (!autoplay || isHovered || total <= 1) return;
+    if (!autoplay || isPaused || isHovered || total <= 1) return;
     const interval = setInterval(nextSlide, autoplayDelay);
     return () => clearInterval(interval);
-  }, [autoplay, autoplayDelay, isHovered, nextSlide, total]);
+  }, [autoplay, autoplayDelay, isPaused, isHovered, nextSlide, total]);
 
+  // Ativo só enquanto o mouse está sobre o carrossel — evita sequestrar as
+  // setas do teclado do resto da página (ex: usuário digitando um campo mais
+  // abaixo). Quem navega só por teclado/toque já tem os botões prev/next/dots.
   useEffect(() => {
-    if (total <= 1) return;
+    if (!isHovered || total <= 1) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prevSlide();
       if (e.key === "ArrowRight") nextSlide();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextSlide, prevSlide, total]);
+  }, [isHovered, nextSlide, prevSlide, total]);
 
   const handleTouchStart = (e: TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -84,11 +88,18 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
   return (
     <div
       className={cn("relative w-full", className)}
+      role="region"
+      aria-roledescription="carrossel"
+      aria-label="Nossos cuidados"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      <span className="sr-only" aria-live="polite">
+        {items[currentIndex]?.titleLine1}
+      </span>
+
       <div
         className="relative flex h-[480px] items-center justify-center overflow-hidden px-3 sm:px-8"
         style={{ perspective: "1400px" }}
@@ -132,10 +143,22 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
           return (
             <div
               key={item.id}
+              role={isCenter ? undefined : "button"}
+              tabIndex={isCenter ? undefined : 0}
+              aria-label={isCenter ? undefined : `Ir para ${item.titleLine1}`}
               onClick={() => !isCenter && goToSlide(idx)}
+              onKeyDown={(e) => {
+                if (isCenter) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  goToSlide(idx);
+                }
+              }}
               className={cn(
                 "absolute flex h-[420px] w-[290px] flex-col overflow-hidden rounded-2xl border border-brand-beige bg-white transition-all duration-[800ms] ease-[cubic-bezier(0.25,1,0.5,1)]",
-                isCenter ? "shadow-soft ring-2 ring-brand-forest/30" : "cursor-pointer shadow-softer"
+                isCenter
+                  ? "shadow-soft ring-2 ring-brand-forest/30"
+                  : "cursor-pointer shadow-softer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-forest/50"
               )}
               style={{ transform, opacity, zIndex, filter, transformOrigin: "center center" }}
             >
@@ -224,18 +247,31 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
       </div>
 
       {total > 1 ? (
-        <div className="mt-8 flex items-center justify-center gap-2">
-          {items.map((item, idx) => (
+        <div className="mt-8 flex items-center justify-center gap-3">
+          {autoplay ? (
             <button
-              key={item.id}
-              onClick={() => goToSlide(idx)}
-              aria-label={`Ir para ${item.titleLine1}`}
-              className={cn(
-                "h-2 rounded-full transition-all duration-300",
-                idx === currentIndex ? "w-7 bg-brand-forest" : "w-2 bg-brand-beige"
-              )}
-            />
-          ))}
+              type="button"
+              onClick={() => setIsPaused((v) => !v)}
+              aria-label={isPaused ? "Retomar troca automática" : "Pausar troca automática"}
+              aria-pressed={isPaused}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-brand-graphite/50 transition hover:bg-brand-beige hover:text-brand-forest"
+            >
+              {isPaused ? <Play size={13} /> : <Pause size={13} />}
+            </button>
+          ) : null}
+          <div className="flex items-center gap-2">
+            {items.map((item, idx) => (
+              <button
+                key={item.id}
+                onClick={() => goToSlide(idx)}
+                aria-label={`Ir para ${item.titleLine1}`}
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
+                  idx === currentIndex ? "w-7 bg-brand-forest" : "w-2 bg-brand-beige"
+                )}
+              />
+            ))}
+          </div>
         </div>
       ) : null}
     </div>
