@@ -35,11 +35,11 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
         <StaggerContainer className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {mainResults.map((item) => (
             <StaggerItem key={item.id}>
-              <TiltCard className="rounded-2xl">
+              <TiltCard className="group rounded-2xl">
                 <PlaceholderImage
                   label={item.caption ?? "Resultado do acompanhamento"}
                   tone="sage"
-                  className="aspect-square w-full ring-1 ring-brand-sage/30"
+                  className="aspect-square w-full ring-1 ring-brand-sage/30 transition-transform duration-500 group-hover:scale-105"
                 />
               </TiltCard>
             </StaggerItem>
@@ -50,11 +50,11 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
           <StaggerContainer className="relative mt-6 flex justify-end gap-5 sm:mt-8">
             {highlightedResults.map((item) => (
               <StaggerItem key={item.id} className="w-[calc(50%-0.625rem)] sm:w-48 lg:w-56">
-                <TiltCard className="rounded-2xl">
+                <TiltCard className="group rounded-2xl">
                   <PlaceholderImage
                     label={item.caption ?? "Resultado do acompanhamento"}
                     tone="gold"
-                    className="aspect-square w-full ring-2 ring-brand-gold/50"
+                    className="aspect-square w-full ring-2 ring-brand-gold/50 transition-transform duration-500 group-hover:scale-105"
                   />
                 </TiltCard>
               </StaggerItem>

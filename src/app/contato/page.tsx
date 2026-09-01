@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Clock, Facebook, Instagram, MapPin, MessageCircle } from "lucide-react";
 import { getSettings } from "@/lib/data/settings";
+import { isOpenNow } from "@/lib/data/business-hours";
 import { SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { PhoneCarousel, type PhoneCarouselItem } from "@/components/ui/PhoneCarousel";
+import { OpenStatusBadge } from "@/components/ui/OpenStatusBadge";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { formatPhoneDisplay, toWhatsAppDigits } from "@/lib/utils/phone";
 
@@ -19,7 +21,7 @@ const HOURS = [
 ];
 
 export default async function ContatoPage() {
-  const settings = await getSettings();
+  const [settings, isOpen] = await Promise.all([getSettings(), isOpenNow()]);
 
   const socialChannels: PhoneCarouselItem[] = [
     {
@@ -89,7 +91,10 @@ export default async function ContatoPage() {
                   <Clock size={17} />
                 </span>
                 <div className="w-full">
-                  <p className="text-sm font-medium text-brand-forest">Horário de atendimento</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium text-brand-forest">Horário de atendimento</p>
+                    <OpenStatusBadge open={isOpen} />
+                  </div>
                   <table className="mt-2 w-full text-sm text-brand-graphite/80">
                     <tbody>
                       {HOURS.map((h) => (

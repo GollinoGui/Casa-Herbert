@@ -4,13 +4,14 @@ import { SectionHeading } from "@/components/ui/Card";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { MarginThread } from "@/components/motion/MarginThread";
+import { OpenStatusBadge } from "@/components/ui/OpenStatusBadge";
 
 const HOURS = [
   { day: "Terça a sábado", hours: "09:00–11:00 e 14:00–19:00" },
   { day: "Domingo e segunda-feira", hours: "Fechado" },
 ];
 
-export function LocationSection({ settings }: { settings: Settings }) {
+export function LocationSection({ settings, isOpen }: { settings: Settings; isOpen: boolean }) {
   return (
     <section className="section-padding relative overflow-hidden bg-brand-beige/25">
       <ParallaxLeaf className="pointer-events-none absolute -left-2 top-4 hidden sm:block" size={40} tone="moss" />
@@ -47,16 +48,19 @@ export function LocationSection({ settings }: { settings: Settings }) {
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss">
                   <Clock size={17} />
                 </span>
-                <table className="w-full text-sm text-brand-graphite/85">
-                  <tbody>
-                    {HOURS.map((h) => (
-                      <tr key={h.day}>
-                        <td className="py-1 pr-4 font-medium text-brand-forest">{h.day}</td>
-                        <td className="py-1">{h.hours}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="w-full">
+                  <OpenStatusBadge open={isOpen} className="mb-2" />
+                  <table className="w-full text-sm text-brand-graphite/85">
+                    <tbody>
+                      {HOURS.map((h) => (
+                        <tr key={h.day}>
+                          <td className="py-1 pr-4 font-medium text-brand-forest">{h.day}</td>
+                          <td className="py-1">{h.hours}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <p className="text-xs text-brand-graphite/60">Atendimento somente com hora marcada.</p>
             </div>

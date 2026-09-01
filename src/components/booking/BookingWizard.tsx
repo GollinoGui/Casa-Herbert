@@ -404,7 +404,28 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
           {step === "confirmation" && (
             <div className="text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-forest/10 text-brand-forest">
-                <Check size={28} />
+                <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+                  <motion.circle
+                    cx="16"
+                    cy="16"
+                    r="14"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 1 }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                  <motion.path
+                    d="M9 16.5 L14 21 L23 11"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 1 }}
+                    transition={{ duration: 0.35, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </svg>
               </div>
               <h2 className="mx-auto mt-6 max-w-md font-serif text-2xl text-brand-forest sm:text-3xl">
                 Solicitação recebida. Seu horário será confirmado pela Casa Herbert através do WhatsApp.

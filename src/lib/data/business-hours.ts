@@ -2,12 +2,30 @@ import { randomUUID } from "node:crypto";
 import type { AppointmentWithRelations, BusinessHourRule, TimeRange } from "@/types";
 import { mutateDb, readDb } from "./store";
 import { getEffectiveWindows } from "@/lib/booking/engine";
-import { todayDateStr } from "@/lib/utils/date-format";
+import { nowTimeStr, timeToMinutes, todayDateStr } from "@/lib/utils/date-format";
 import { hydrateAppointment } from "./appointments";
 
 export async function getBusinessHours(): Promise<BusinessHourRule[]> {
   const db = readDb();
   return [...db.businessHours].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
+}
+
+/** Se a Casa Herbert está aberta neste exato momento — mesma fonte de verdade do
+ * motor de agendamento (horários + horários especiais + bloqueios de dia inteiro),
+ * nunca um texto de horário duplicado e fora de sincronia. */
+export async function isOpenNow(): Promise<boolean> {
+  const db = readDb();
+  const today = todayDateStr();
+  const windows = getEffectiveWindows(today, db.businessHours, db.specialHours);
+  if (windows.length === 0) return false;
+
+  const fullyBlocked = db.blockedSlots.some(
+    (b) => b.isFullDay && today >= b.startDate && today <= b.endDate
+  );
+  if (fullyBlocked) return false;
+
+  const nowMinutes = timeToMinutes(nowTimeStr());
+  return windows.some((w) => nowMinutes >= timeToMinutes(w.startTime) && nowMinutes < timeToMinutes(w.endTime));
 }
 
 /**

@@ -60,8 +60,12 @@ export default async function ProdutosPage() {
           <StaggerContainer className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {PRODUCT_LINES.map((product) => (
               <StaggerItem key={product.name}>
-                <Card className="flex h-full flex-col overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-soft">
-                  <PlaceholderImage label={product.name} tone="gold" className="aspect-[4/3] w-full rounded-none" />
+                <Card className="group flex h-full flex-col overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-soft">
+                  <PlaceholderImage
+                    label={product.name}
+                    tone="gold"
+                    className="aspect-[4/3] w-full rounded-none transition-transform duration-500 group-hover:scale-105"
+                  />
                   <div className="flex flex-1 flex-col p-6">
                     <h3 className="font-serif text-lg text-brand-forest">{product.name}</h3>
                     <p className="mt-2 flex-1 text-sm text-brand-graphite/75">{product.description}</p>
