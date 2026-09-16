@@ -111,6 +111,10 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
           let opacity = 0;
           let zIndex = 0;
           let filter = "brightness(0.5)";
+          // Espelha o scale() do transform: o card tem sempre 290px de layout, mas o
+          // tamanho exibido de fato varia com o scale — usado pra pedir do next/image
+          // só os pixels realmente visíveis (ver achado do Lighthouse sobre isso).
+          let visualScale = 0.4;
           const isCenter = offset === 0;
 
           if (offset === 0) {
@@ -118,27 +122,34 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
             opacity = 1;
             zIndex = 30;
             filter = "brightness(1)";
+            visualScale = 1;
           } else if (offset === 1) {
             transform = "translateX(260px) scale(0.84) rotateY(-24deg)";
             opacity = 0.65;
             zIndex = 20;
             filter = "brightness(0.85)";
+            visualScale = 0.84;
           } else if (offset === 2) {
             transform = "translateX(460px) scale(0.68) rotateY(-38deg)";
             opacity = 0.38;
             zIndex = 10;
             filter = "brightness(0.7)";
+            visualScale = 0.68;
           } else if (offset === total - 1) {
             transform = "translateX(-260px) scale(0.84) rotateY(24deg)";
             opacity = 0.65;
             zIndex = 20;
             filter = "brightness(0.85)";
+            visualScale = 0.84;
           } else if (offset === total - 2) {
             transform = "translateX(-460px) scale(0.68) rotateY(38deg)";
             opacity = 0.38;
             zIndex = 10;
             filter = "brightness(0.7)";
+            visualScale = 0.68;
           }
+
+          const imageSizes = `${Math.round(290 * visualScale)}px`;
 
           return (
             <div
@@ -168,7 +179,7 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
                     src={item.imageSrc}
                     alt={item.titleLine1}
                     fill
-                    sizes="290px"
+                    sizes={imageSizes}
                     className="object-cover"
                     style={{ objectPosition: item.imagePosition ?? "center" }}
                   />

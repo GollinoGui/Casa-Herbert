@@ -11,6 +11,11 @@ import {
   hydrateAppointment,
   type AppointmentFilters,
 } from "@/lib/data/appointments";
+import {
+  adminCreateAppointment,
+  adminRescheduleAppointment,
+  type AdminCreateAppointmentInput,
+} from "@/lib/data/availability";
 import { mutateDb } from "@/lib/data/store";
 import type { AppointmentWithRelations } from "@/types";
 
@@ -74,4 +79,31 @@ export async function updateAdminNotesAction(
   });
   revalidateAppointmentPaths();
   return updated;
+}
+
+export async function updateAppointmentPriceAction(
+  id: string,
+  priceCents: number | null
+): Promise<AppointmentWithRelations | null> {
+  const updated = mutateDb((db) => {
+    const appointment = db.appointments.find((a) => a.id === id);
+    if (!appointment) return null;
+    appointment.priceCents = priceCents;
+    appointment.updatedAt = new Date().toISOString();
+    return hydrateAppointment(appointment, db);
+  });
+  revalidateAppointmentPaths();
+  return updated;
+}
+
+export async function adminCreateAppointmentAction(input: AdminCreateAppointmentInput) {
+  const result = await adminCreateAppointment(input);
+  revalidateAppointmentPaths();
+  return result;
+}
+
+export async function adminRescheduleAppointmentAction(id: string, newDate: string, newStartTime: string) {
+  const result = await adminRescheduleAppointment(id, newDate, newStartTime);
+  revalidateAppointmentPaths();
+  return result;
 }

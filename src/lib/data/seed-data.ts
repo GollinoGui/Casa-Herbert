@@ -7,6 +7,8 @@ import type {
   BusinessHourRule,
   Customer,
   GalleryItem,
+  Product,
+  Sale,
   Service,
   Settings,
   SpecialHours,
@@ -23,6 +25,8 @@ export interface MockDatabase {
   settings: Settings;
   testimonials: Testimonial[];
   gallery: GalleryItem[];
+  products: Product[];
+  sales: Sale[];
 }
 
 function d(offsetDays: number) {
@@ -186,6 +190,7 @@ export function buildSeedData(): MockDatabase {
       status: "PENDING",
       customerNotes: "Primeira vez, gostaria de entender melhor o protocolo.",
       adminNotes: null,
+      priceCents: null,
       createdAt: now(),
       updatedAt: now(),
       confirmedAt: null,
@@ -201,6 +206,7 @@ export function buildSeedData(): MockDatabase {
       status: "CONFIRMED",
       customerNotes: null,
       adminNotes: "Cliente já conhece o protocolo.",
+      priceCents: 15000,
       createdAt: now(),
       updatedAt: now(),
       confirmedAt: now(),
@@ -216,6 +222,7 @@ export function buildSeedData(): MockDatabase {
       status: "PENDING",
       customerNotes: null,
       adminNotes: null,
+      priceCents: null,
       createdAt: now(),
       updatedAt: now(),
       confirmedAt: null,
@@ -231,6 +238,7 @@ export function buildSeedData(): MockDatabase {
       status: "COMPLETED",
       customerNotes: null,
       adminNotes: null,
+      priceCents: null,
       createdAt: d(-6),
       updatedAt: d(-5),
       confirmedAt: d(-6),
@@ -246,6 +254,7 @@ export function buildSeedData(): MockDatabase {
       status: "REJECTED",
       customerNotes: null,
       adminNotes: "Horário conflitante, cliente reagendará.",
+      priceCents: null,
       createdAt: d(-3),
       updatedAt: d(-2),
       confirmedAt: null,
@@ -312,6 +321,38 @@ export function buildSeedData(): MockDatabase {
 
   const settings: Settings = { ...DEFAULT_SETTINGS_SEED, messageTemplates: { ...DEFAULT_SETTINGS_SEED.messageTemplates } };
 
+  const products: Product[] = [
+    {
+      id: randomUUID(),
+      name: "Shampoo Antiqueda",
+      priceCents: 8900,
+      stockQuantity: 12,
+      isActive: true,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      id: randomUUID(),
+      name: "Ampola Reconstrutora",
+      priceCents: 4500,
+      stockQuantity: 20,
+      isActive: true,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      id: randomUUID(),
+      name: "Tônico Capilar Fortalecedor",
+      priceCents: 12000,
+      stockQuantity: 8,
+      isActive: true,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+  ];
+
+  const sales: Sale[] = [];
+
   return {
     services,
     customers,
@@ -322,5 +363,7 @@ export function buildSeedData(): MockDatabase {
     settings,
     testimonials,
     gallery,
+    products,
+    sales,
   };
 }

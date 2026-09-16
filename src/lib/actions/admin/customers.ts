@@ -1,13 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { updateCustomerNotes } from "@/lib/data/customers";
+import { getCustomers, updateCustomerNotes } from "@/lib/data/customers";
 import { listAppointments } from "@/lib/data/appointments";
 
 export async function updateCustomerNotesAction(id: string, notes: string) {
   const customer = await updateCustomerNotes(id, notes);
   revalidatePath("/admin/clientes");
   return customer;
+}
+
+export async function listCustomersAction() {
+  return getCustomers();
 }
 
 /**

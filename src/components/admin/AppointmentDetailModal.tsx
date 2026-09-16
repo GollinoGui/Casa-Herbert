@@ -5,9 +5,10 @@ import { MessageCircle, Phone } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
-import { Textarea, FieldLabel } from "@/components/ui/Field";
+import { Input, Textarea, FieldLabel } from "@/components/ui/Field";
 import { formatShortDatePtBR, formatWeekdayPtBR } from "@/lib/utils/date-format";
 import { formatPhoneDisplay, toWhatsAppDigits } from "@/lib/utils/phone";
+import { formatServicePrice } from "@/lib/utils/service-format";
 import { buildAppointmentMessage, buildWhatsAppLink } from "@/lib/booking/whatsapp";
 import {
   getAppointmentAction,
@@ -16,7 +17,9 @@ import {
   cancelAppointmentAction,
   completeAppointmentAction,
   updateAdminNotesAction,
+  updateAppointmentPriceAction,
 } from "@/lib/actions/admin/appointments";
+import { CheckoutModal } from "@/components/admin/CheckoutModal";
 import { getSettingsAction } from "@/lib/actions/admin/settings";
 import type { AppointmentWithRelations, Settings } from "@/types";
 
@@ -43,6 +46,9 @@ export function AppointmentDetailModal({
   const [rejectReason, setRejectReason] = useState("");
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [priceDraft, setPriceDraft] = useState("");
+  const [priceDirty, setPriceDirty] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -59,6 +65,8 @@ export function AppointmentDetailModal({
       setSettings(sett);
       setNotesDraft(appt?.adminNotes ?? "");
       setNotesDirty(false);
+      setPriceDraft(appt?.priceCents != null ? String(appt.priceCents) : "");
+      setPriceDirty(false);
       setLoading(false);
     });
     return () => {
@@ -72,6 +80,8 @@ export function AppointmentDetailModal({
       setAppointment(appt);
       setNotesDraft(appt?.adminNotes ?? "");
       setNotesDirty(false);
+      setPriceDraft(appt?.priceCents != null ? String(appt.priceCents) : "");
+      setPriceDirty(false);
     });
     onMutated?.();
   }
@@ -115,6 +125,17 @@ export function AppointmentDetailModal({
     startTransition(async () => {
       await updateAdminNotesAction(appointment.id, notesDraft);
       setNotesDirty(false);
+      onMutated?.();
+    });
+  }
+
+  function handleSavePrice() {
+    if (!appointment) return;
+    const trimmed = priceDraft.trim();
+    const priceCents = trimmed === "" ? null : Number(trimmed);
+    startTransition(async () => {
+      await updateAppointmentPriceAction(appointment.id, priceCents);
+      setPriceDirty(false);
       onMutated?.();
     });
   }
@@ -173,6 +194,34 @@ export function AppointmentDetailModal({
                 {formatWeekdayPtBR(appointment.date)}, {formatShortDatePtBR(appointment.date)} ·{" "}
                 {appointment.startTime}–{appointment.endTime}
               </p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Valor combinado</p>
+              {appointment.status === "PENDING" || appointment.status === "CONFIRMED" ? (
+                <div className="mt-1 flex items-center gap-2">
+                  <Input
+                    type="number"
+                    className="max-w-[160px] !py-2 text-sm"
+                    placeholder="Sob consulta"
+                    value={priceDraft}
+                    onChange={(e) => {
+                      setPriceDraft(e.target.value);
+                      setPriceDirty(true);
+                    }}
+                  />
+                  <span className="text-xs text-brand-graphite/50">centavos</span>
+                  <Button
+                    variant="secondary"
+                    className="!px-3 !py-1.5 text-xs"
+                    onClick={handleSavePrice}
+                    disabled={!priceDirty || isPending}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              ) : (
+                <p className="font-medium text-brand-graphite">{formatServicePrice(appointment.priceCents)}</p>
+              )}
             </div>
           </div>
 
@@ -248,8 +297,11 @@ export function AppointmentDetailModal({
                   <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
                     Enviar confirmação pelo WhatsApp
                   </LinkButton>
+                  <Button onClick={() => setCheckoutOpen(true)} disabled={isPending}>
+                    Finalizar atendimento
+                  </Button>
                   <Button variant="secondary" onClick={handleComplete} disabled={isPending}>
-                    Marcar como concluído
+                    Concluir sem venda
                   </Button>
                   {!showCancelForm ? (
                     <Button variant="ghost" onClick={() => setShowCancelForm(true)} disabled={isPending}>
@@ -297,6 +349,15 @@ export function AppointmentDetailModal({
           </div>
         </div>
       )}
+      <CheckoutModal
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        appointment={appointment}
+        onCompleted={() => {
+          setCheckoutOpen(false);
+          refresh();
+        }}
+      />
     </Modal>
   );
 }

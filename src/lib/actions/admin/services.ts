@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createService, updateService, setServiceActive, type ServiceInput } from "@/lib/data/services";
+import {
+  createService,
+  updateService,
+  setServiceActive,
+  getActiveServices,
+  type ServiceInput,
+} from "@/lib/data/services";
 
 export async function createServiceAction(input: ServiceInput) {
   const service = await createService(input);
@@ -19,4 +25,8 @@ export async function setServiceActiveAction(id: string, isActive: boolean) {
   const service = await setServiceActive(id, isActive);
   revalidatePath("/admin/servicos");
   return service;
+}
+
+export async function listActiveServicesAction() {
+  return getActiveServices();
 }

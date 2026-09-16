@@ -47,6 +47,7 @@ export interface Appointment {
   status: AppointmentStatus;
   customerNotes: string | null;
   adminNotes: string | null;
+  priceCents: number | null; // valor combinado para este agendamento; null = ainda não definido
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
@@ -56,6 +57,40 @@ export interface Appointment {
 export interface AppointmentWithRelations extends Appointment {
   customer: Customer;
   service: Service;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  priceCents: number; // diferente de Service.priceCents: aqui não é nullable
+  stockQuantity: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SaleItemType = "service" | "product";
+
+export type PaymentMethod = "dinheiro" | "pix" | "cartao_credito" | "cartao_debito" | "outro";
+
+export interface SaleItem {
+  type: SaleItemType;
+  refId: string | null; // serviceId ou productId; null para linha de serviço sem vínculo
+  description: string; // snapshot — sobrevive a renomeação/alteração de preço do produto/serviço depois
+  unitPriceCents: number;
+  quantity: number;
+  totalCents: number;
+}
+
+export interface Sale {
+  id: string;
+  appointmentId: string | null; // null = venda avulsa
+  customerId: string | null;
+  items: SaleItem[];
+  totalCents: number;
+  paymentMethod: PaymentMethod;
+  notes: string | null;
+  createdAt: string;
 }
 
 export interface TimeRange {

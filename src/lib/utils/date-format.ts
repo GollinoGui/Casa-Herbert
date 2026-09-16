@@ -69,6 +69,11 @@ export function nowTimeStr(): string {
   return format(new Date(), "HH:mm");
 }
 
+/** Formata um Date arbitrário (não necessariamente "agora") como "HH:mm". */
+export function formatTimeOnly(date: Date): string {
+  return format(date, "HH:mm");
+}
+
 export function parseDateTimeInputToStr(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }

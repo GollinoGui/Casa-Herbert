@@ -56,6 +56,40 @@ export const serviceFormSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+export const adminAppointmentFormSchema = z
+  .object({
+    customerMode: z.enum(["existing", "new"]),
+    customerId: z.string().optional(),
+    newCustomerName: z.string().trim().optional(),
+    newCustomerPhone: z.string().trim().optional(),
+    newCustomerEmail: z.string().trim().optional(),
+    serviceId: z.string().min(1, "Selecione um serviço."),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/, "Horário inválido."),
+    priceCents: z.coerce.number().int().nonnegative("Preço inválido.").optional().nullable(),
+    adminNotes: z.string().trim().max(500, "Observação muito longa.").optional(),
+    status: z.enum(["CONFIRMED", "PENDING"]),
+  })
+  .refine((v) => v.customerMode !== "existing" || !!v.customerId, {
+    message: "Selecione um cliente.",
+    path: ["customerId"],
+  })
+  .refine((v) => v.customerMode !== "new" || (v.newCustomerName?.trim().length ?? 0) >= 3, {
+    message: "Informe o nome completo do cliente.",
+    path: ["newCustomerName"],
+  })
+  .refine((v) => v.customerMode !== "new" || (v.newCustomerPhone?.trim().length ?? 0) >= 10, {
+    message: "Informe um WhatsApp válido com DDD.",
+    path: ["newCustomerPhone"],
+  });
+
+export const productFormSchema = z.object({
+  name: z.string().trim().min(2, "Nome obrigatório."),
+  priceCents: z.coerce.number().int().nonnegative("Preço inválido."),
+  stockQuantity: z.coerce.number().int().nonnegative("Quantidade inválida."),
+  isActive: z.boolean().default(true),
+});
+
 export const settingsFormSchema = z.object({
   minAdvanceDays: z.coerce.number().int().min(0),
   bufferMinutes: z.coerce.number().int().min(0),

@@ -37,8 +37,13 @@ body {
     @apply text-xs font-medium uppercase tracking-[0.25em] text-brand-moss;
   }
 
+  /* Texto grafite (não branco/rust) no primary e no gold: com o laranja/dourado
+     da marca como fundo, é o único par que fecha o contraste 4.5:1 do WCAG AA —
+     branco e o rust do forestDark ficam em ~2.4:1 e ~2.1:1. Por isso o hover do
+     primary clareia (brightness) em vez de escurecer para forestDark: escurecer
+     aproximaria o fundo do grafite do texto e derrubaria o contraste de novo. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-forest px-7 py-3.5 text-sm font-medium text-brand-cream shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-forestDark hover:shadow-md active:translate-y-0 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-forest px-7 py-3.5 text-sm font-medium text-brand-graphite shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .btn-secondary {
@@ -46,7 +51,7 @@ body {
   }
 
   .btn-gold {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-gold px-7 py-3.5 text-sm font-medium text-brand-forestDark shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-95 hover:shadow-md active:translate-y-0 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-gold px-7 py-3.5 text-sm font-medium text-brand-graphite shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-95 hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .gold-divider {

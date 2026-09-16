@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CheckCircle2, Clock, CalendarRange, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, CalendarRange, Users, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { AppointmentDetailModal } from "@/components/admin/AppointmentDetailModal";
+import { CalendarView } from "@/components/admin/CalendarView";
 import { formatShortDatePtBR } from "@/lib/utils/date-format";
+import { formatServicePrice } from "@/lib/utils/service-format";
 import type { AppointmentWithRelations } from "@/types";
 
 interface DashboardStats {
@@ -20,7 +22,13 @@ interface DashboardStats {
   todayAppointments: AppointmentWithRelations[];
 }
 
-export function DashboardOverview({ stats }: { stats: DashboardStats }) {
+export function DashboardOverview({
+  stats,
+  todayRevenueCents,
+}: {
+  stats: DashboardStats;
+  todayRevenueCents: number;
+}) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -31,6 +39,7 @@ export function DashboardOverview({ stats }: { stats: DashboardStats }) {
     { label: "Confirmados", value: stats.confirmedCount, icon: CheckCircle2 },
     { label: "Próximos 7 dias", value: stats.weekCount, icon: CalendarRange },
     { label: "Próximos 30 dias", value: stats.monthCount, icon: Users },
+    { label: "Faturamento hoje", value: formatServicePrice(todayRevenueCents), icon: Wallet },
   ];
 
   function openAppointment(id: string) {
@@ -47,7 +56,7 @@ export function DashboardOverview({ stats }: { stats: DashboardStats }) {
         </div>
       </FadeIn>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {statCards.map(({ label, value, icon: Icon }) => (
           <Card key={label} className="p-5">
             <Icon className="mb-3 text-brand-moss" size={20} strokeWidth={1.75} />
@@ -55,6 +64,11 @@ export function DashboardOverview({ stats }: { stats: DashboardStats }) {
             <p className="text-xs text-brand-graphite/70">{label}</p>
           </Card>
         ))}
+      </div>
+
+      <div>
+        <h2 className="mb-4 font-serif text-lg text-brand-forest">Calendário</h2>
+        <CalendarView />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
