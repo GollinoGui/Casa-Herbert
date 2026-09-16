@@ -138,3 +138,7 @@ Para recomeçar os dados do zero, apague `.mockdata/db.json` (ele é recriado au
 - Sem upload real de imagens (galeria/produtos usam placeholders com legenda) — chega junto com o Supabase Storage na Fase 2.
 - "Hoje"/"agora" usam o fuso horário do processo local, não `America/Sao_Paulo` explicitamente — isso é resolvido na Fase 2 (ver `salon_timezone` em `settings`, já modelado no schema).
 - Sem integração real com WhatsApp Business API — os botões do painel geram links `wa.me` com mensagem pré-preenchida, que o admin envia manualmente.
+
+## 10. Ideias para funcionalidades futuras
+
+- **Comissões.** Venda de produto gera comissão para a Casa Herbert (o negócio). Prestação de serviço também deve gerar comissão no futuro — mas atribuída a qual **funcionária** realizou o atendimento/a venda. Hoje o modelo de dados não tem conceito de funcionária/profissional (`Sale`/`SaleItem` em `src/lib/data/sales.ts` não têm campo de quem vendeu ou atendeu) — precisa entrar como uma entidade nova antes de calcular comissão por pessoa.
