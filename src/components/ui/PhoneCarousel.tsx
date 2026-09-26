@@ -24,10 +24,19 @@ const toneClass: Record<PhoneCarouselItem["tone"], string> = {
  * um placeholder com ícone (ver CLAUDE.md > Fotos); passar `imageSrc` troca pelo
  * print real ou arte pronta. Puramente apresentacional — quem posiciona/anima é o caller.
  */
-export function PhoneFrame({ item }: { item: PhoneCarouselItem }) {
+/**
+ * `compact`: versão para celulares estreitos (~100px) abaixo de `sm`, como no leque do CTA final;
+ * a partir de `sm` volta ao tamanho normal.
+ */
+export function PhoneFrame({ item, compact = false }: { item: PhoneCarouselItem; compact?: boolean }) {
   const Icon = item.icon;
   return (
-    <div className="relative rounded-[2.5rem] bg-gradient-to-br from-neutral-600 via-brand-graphite to-neutral-900 p-2.5 shadow-soft ring-1 ring-inset ring-white/10 transition-shadow duration-500 group-hover:shadow-md">
+    <div
+      className={cn(
+        "relative bg-gradient-to-br from-neutral-600 via-brand-graphite to-neutral-900 shadow-soft ring-1 ring-inset ring-white/10 transition-shadow duration-500 group-hover:shadow-md",
+        compact ? "rounded-[1.6rem] p-1.5 sm:rounded-[2.5rem] sm:p-2.5" : "rounded-[2.5rem] p-2.5"
+      )}
+    >
       {/* Botões laterais, só decorativos (mute + volume à esquerda, power à direita) */}
       <span className="absolute -left-[3px] top-14 h-5 w-[3px] rounded-l-sm bg-neutral-800" />
       <span className="absolute -left-[3px] top-[5.5rem] h-8 w-[3px] rounded-l-sm bg-neutral-800" />
@@ -36,7 +45,8 @@ export function PhoneFrame({ item }: { item: PhoneCarouselItem }) {
 
       <div
         className={cn(
-          "relative flex aspect-[9/19] flex-col items-center justify-center gap-4 overflow-hidden rounded-[2rem] border border-black/40 bg-gradient-to-br px-6 text-center",
+          "relative flex aspect-[9/19] flex-col items-center justify-center overflow-hidden border border-black/40 bg-gradient-to-br text-center",
+          compact ? "gap-2 rounded-[1.3rem] px-2 sm:gap-4 sm:rounded-[2rem] sm:px-6" : "gap-4 rounded-[2rem] px-6",
           toneClass[item.tone]
         )}
       >
@@ -44,15 +54,36 @@ export function PhoneFrame({ item }: { item: PhoneCarouselItem }) {
           <Image src={item.imageSrc} alt={`Tela do ${item.label}`} fill sizes="210px" className="object-cover" />
         ) : (
           <>
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/85 text-brand-forest shadow-softer">
-              <Icon size={26} strokeWidth={1.5} />
+            <span
+              className={cn(
+                "flex items-center justify-center rounded-full bg-white/85 text-brand-forest shadow-softer",
+                compact ? "h-10 w-10 sm:h-14 sm:w-14" : "h-14 w-14"
+              )}
+            >
+              <Icon size={26} strokeWidth={1.5} className={cn(compact && "h-5 w-5 sm:h-[26px] sm:w-[26px]")} />
             </span>
-            <div>
-              <p className="font-serif text-base text-brand-forest">{item.label}</p>
-              <p className="mt-1 text-xs text-brand-graphite/70">{item.handle}</p>
+            <div className="min-w-0">
+              <p className={cn("font-serif text-brand-forest", compact ? "text-sm sm:text-base" : "text-base")}>
+                {item.label}
+              </p>
+              <p className={cn("mt-1 text-brand-graphite/70", compact ? "text-[10px] leading-tight sm:text-xs" : "text-xs")}>
+                {item.handle}
+              </p>
             </div>
-            <span className="mt-1 rounded-full bg-brand-forest px-4 py-1.5 text-[11px] font-medium text-brand-cream shadow-softer transition-transform duration-300 group-hover:scale-105">
-              Toque para abrir
+            <span
+              className={cn(
+                "mt-1 whitespace-nowrap rounded-full bg-brand-forest font-medium text-brand-cream shadow-softer transition-transform duration-300 group-hover:scale-105",
+                compact ? "px-3 py-1 text-[10px] sm:px-4 sm:py-1.5 sm:text-[11px]" : "px-4 py-1.5 text-[11px]"
+              )}
+            >
+              {compact ? (
+                <>
+                  <span className="sm:hidden">Abrir</span>
+                  <span className="hidden sm:inline">Toque para abrir</span>
+                </>
+              ) : (
+                "Toque para abrir"
+              )}
             </span>
           </>
         )}
@@ -61,7 +92,12 @@ export function PhoneFrame({ item }: { item: PhoneCarouselItem }) {
         <div className="pointer-events-none absolute -inset-y-8 -left-1/2 w-1/3 -rotate-12 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
         {/* Dynamic Island */}
-        <span className="absolute left-1/2 top-3 z-20 flex h-6 w-24 -translate-x-1/2 items-center justify-end rounded-full bg-black pr-2">
+        <span
+          className={cn(
+            "absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-end rounded-full bg-black",
+            compact ? "top-2 h-4 w-10 pr-1 sm:top-3 sm:h-6 sm:w-24 sm:pr-2" : "top-3 h-6 w-24 pr-2"
+          )}
+        >
           <span className="h-1.5 w-1.5 rounded-full bg-neutral-700" />
         </span>
       </div>

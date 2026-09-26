@@ -47,9 +47,9 @@ export function FinalCtaSection({ whatsappNumber }: { whatsappNumber: string }) 
       <div className="container-herbert relative">
         <PhoneFanReveal
           items={[
-            { href: instagramItem.href, label: instagramItem.label, frame: <PhoneFrame item={instagramItem} /> },
-            { href: whatsappItem.href, label: whatsappItem.label, frame: <PhoneFrame item={whatsappItem} /> },
-            { href: facebookItem.href, label: facebookItem.label, frame: <PhoneFrame item={facebookItem} /> },
+            { href: instagramItem.href, label: instagramItem.label, frame: <PhoneFrame item={instagramItem} compact /> },
+            { href: whatsappItem.href, label: whatsappItem.label, frame: <PhoneFrame item={whatsappItem} compact /> },
+            { href: facebookItem.href, label: facebookItem.label, frame: <PhoneFrame item={facebookItem} compact /> },
           ]}
           className="mb-4"
         />

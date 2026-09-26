@@ -8,6 +8,7 @@ import { Plus, Pencil } from "lucide-react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { ActiveBadge } from "@/components/ui/Badge";
 import { Input, Textarea, FieldLabel, FieldError } from "@/components/ui/Field";
 import { serviceFormSchema } from "@/lib/booking/validators";
 import { createServiceAction, updateServiceAction, setServiceActiveAction } from "@/lib/actions/admin/services";
@@ -48,8 +49,41 @@ export function ServicesManager({ services }: { services: Service[] }) {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-brand-beige bg-white">
-        <table className="w-full min-w-[640px] text-left text-sm">
+      <ul className="space-y-2 md:hidden">
+        {services.length === 0 ? (
+          <li className="rounded-2xl border border-brand-beige bg-white px-4 py-8 text-center text-sm text-brand-graphite/50">
+            Nenhum serviço cadastrado.
+          </li>
+        ) : (
+          services.map((s) => (
+            <li
+              key={s.id}
+              className={cn("rounded-2xl border border-brand-beige bg-white p-4", !s.isActive && "opacity-60")}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-brand-graphite">{s.name}</p>
+                  <p className="mt-0.5 text-xs text-brand-graphite/60">
+                    {s.durationMinutes} min · {formatPrice(s.priceCents)}
+                  </p>
+                </div>
+                <ActiveBadge active={s.isActive} />
+              </div>
+              <div className="mt-3 flex gap-2 border-t border-brand-beige/70 pt-3">
+                <Button variant="secondary" className="flex-1 !px-3 !py-2 text-xs" onClick={() => openEdit(s)}>
+                  <Pencil size={14} /> Editar
+                </Button>
+                <Button variant="ghost" className="flex-1 !px-3 !py-2 text-xs" onClick={() => handleToggleActive(s)}>
+                  {s.isActive ? "Desativar" : "Reativar"}
+                </Button>
+              </div>
+            </li>
+          ))
+        )}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-2xl border border-brand-beige bg-white md:block">
+        <table className="w-full text-left text-sm">
           <thead className="border-b border-brand-beige bg-brand-cream/50 text-xs uppercase tracking-wide text-brand-graphite/60">
             <tr>
               <th className="px-4 py-3">Nome</th>
@@ -73,14 +107,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
                   <td className="px-4 py-3">{s.durationMinutes} min</td>
                   <td className="px-4 py-3">{formatPrice(s.priceCents)}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "rounded-full px-3 py-1 text-xs font-medium",
-                        s.isActive ? "bg-brand-forest/10 text-brand-forest" : "bg-brand-graphite/10 text-brand-graphite/70"
-                      )}
-                    >
-                      {s.isActive ? "Ativo" : "Inativo"}
-                    </span>
+                    <ActiveBadge active={s.isActive} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">

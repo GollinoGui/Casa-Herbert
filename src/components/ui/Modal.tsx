@@ -58,7 +58,7 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-brand-graphite/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-brand-graphite/40 backdrop-blur-sm sm:items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -70,14 +70,15 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
             tabIndex={-1}
-            className={`w-full ${widthClassName} max-h-[90vh] overflow-y-auto overscroll-contain rounded-2xl bg-white p-6 shadow-xl outline-none sm:p-8`}
+            className={`w-full ${widthClassName} max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-white px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 shadow-xl outline-none sm:max-h-[90dvh] sm:rounded-2xl sm:p-8`}
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mx-auto -mt-1 mb-3 h-1 w-10 rounded-full bg-brand-beige sm:hidden" aria-hidden="true" />
+            <div className="mb-5 flex items-center justify-between gap-3">
               {title ? (
                 <h3 id={titleId} className="font-serif text-xl text-brand-forest">
                   {title}
@@ -88,7 +89,7 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
               <button
                 onClick={onClose}
                 aria-label="Fechar"
-                className="rounded-full p-1.5 text-brand-graphite/50 transition hover:bg-brand-beige hover:text-brand-graphite"
+                className="-mr-1 shrink-0 rounded-full p-2 text-brand-graphite/50 transition hover:bg-brand-beige hover:text-brand-graphite"
               >
                 <X size={18} />
               </button>

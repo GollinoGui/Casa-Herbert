@@ -49,16 +49,19 @@ export function PersonalizedEvaluationSection() {
           icons={STEPS.map((step) => (
             <step.icon key={step.title} size={26} strokeWidth={1.5} />
           ))}
-          className="mt-14 flex items-center justify-center"
+          className="mt-14 hidden items-center justify-center sm:flex"
         />
 
-        <div className="mt-8 grid gap-8 sm:grid-cols-3">
+        <div className="mt-12 grid gap-10 sm:mt-8 sm:grid-cols-3 sm:gap-8">
           {STEPS.map((step, index) => (
             <FadeIn key={step.title} delay={index * 0.08}>
               <div className="relative flex flex-col items-center text-center">
+                <span className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-1 ring-brand-moss/25 sm:hidden">
+                  <step.icon size={22} strokeWidth={1.5} aria-hidden="true" />
+                </span>
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 select-none font-serif text-6xl text-brand-forest/[0.06]"
+                  className="pointer-events-none absolute -top-3 left-1/2 hidden -translate-x-1/2 select-none font-serif text-6xl sm:block text-brand-forest/[0.06]"
                 >
                   {step.number}
                 </span>
@@ -66,7 +69,7 @@ export function PersonalizedEvaluationSection() {
                   Passo {index + 1}
                 </p>
                 <h3 className="relative mt-2 font-serif text-lg text-brand-forest">{step.title}</h3>
-                <p className="relative mt-2 text-sm text-brand-graphite/75">{step.description}</p>
+                <p className="relative mt-2 max-w-xs text-sm text-brand-graphite/75">{step.description}</p>
               </div>
             </FadeIn>
           ))}

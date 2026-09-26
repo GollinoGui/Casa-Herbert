@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
@@ -26,6 +26,13 @@ const SITE_URL = "https://casaherbert.com.br";
 // Next 14 tenta gerá-las estáticas no build, e o supabase-js engole o sinal de
 // "rota dinâmica" que o fetch no-store deveria dar.
 export const dynamic = "force-dynamic";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#F7F3EA",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

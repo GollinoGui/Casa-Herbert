@@ -10,7 +10,7 @@ export default async function GaleriaPage() {
     <div className="space-y-6">
       <div>
         <p className="eyebrow mb-2">Galeria</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Galeria de fotos</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Galeria de fotos</h1>
         <p className="mt-2 max-w-2xl text-sm text-brand-graphite/70">
           Upload de imagens reais será adicionado quando o Supabase Storage for conectado. Por enquanto, cada item
           usa uma imagem ilustrativa.

@@ -12,7 +12,7 @@ export default async function FinanceiroPage() {
     <div className="space-y-6">
       <div>
         <p className="eyebrow mb-2">Financeiro</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Vendas e faturamento</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Vendas e faturamento</h1>
       </div>
       <FinanceiroManager summary={summary} sales={sales} customers={customers} />
     </div>

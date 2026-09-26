@@ -40,7 +40,7 @@ export function SpecialHoursManager({ items }: { items: SpecialHours[] }) {
         ) : (
           items.map((item) => (
             <div key={item.id} className="flex items-start justify-between gap-4 rounded-2xl border border-brand-beige bg-white p-4">
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium text-brand-graphite">
                   {formatShortDatePtBR(item.date)} · {formatWeekdayPtBR(item.date)}
                 </p>
@@ -49,19 +49,19 @@ export function SpecialHoursManager({ items }: { items: SpecialHours[] }) {
                 </p>
                 {item.reason ? <p className="mt-1 text-xs text-brand-graphite/50">{item.reason}</p> : null}
               </div>
-              <div className="flex gap-2">
+              <div className="-mr-1 -mt-1 flex shrink-0 gap-1">
                 <button
                   onClick={() => {
                     setEditing(item);
                     setModalOpen(true);
                   }}
-                  className="rounded-lg px-2 py-1 text-xs font-medium text-brand-forest hover:bg-brand-cream"
+                  className="rounded-lg px-3 py-2 text-xs font-medium text-brand-forest hover:bg-brand-cream"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => handleDelete(item.id)}
-                  className="rounded-lg p-1.5 text-brand-graphite/50 hover:bg-red-50 hover:text-red-600"
+                  className="rounded-lg p-2 text-brand-graphite/50 hover:bg-red-50 hover:text-red-600"
                   aria-label="Remover"
                 >
                   <Trash2 size={16} />
@@ -179,14 +179,14 @@ function SpecialHoursFormModal({
                 <button
                   type="button"
                   onClick={() => removeRange(index)}
-                  className="shrink-0 rounded-lg p-1.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
+                  className="shrink-0 rounded-lg p-2.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
                   aria-label="Remover intervalo"
                 >
                   <X size={16} />
                 </button>
               </div>
             ))}
-            <button type="button" onClick={addRange} className="text-xs font-medium text-brand-forest hover:underline">
+            <button type="button" onClick={addRange} className="-mx-2 rounded-lg px-2 py-2 text-xs font-medium text-brand-forest hover:underline">
               + Adicionar intervalo
             </button>
           </div>

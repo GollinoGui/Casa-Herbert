@@ -10,7 +10,7 @@ export default async function EstoquePage() {
     <div className="space-y-6">
       <div>
         <p className="eyebrow mb-2">Estoque</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Produtos</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Produtos</h1>
       </div>
       <ProductsManager products={products} />
     </div>

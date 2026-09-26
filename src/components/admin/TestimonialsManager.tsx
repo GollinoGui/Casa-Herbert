@@ -50,11 +50,11 @@ export function TestimonialsManager({ testimonials }: { testimonials: Testimonia
         ) : (
           testimonials.map((t) => (
             <Card key={t.id} className={cn("p-4", !t.isPublished && "opacity-60")}>
-              <div className="mb-2 flex items-center justify-between">
-                <p className="font-medium text-brand-graphite">{t.customerName}</p>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="min-w-0 font-medium text-brand-graphite">{t.customerName}</p>
                 <span
                   className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                    "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
                     t.isPublished ? "bg-brand-forest/10 text-brand-forest" : "bg-brand-graphite/10 text-brand-graphite/70"
                   )}
                 >
@@ -67,20 +67,20 @@ export function TestimonialsManager({ testimonials }: { testimonials: Testimonia
                 ))}
               </div>
               <p className="text-sm text-brand-graphite/80">{t.content}</p>
-              <div className="mt-3 flex gap-3 text-xs">
+              <div className="-mx-2 mt-2 flex flex-wrap gap-1 text-xs">
                 <button
                   onClick={() => {
                     setEditing(t);
                     setModalOpen(true);
                   }}
-                  className="font-medium text-brand-forest hover:underline"
+                  className="rounded-lg px-2 py-2 font-medium text-brand-forest hover:underline"
                 >
                   Editar
                 </button>
-                <button onClick={() => handleTogglePublish(t)} className="font-medium text-brand-moss hover:underline">
+                <button onClick={() => handleTogglePublish(t)} className="rounded-lg px-2 py-2 font-medium text-brand-moss hover:underline">
                   {t.isPublished ? "Despublicar" : "Publicar"}
                 </button>
-                <button onClick={() => handleDelete(t.id)} className="font-medium text-red-600 hover:underline">
+                <button onClick={() => handleDelete(t.id)} className="rounded-lg px-2 py-2 font-medium text-red-600 hover:underline">
                   Excluir
                 </button>
               </div>

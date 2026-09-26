@@ -10,7 +10,7 @@ export default async function HorariosEspeciaisPage() {
     <div className="space-y-6">
       <div>
         <p className="eyebrow mb-2">Horários especiais</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Datas com horário diferente</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Datas com horário diferente</h1>
         <p className="mt-2 max-w-2xl text-sm text-brand-graphite/70">
           Estas configurações substituem o horário semanal padrão apenas na data selecionada — úteis para
           feriados, vésperas ou dias com expediente reduzido.

@@ -53,7 +53,7 @@ export function AppointmentsTable() {
               key={status}
               onClick={() => toggleStatus(status)}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                "rounded-full border px-3.5 py-2 text-xs font-medium transition",
                 statusFilter.includes(status)
                   ? "border-brand-forest bg-brand-forest text-brand-cream"
                   : "border-brand-beige text-brand-graphite/70 hover:border-brand-moss"
@@ -63,20 +63,54 @@ export function AppointmentsTable() {
             </button>
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label="De" />
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} aria-label="Até" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label="De" className="min-w-0" />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} aria-label="Até" className="min-w-0" />
           <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por cliente ou telefone..."
+            className="col-span-2 sm:col-span-1"
           />
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-brand-beige bg-white">
-        <table className="w-full min-w-[640px] text-left text-sm">
+      <ul className="space-y-2 md:hidden">
+        {loading ? (
+          <li className="rounded-2xl border border-brand-beige bg-white px-4 py-8 text-center text-sm text-brand-graphite/50">
+            Carregando...
+          </li>
+        ) : items.length === 0 ? (
+          <li className="rounded-2xl border border-brand-beige bg-white px-4 py-8 text-center text-sm text-brand-graphite/50">
+            Nenhum agendamento encontrado.
+          </li>
+        ) : (
+          items.map((a) => (
+            <li key={a.id}>
+              <button
+                onClick={() => {
+                  setSelectedId(a.id);
+                  setOpen(true);
+                }}
+                className="flex w-full items-center justify-between gap-3 rounded-2xl border border-brand-beige bg-white px-4 py-3.5 text-left text-sm transition active:bg-brand-cream/60"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-brand-graphite">{a.customer.fullName}</p>
+                  <p className="truncate text-xs text-brand-graphite/60">{a.service.name}</p>
+                  <p className="mt-1 text-xs font-medium tabular-nums text-brand-graphite/80">
+                    {formatShortDatePtBR(a.date)} · {a.startTime}
+                  </p>
+                </div>
+                <StatusBadge status={a.status} />
+              </button>
+            </li>
+          ))
+        )}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-2xl border border-brand-beige bg-white md:block">
+        <table className="w-full text-left text-sm">
           <thead className="border-b border-brand-beige bg-brand-cream/50 text-xs uppercase tracking-wide text-brand-graphite/60">
             <tr>
               <th className="px-4 py-3">Data</th>

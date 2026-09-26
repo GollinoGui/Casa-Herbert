@@ -10,15 +10,15 @@ Site institucional + painel administrativo para a **Casa Herbert Embelezamento e
 - **Atendimento:** somente com hora marcada.
 - **Horários:** terça a sábado, 09:00–11:00 e 14:00–19:00. Domingo e segunda-feira fechado.
 
-## 2. Status atual do protótipo
+## 2. Status atual
 
-**Fase 1 (atual): protótipo visual.** O site inteiro roda localmente (`npm run dev`) sobre uma **camada de dados mockada** (arquivo JSON local), implementando exatamente as mesmas regras de agendamento que depois serão aplicadas no Supabase. O objetivo desta fase é validar visual, fluxo de agendamento e painel administrativo antes de conectar infraestrutura real.
+**Em produção.** Site e painel rodam na Vercel (`https://casa-herbert.vercel.app`, região São Paulo — `gru1`) sobre Supabase (projeto na organização da Casa Herbert, região `sa-east-1`). As duas contas (Supabase e Vercel) estão no e-mail da Casa Herbert.
 
-**Fase 2 (depois de aprovado): produção.** Aplicar as migrations em `supabase/migrations/`, trocar a implementação interna de `src/lib/data/*.ts` para consultar o Supabase em vez do arquivo local, configurar Supabase Auth para o admin, e então fazer deploy na Vercel. Ver seção 8 (Roadmap) para o passo a passo.
+Deploy é feito pela Vercel CLI a partir da pasta do projeto (`npx vercel deploy --prod`), não por integração com o GitHub. Ver seção 8.
 
 ## 3. Regras de negócio do agendamento
 
-Todas as regras abaixo são aplicadas em `src/lib/booking/engine.ts` (funções puras, sem I/O) e reaplicadas do zero em `src/lib/data/availability.ts` (`createAppointment`) antes de gravar — nunca confiar só no que o formulário mostrou antes de enviar. As mesmas regras estão espelhadas em `supabase/migrations/0003_booking_functions.sql` para quando o Supabase for conectado.
+Todas as regras abaixo são aplicadas em `src/lib/booking/engine.ts` (funções puras, sem I/O) e reaplicadas do zero em `src/lib/data/availability.ts` (`createAppointment`) antes de gravar — nunca confiar só no que o formulário mostrou antes de enviar. As mesmas regras estão espelhadas nas funções SQL `get_available_slots`/`create_appointment` (`0003_booking_functions.sql`, atualizada em `0006_production_fixes.sql`); o app não as chama, mas elas devem continuar concordando com o engine.
 
 - **Sem datas passadas.**
 - **Antecedência mínima configurável:** `settings.minAdvanceDays` (padrão `1`) — fórmula é `(data escolhida − hoje) em dias de calendário ≥ minAdvanceDays`. Com o padrão 1, o mesmo dia nunca é permitido, em qualquer horário. Para exigir 48h, basta mudar para `2` em **/admin/configuracoes**.
@@ -32,25 +32,40 @@ Todas as regras abaixo são aplicadas em `src/lib/booking/engine.ts` (funções 
 
 ### Casos de conflito já resolvidos
 
-- **`PENDING` esquecido:** expira automaticamente após `settings.pendingExpiryHours` (padrão 48h) virando `CANCELLED` com nota — sem criar um novo status.
+- **`PENDING` esquecido:** expira automaticamente após `settings.pendingExpiryHours` (padrão 48h) virando `CANCELLED` com nota — sem criar um novo status. Roda de hora em hora via `pg_cron` no Supabase (job `expire-pending-appointments`).
 - **Editar horários depois de já existirem agendamentos futuros:** nunca invalida agendamentos existentes retroativamente (cada um guarda seu próprio horário gravado). O painel **avisa** quais agendamentos ficariam fora da nova janela, nunca cancela sozinho.
 - **Bloquear um período que já tem agendamentos dentro:** o bloqueio é criado, e o admin recebe a lista de agendamentos em conflito para decidir manualmente — nunca cancela automaticamente.
 - **Reagendamento:** sempre volta o status para `PENDING` (a confirmação era para o horário antigo).
-- **Duas pessoas no mesmo horário ao mesmo tempo:** no mock, a checagem-e-escrita acontece de forma síncrona antes de gravar. No Postgres real, quem garante isso de verdade é a constraint `EXCLUDE USING gist` em `appointments` (ver `0001_schema.sql`) — impossível dois agendamentos `PENDING`/`CONFIRMED` sobrepostos existirem ao mesmo tempo, mesmo sob concorrência ou uma escrita direta no banco.
+- **Duas pessoas no mesmo horário ao mesmo tempo:** o app checa antes de gravar, mas quem garante de verdade é o banco: a constraint `EXCLUDE USING gist` em `appointments` (`0001_schema.sql`) torna impossível dois agendamentos `PENDING`/`CONFIRMED` sobrepostos, mesmo sob concorrência; o trigger `SLOT_BLOCKED` (`0008_fix_blocked_slot_trigger.sql`) faz o mesmo para bloqueios manuais. O app traduz esses erros para "horário não está mais disponível".
 
 ## 4. Arquitetura
 
 **Stack:** Next.js 14 (App Router) + TypeScript + Tailwind CSS + Framer Motion (animações) + React Hook Form + Zod (formulários/validação) + FullCalendar (agenda administrativa) + date-fns (datas, locale pt-BR).
 
-### Camada de dados mockada (fase atual)
+### Camada de dados
 
-`src/lib/data/*.ts` expõe funções assíncronas com **as mesmas assinaturas** que terão quando virarem chamadas ao Supabase (`getServices`, `getAvailableSlotsForService`, `createAppointment`, `confirmAppointment`, etc.). Por baixo, elas leem/escrevem um arquivo JSON local (`.mockdata/db.json`, gitignored), gerenciado por `src/lib/data/store.ts`. Na primeira execução, o arquivo é semeado automaticamente a partir de `src/lib/data/seed-data.ts` (serviços reais da Casa Herbert, horários padrão, alguns agendamentos de exemplo em status variados, depoimentos, galeria).
+`src/lib/data/*.ts` é o único lugar que fala com o banco. Todo acesso é feito **no servidor**, com a chave secreta do Supabase (service role, que ignora RLS) — o navegador nunca recebe chave nenhuma do Supabase. As policies de RLS (`0002_rls_policies.sql`) continuam ativas como proteção caso a chave pública seja usada por fora.
 
-Isso significa: qualquer página/Server Action que hoje chama `getActiveServices()` ou `createAppointment(...)` **não vai precisar mudar** quando o Supabase entrar — só a implementação interna desses arquivos muda.
+Operações com várias escritas que precisam acontecer inteiras ou não acontecer (trocar os horários de um dia, salvar horário especial, finalizar venda com baixa de estoque) são funções SQL chamadas por RPC — ver `0006_production_fixes.sql`.
 
-### Autenticação do admin (protótipo apenas)
+### Autenticação do admin
 
-Login simples por senha comparando `ADMIN_EMAIL`/`ADMIN_PASSWORD` (variáveis de ambiente) — ver `src/lib/auth/session.ts`. Sessão é um cookie httpOnly assinado com HMAC-SHA256 (`AUTH_SECRET`), validado em `src/middleware.ts` para tudo em `/admin/*` exceto `/admin/login`. **Isso é descartável** — na fase de produção vira Supabase Auth (tabela `admin_profiles` + RLS, já modelada em `0001_schema.sql`/`0002_rls_policies.sql`).
+O login confere e-mail/senha no **Supabase Auth** e só aceita usuários cadastrados na tabela `admin_profiles` (`src/lib/auth/credentials.ts`). Depois do login, a sessão é um cookie httpOnly assinado com HMAC-SHA256 (`AUTH_SECRET`, validade de 8h), conferido em `src/middleware.ts` para as páginas `/admin/*` e em `requireAdmin()` no início de toda Server Action administrativa.
+
+**Liberar alguém no painel** (SQL Editor do Supabase), depois de criar o usuário em Authentication → Add user:
+
+```sql
+insert into admin_profiles (id, full_name)
+select id, 'Nome da Pessoa' from auth.users where email = 'email@dapessoa.com';
+```
+
+O SQL Editor responde "Success. No rows returned" quando o insert dá certo; confira listando:
+
+```sql
+select u.email, a.full_name from admin_profiles a join auth.users u on u.id = a.id;
+```
+
+**Tirar o acesso:** `delete from admin_profiles where id = (select id from auth.users where email = 'email@dapessoa.com');` — a sessão atual continua válida até expirar (até 8h); para cortar na hora, apague também o usuário em Authentication → Users.
 
 ### Estrutura de pastas
 
@@ -70,13 +85,14 @@ src/
     admin/       Sidebar, CalendarView, AppointmentDetailModal, formulários administrativos
   lib/
     booking/     engine.ts (regras puras), validators.ts (zod), constants.ts, whatsapp.ts
-    data/        camada de dados mockada (ver acima)
+    data/        acesso ao banco (ver acima)
+    supabase/    cliente do Supabase (servidor) e conversão de linhas → tipos do app
     actions/     Server Actions — booking.ts (público), admin/*.ts (painel)
-    auth/        sessão do admin
+    auth/        login (Supabase Auth), cookie de sessão, requireAdmin()
     utils/       datas (pt-BR), telefone, cn()
   types/         tipos compartilhados
 supabase/
-  migrations/    schema completo pronto para aplicar na Fase 2 (ver seção 8)
+  migrations/    histórico do schema — todas já aplicadas em produção (ver seção 8)
 ```
 
 ## 5. Identidade visual
@@ -102,42 +118,37 @@ Sem fotos reais ainda — toda foto usa `<PlaceholderImage>` (gradiente + ícone
 
 ```bash
 npm install
-cp .env.example .env.local   # já existe um .env.local de exemplo com valores de teste
+cp .env.example .env   # preencher com os valores do Supabase (seção 7)
 npm run dev
 ```
 
-Login do admin (protótipo): e-mail e senha definidos em `.env.local` (`ADMIN_EMAIL`/`ADMIN_PASSWORD`).
+Atenção: localmente o site usa **o mesmo banco de produção** — agendamentos e alterações feitas em `localhost` aparecem no site real.
 
-Para recomeçar os dados do zero, apague `.mockdata/db.json` (ele é recriado automaticamente a partir do seed na próxima requisição).
+`npm run build` no Windows falha só em `/opengraph-image` e `/twitter-image` ("Invalid URL") por causa do espaço no caminho da pasta ("Casa Herbert") — bug do `@vercel/og` no Windows. Na Vercel (Linux) funciona normalmente.
 
 ## 7. Variáveis de ambiente
 
-| Variável | Fase | Descrição |
-|---|---|---|
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Protótipo | credenciais do login simples do `/admin` |
-| `AUTH_SECRET` | Protótipo | chave HMAC para assinar o cookie de sessão do admin |
-| `NEXT_PUBLIC_SUPABASE_URL` | Produção | ver seção 8 |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Produção | ver seção 8 |
-| `SUPABASE_SERVICE_ROLE_KEY` | Produção | ver seção 8 (uso restrito a jobs de servidor, nunca exposto ao client) |
+| Variável | Descrição |
+|---|---|
+| `SUPABASE_URL` | URL do projeto Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | chave secreta (Project Settings → API Keys) — só no servidor, nunca em variável `NEXT_PUBLIC_` |
+| `AUTH_SECRET` | chave para assinar o cookie de sessão do painel (`openssl rand -base64 48`); trocar invalida todas as sessões |
 
-## 8. Roadmap — Fase 2 (produção)
+Localmente ficam em `.env` (fora do git). Na Vercel, em Project → Settings → Environment Variables (ou `npx vercel env add`).
 
-1. **Criar o projeto Supabase** (organização já existe: "Gollino M.E"). Aplicar as migrations em ordem: `0001_schema.sql` → `0002_rls_policies.sql` → `0003_booking_functions.sql` → `0004_seed.sql`.
-2. **Criar `src/lib/supabase/client.ts`** (browser) **e `server.ts`** (Server Components/Actions, usando `@supabase/ssr`).
-3. **Trocar a implementação interna** de cada arquivo em `src/lib/data/*.ts` para chamar o Supabase (`supabase.rpc('get_available_slots', ...)`, `supabase.rpc('create_appointment', ...)`, `supabase.from('services').select()`, etc.) mantendo as mesmas assinaturas de função — nada que consome esses módulos precisa mudar.
-4. **Criar o primeiro admin:** Dashboard do Supabase → Authentication → Add User (e-mail + senha) → copiar o UUID gerado → `insert into admin_profiles (id, full_name) values ('<uuid>', 'Nome do Admin');`.
-5. **Trocar a autenticação do painel** de `src/lib/auth/session.ts` (HMAC caseiro) para Supabase Auth (`supabase.auth.signInWithPassword`, sessão via cookies do `@supabase/ssr`), atualizando `src/middleware.ts` de acordo.
-6. **Agendar `expire_pending_appointments()`** (Supabase `pg_cron` ou uma rota de cron na Vercel) para rodar periodicamente.
-7. **Configurar as variáveis de ambiente** de Supabase na Vercel e fazer o deploy.
-8. **(Opcional/futuro)** integrar com a WhatsApp Business Cloud API para envio automático de mensagens, em vez dos links `wa.me` manuais usados no protótipo.
+## 8. Operação
 
-## 9. Limitações conhecidas do protótipo
+- **Deploy:** `npx vercel deploy --prod` na pasta do projeto (CLI logada na conta da Casa Herbert). Região das funções fixada em `vercel.json` (`gru1`, São Paulo — perto do banco).
+- **Mudança de schema:** nunca editar migration já aplicada. Criar `supabase/migrations/000N_descricao.sql` e aplicar no banco (SQL Editor ou Supabase CLI).
+- **Dados iniciais:** o banco começou só com serviços, horários e configurações reais (`0004_seed.sql`). Depoimentos, galeria e produtos são cadastrados pelo painel; enquanto vazios, as seções correspondentes não aparecem no site.
+- **Domínio:** o site ainda responde em `casa-herbert.vercel.app`. `SITE_URL` em `src/app/layout.tsx` (usado em SEO/sitemap) já aponta para `casaherbert.com.br` — configurar esse domínio na Vercel quando for registrado.
+- **(Futuro)** integrar com a WhatsApp Business Cloud API para envio automático de mensagens, em vez dos links `wa.me` manuais.
 
-- Os dados resetam se `.mockdata/db.json` for apagado (é só o seed sendo recriado — não é um bug).
-- Autenticação do admin é uma senha única comparada em texto puro contra variável de ambiente — adequado só para demonstração, nunca usar assim em produção.
-- Sem upload real de imagens (galeria/produtos usam placeholders com legenda) — chega junto com o Supabase Storage na Fase 2.
-- "Hoje"/"agora" usam o fuso horário do processo local, não `America/Sao_Paulo` explicitamente — isso é resolvido na Fase 2 (ver `salon_timezone` em `settings`, já modelado no schema).
+## 9. Limitações conhecidas
+
+- Sem upload real de imagens (galeria/produtos usam placeholders com legenda) — a tabela `gallery` já tem `image_url`/`storage_path` para quando entrar o Supabase Storage.
 - Sem integração real com WhatsApp Business API — os botões do painel geram links `wa.me` com mensagem pré-preenchida, que o admin envia manualmente.
+- Plano Hobby (grátis) da Vercel é, pelos termos de uso, para projetos não comerciais — avaliar o plano Pro.
 
 ## 10. Ideias para funcionalidades futuras
 

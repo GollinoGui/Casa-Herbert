@@ -58,7 +58,7 @@ export function Footer({ whatsappNumber, address }: { whatsappNumber: string; ad
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram da Casa Herbert"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-brand-cream/80 transition hover:border-brand-gold hover:text-brand-gold"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-brand-cream/80 transition hover:border-brand-gold hover:text-brand-gold"
             >
               <Instagram size={16} />
             </a>
@@ -67,7 +67,7 @@ export function Footer({ whatsappNumber, address }: { whatsappNumber: string; ad
               target="_blank"
               rel="noopener noreferrer"
               aria-label="WhatsApp da Casa Herbert"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-brand-cream/80 transition hover:border-brand-gold hover:text-brand-gold"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-brand-cream/80 transition hover:border-brand-gold hover:text-brand-gold"
             >
               <MessageCircle size={16} />
             </a>
@@ -76,10 +76,10 @@ export function Footer({ whatsappNumber, address }: { whatsappNumber: string; ad
 
         <div>
           <p className="mb-3 text-sm font-medium text-brand-sage">Navegação</p>
-          <ul className="space-y-2 text-sm text-brand-cream/80">
+          <ul className="grid grid-cols-2 gap-x-6 text-sm text-brand-cream/80 sm:block sm:space-y-2">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="hover:text-white">
+                <Link href={link.href} className="inline-block py-2 hover:text-white sm:py-0">
                   {link.label}
                 </Link>
               </li>
@@ -108,7 +108,7 @@ export function Footer({ whatsappNumber, address }: { whatsappNumber: string; ad
             </li>
             <li className="flex items-center gap-2">
               <Phone size={16} className="shrink-0 text-brand-sage" />
-              <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="-my-2 py-2 hover:text-white">
                 {formatPhoneDisplay(whatsappNumber)}
               </a>
             </li>
@@ -129,7 +129,7 @@ export function Footer({ whatsappNumber, address }: { whatsappNumber: string; ad
           <p className="text-center text-xs text-brand-cream/50">
             © {new Date().getFullYear()} Casa Herbert Embelezamento e Saúde Capilar — Orlândia/SP. Protótipo em desenvolvimento.
             {" · "}
-            <Link href="/privacidade" className="underline-offset-2 hover:text-brand-cream/80 hover:underline">
+            <Link href="/privacidade" className="inline-block py-1.5 underline-offset-2 hover:text-brand-cream/80 hover:underline">
               Política de Privacidade
             </Link>
           </p>

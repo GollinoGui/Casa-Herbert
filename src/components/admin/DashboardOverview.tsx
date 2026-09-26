@@ -52,15 +52,15 @@ export function DashboardOverview({
       <FadeIn>
         <div>
           <p className="eyebrow mb-2">Painel administrativo</p>
-          <h1 className="font-serif text-3xl text-brand-forest">Visão geral</h1>
+          <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Visão geral</h1>
         </div>
       </FadeIn>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 2xl:grid-cols-6">
         {statCards.map(({ label, value, icon: Icon }) => (
-          <Card key={label} className="p-5">
-            <Icon className="mb-3 text-brand-moss" size={20} strokeWidth={1.75} />
-            <p className="text-2xl font-semibold text-brand-forest">{value}</p>
+          <Card key={label} className="p-4 sm:p-5">
+            <Icon className="mb-2 text-brand-moss sm:mb-3" size={20} strokeWidth={1.75} />
+            <p className="truncate text-xl font-semibold tabular-nums text-brand-forest sm:text-2xl">{value}</p>
             <p className="text-xs text-brand-graphite/70">{label}</p>
           </Card>
         ))}
@@ -124,9 +124,9 @@ function AppointmentRow({
         onClick={onClick}
         className="flex w-full items-center justify-between gap-3 rounded-xl border border-brand-beige bg-white px-4 py-3 text-left text-sm transition hover:border-brand-moss"
       >
-        <div>
-          <p className="font-medium text-brand-graphite">{appointment.customer.fullName}</p>
-          <p className="text-xs text-brand-graphite/60">
+        <div className="min-w-0">
+          <p className="truncate font-medium text-brand-graphite">{appointment.customer.fullName}</p>
+          <p className="truncate text-xs text-brand-graphite/60">
             {appointment.service.name} · {showDate ? `${formatShortDatePtBR(appointment.date)} · ` : ""}
             {appointment.startTime}
           </p>

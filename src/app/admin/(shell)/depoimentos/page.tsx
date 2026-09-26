@@ -10,7 +10,7 @@ export default async function DepoimentosPage() {
     <div className="space-y-6">
       <div>
         <p className="eyebrow mb-2">Depoimentos</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Depoimentos de clientes</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Depoimentos de clientes</h1>
       </div>
       <TestimonialsManager testimonials={testimonials} />
     </div>

@@ -13,6 +13,20 @@ html {
 body {
   background-color: #f7f3ea;
   color: #2e2e2e;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Remove o atraso de toque duplo e o flash cinza do Safari/Chrome mobile ao tocar em links e botões. */
+a,
+button,
+input,
+select,
+textarea,
+label,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 ::selection {
@@ -26,7 +40,7 @@ body {
 
 @layer components {
   .container-herbert {
-    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8 2xl:max-w-7xl;
   }
 
   .section-padding {
@@ -59,18 +73,52 @@ body {
   }
 }
 
-/* FullCalendar (agenda do admin): cabeçalho quebra em telas estreitas em vez de estourar a largura */
+/* FullCalendar (agenda do admin): botões na paleta da marca e cabeçalho que quebra
+   em telas estreitas em vez de estourar a largura. */
+.fc {
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: #e7e3d8;
+  --fc-button-text-color: #2e2e2e;
+  --fc-button-hover-bg-color: #f7f3ea;
+  --fc-button-hover-border-color: #a3b89a;
+  --fc-button-active-bg-color: #ef8523;
+  --fc-button-active-border-color: #ef8523;
+  --fc-today-bg-color: rgba(239, 133, 35, 0.07);
+  --fc-border-color: #efebe2;
+}
+.fc .fc-button {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.fc .fc-button:focus,
+.fc .fc-button-primary:not(:disabled):active:focus,
+.fc .fc-button-primary:not(:disabled).fc-button-active:focus {
+  box-shadow: 0 0 0 2px rgba(163, 184, 154, 0.5);
+}
+.fc .fc-toolbar-title {
+  font-family: var(--font-playfair), Georgia, serif;
+  color: #ef8523;
+}
+.fc .fc-toolbar-title::first-letter {
+  text-transform: uppercase;
+}
 .fc .fc-toolbar {
   flex-wrap: wrap;
-  row-gap: 0.5rem;
+  gap: 0.5rem;
 }
 @media (max-width: 640px) {
+  /* Título numa linha própria, navegação à esquerda e visões à direita. */
+  .fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) {
+    order: -1;
+    flex-basis: 100%;
+  }
   .fc .fc-toolbar-title {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
   .fc .fc-button {
-    padding: 0.3rem 0.55rem;
-    font-size: 0.75rem;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.7rem;
   }
 }
 

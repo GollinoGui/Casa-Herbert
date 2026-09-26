@@ -159,8 +159,8 @@ export function AppointmentDetailModal({
       ) : (
         <div className="space-y-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h4 className="font-serif text-lg text-brand-forest">{appointment.customer.fullName}</h4>
+            <div className="min-w-0">
+              <h4 className="break-words font-serif text-lg text-brand-forest">{appointment.customer.fullName}</h4>
               <p className="text-sm text-brand-graphite/70">{formatPhoneDisplay(appointment.customer.phone)}</p>
             </div>
             <StatusBadge status={appointment.status} />
@@ -169,7 +169,7 @@ export function AppointmentDetailModal({
           <div className="flex flex-wrap gap-2">
             <a
               href={`tel:+${toWhatsAppDigits(appointment.customer.phone)}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-brand-beige px-3 py-1.5 text-xs font-medium text-brand-graphite transition hover:border-brand-moss"
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand-beige px-4 py-2 text-xs font-medium text-brand-graphite transition hover:border-brand-moss"
             >
               <Phone size={14} /> Ligar
             </a>
@@ -177,7 +177,7 @@ export function AppointmentDetailModal({
               href={`https://wa.me/${toWhatsAppDigits(appointment.customer.phone)}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-brand-beige px-3 py-1.5 text-xs font-medium text-brand-graphite transition hover:border-brand-moss"
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand-beige px-4 py-2 text-xs font-medium text-brand-graphite transition hover:border-brand-moss"
             >
               <MessageCircle size={14} /> Abrir WhatsApp
             </a>
@@ -198,10 +198,11 @@ export function AppointmentDetailModal({
             <div className="sm:col-span-2">
               <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Valor combinado</p>
               {appointment.status === "PENDING" || appointment.status === "CONFIRMED" ? (
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Input
                     type="number"
-                    className="max-w-[160px] !py-2 text-sm"
+                    inputMode="numeric"
+                    className="w-36 !py-2"
                     placeholder="Sob consulta"
                     value={priceDraft}
                     onChange={(e) => {

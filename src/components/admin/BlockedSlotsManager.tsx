@@ -66,7 +66,7 @@ export function BlockedSlotsManager({ blockedSlots }: { blockedSlots: BlockedSlo
         ) : (
           blockedSlots.map((b) => (
             <div key={b.id} className="flex items-start justify-between gap-4 rounded-2xl border border-brand-beige bg-white p-4">
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium text-brand-graphite">
                   {b.startDate === b.endDate
                     ? formatShortDatePtBR(b.startDate)
@@ -78,7 +78,7 @@ export function BlockedSlotsManager({ blockedSlots }: { blockedSlots: BlockedSlo
               </div>
               <button
                 onClick={() => handleDelete(b.id)}
-                className="rounded-lg p-1.5 text-brand-graphite/50 hover:bg-red-50 hover:text-red-600"
+                className="-mr-1 -mt-1 shrink-0 rounded-lg p-2 text-brand-graphite/50 hover:bg-red-50 hover:text-red-600"
                 aria-label="Remover"
               >
                 <Trash2 size={16} />

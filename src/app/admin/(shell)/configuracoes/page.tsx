@@ -11,7 +11,7 @@ export default async function ConfiguracoesPage() {
     <div className="space-y-8">
       <div>
         <p className="eyebrow mb-2">Configurações</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Configurações do painel</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Configurações do painel</h1>
       </div>
       <SettingsManager settings={settings} businessHours={businessHours} />
     </div>

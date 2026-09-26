@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Textarea, FieldLabel } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,15 @@ export function CustomersPanel({ customers }: { customers: Customer[] }) {
   const [notesDraft, setNotesDraft] = useState(selected?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
+
+  function selectCustomer(customer: Customer) {
+    setSelected(customer);
+    // Abaixo de lg a lista fica em cima do detalhe; sem isso a troca acontece fora da tela.
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  }
 
   useEffect(() => {
     if (!selected) return;
@@ -35,7 +44,7 @@ export function CustomersPanel({ customers }: { customers: Customer[] }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-      <Card className="max-h-[70vh] overflow-y-auto p-3">
+      <Card className="max-h-72 overflow-y-auto overscroll-contain p-3 lg:max-h-[70vh]">
         {customers.length === 0 ? (
           <p className="p-3 text-sm text-brand-graphite/60">Nenhum cliente cadastrado.</p>
         ) : (
@@ -43,7 +52,7 @@ export function CustomersPanel({ customers }: { customers: Customer[] }) {
             {customers.map((c) => (
               <li key={c.id}>
                 <button
-                  onClick={() => setSelected(c)}
+                  onClick={() => selectCustomer(c)}
                   className={cn(
                     "w-full rounded-xl px-3 py-2.5 text-left text-sm transition",
                     selected?.id === c.id ? "bg-brand-forest text-brand-cream" : "text-brand-graphite hover:bg-brand-cream"
@@ -61,11 +70,11 @@ export function CustomersPanel({ customers }: { customers: Customer[] }) {
       </Card>
 
       {selected ? (
-        <div className="space-y-6">
+        <div ref={detailRef} className="scroll-mt-20 space-y-6">
           <Card className="p-5">
-            <h2 className="font-serif text-xl text-brand-forest">{selected.fullName}</h2>
+            <h2 className="break-words font-serif text-xl text-brand-forest">{selected.fullName}</h2>
             <p className="mt-1 text-sm text-brand-graphite/70">{formatPhoneDisplay(selected.phone)}</p>
-            {selected.email ? <p className="text-sm text-brand-graphite/70">{selected.email}</p> : null}
+            {selected.email ? <p className="break-all text-sm text-brand-graphite/70">{selected.email}</p> : null}
 
             <div className="mt-5">
               <FieldLabel htmlFor="customer-notes">Observações internas</FieldLabel>
@@ -98,9 +107,9 @@ export function CustomersPanel({ customers }: { customers: Customer[] }) {
                 {history.map((a) => (
                   <li
                     key={a.id}
-                    className="flex items-center justify-between rounded-xl border border-brand-beige px-4 py-3 text-sm"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-brand-beige px-4 py-3 text-sm"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-brand-graphite">{a.service.name}</p>
                       <p className="text-xs text-brand-graphite/60">
                         {formatShortDatePtBR(a.date)} · {a.startTime}

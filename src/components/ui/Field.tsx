@@ -11,8 +11,9 @@ export function FieldError({ children }: { children?: ReactNode }) {
   return <p className="mt-1.5 text-xs text-red-600">{children}</p>;
 }
 
+// 16px no mobile: abaixo disso o Safari do iOS dá zoom na página ao focar o campo.
 const baseInputClass =
-  "w-full rounded-xl border border-brand-beige bg-white px-4 py-3 text-sm text-brand-graphite placeholder:text-brand-graphite/40 outline-none transition focus:border-brand-moss focus:ring-2 focus:ring-brand-sage/30";
+  "w-full rounded-xl border border-brand-beige bg-white px-4 py-3 text-base text-brand-graphite sm:text-sm placeholder:text-brand-graphite/40 outline-none transition focus:border-brand-moss focus:ring-2 focus:ring-brand-sage/30";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },

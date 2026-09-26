@@ -82,7 +82,7 @@ export function BusinessHoursEditor({ businessHours }: { businessHours: Business
 
       {WEEKDAY_LABELS.map((label, weekday) => (
         <div key={weekday} className="rounded-xl border border-brand-beige p-4">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <p className="font-medium text-brand-graphite">{label}</p>
             <Button
               variant="secondary"
@@ -114,7 +114,7 @@ export function BusinessHoursEditor({ businessHours }: { businessHours: Business
                   />
                   <button
                     onClick={() => removeRange(weekday, index)}
-                    className="shrink-0 rounded-lg p-1.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
+                    className="shrink-0 rounded-lg p-2.5 text-brand-graphite/40 hover:bg-red-50 hover:text-red-600"
                     aria-label="Remover intervalo"
                   >
                     <Trash2 size={16} />
@@ -125,7 +125,7 @@ export function BusinessHoursEditor({ businessHours }: { businessHours: Business
           )}
           <button
             onClick={() => addRange(weekday)}
-            className="flex items-center gap-1 text-xs font-medium text-brand-forest hover:underline"
+            className="-mx-2 flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-medium text-brand-forest hover:underline"
           >
             <Plus size={14} /> Adicionar intervalo
           </button>

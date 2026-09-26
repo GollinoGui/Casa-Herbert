@@ -7,7 +7,7 @@ export function StatusBadge({ status, className }: { status: AppointmentStatus; 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium",
         colors.bg,
         colors.text,
         className
@@ -15,6 +15,19 @@ export function StatusBadge({ status, className }: { status: AppointmentStatus; 
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} />
       {STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+export function ActiveBadge({ active }: { active: boolean }) {
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-3 py-1 text-xs font-medium",
+        active ? "bg-brand-forest/10 text-brand-forest" : "bg-brand-graphite/10 text-brand-graphite/70"
+      )}
+    >
+      {active ? "Ativo" : "Inativo"}
     </span>
   );
 }

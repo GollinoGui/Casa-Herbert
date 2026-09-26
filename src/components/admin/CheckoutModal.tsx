@@ -125,14 +125,15 @@ export function CheckoutModal({ open, onClose, appointment, onCompleted }: Check
         {appointment ? (
           <div className="rounded-xl border border-brand-beige bg-brand-cream/40 p-4">
             <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Serviço</p>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <p className="font-medium text-brand-graphite">
+            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <p className="min-w-0 font-medium text-brand-graphite">
                 {appointment.service.name} — {appointment.customer.fullName}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <Input
                   type="number"
-                  className="w-32 !py-2 text-sm"
+                  inputMode="numeric"
+                  className="w-32 !py-2"
                   placeholder="Sob consulta"
                   value={serviceLinePrice}
                   onChange={(e) => setServiceLinePrice(e.target.value)}
@@ -158,7 +159,7 @@ export function CheckoutModal({ open, onClose, appointment, onCompleted }: Check
         <div>
           <FieldLabel>Produtos</FieldLabel>
           <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[200px] flex-1">
+            <div className="w-full min-w-0 sm:w-auto sm:flex-1">
               <Select value={pickProductId} onChange={(e) => setPickProductId(e.target.value)}>
                 <option value="">Selecione um produto...</option>
                 {products.map((p) => (
@@ -171,11 +172,13 @@ export function CheckoutModal({ open, onClose, appointment, onCompleted }: Check
             <Input
               type="number"
               min={1}
-              className="w-20 !py-3"
+              inputMode="numeric"
+              aria-label="Quantidade"
+              className="w-20 flex-1 !py-3 sm:flex-none"
               value={pickQty}
               onChange={(e) => setPickQty(Number(e.target.value))}
             />
-            <Button type="button" variant="secondary" className="!px-4 !py-3" onClick={handleAddLine}>
+            <Button type="button" variant="secondary" className="!px-4 !py-3" onClick={handleAddLine} aria-label="Adicionar produto">
               <Plus size={16} />
             </Button>
           </div>
@@ -188,18 +191,18 @@ export function CheckoutModal({ open, onClose, appointment, onCompleted }: Check
                 return (
                   <li
                     key={line.productId}
-                    className="flex items-center justify-between rounded-xl border border-brand-beige px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-brand-beige px-3 py-2 text-sm"
                   >
-                    <span>
+                    <span className="min-w-0">
                       {product.name} × {line.quantity}
                     </span>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium text-brand-graphite">
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="font-medium tabular-nums text-brand-graphite">
                         {formatServicePrice(product.priceCents * line.quantity)}
                       </span>
                       <button
                         onClick={() => handleRemoveLine(line.productId)}
-                        className="text-brand-graphite/50 hover:text-red-600"
+                        className="-m-1.5 rounded-lg p-1.5 text-brand-graphite/50 hover:text-red-600"
                         aria-label="Remover"
                       >
                         <Trash2 size={16} />

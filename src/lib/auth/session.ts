@@ -33,7 +33,7 @@ async function getSigningKey(secret: string) {
 
 export async function createSessionToken(email: string): Promise<string> {
   const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("AUTH_SECRET não configurado no .env.local");
+  if (!secret) throw new Error("AUTH_SECRET não configurado no .env");
 
   const payload = JSON.stringify({ email, exp: Date.now() + SESSION_TTL_MS });
   const payloadB64 = base64UrlEncode(new TextEncoder().encode(payload));

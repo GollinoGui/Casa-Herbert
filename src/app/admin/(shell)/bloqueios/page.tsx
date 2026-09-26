@@ -10,7 +10,7 @@ export default async function BloqueiosPage() {
     <div className="space-y-6">
       <div>
         <p className="eyebrow mb-2">Bloqueios</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Bloqueios de horário</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Bloqueios de horário</h1>
       </div>
       <BlockedSlotsManager blockedSlots={blockedSlots} />
     </div>

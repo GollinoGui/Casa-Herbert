@@ -8,7 +8,7 @@ export default function AgendamentosPage() {
     <div className="space-y-6">
       <div>
         <p className="eyebrow mb-2">Agendamentos</p>
-        <h1 className="font-serif text-3xl text-brand-forest">Todos os agendamentos</h1>
+        <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Todos os agendamentos</h1>
       </div>
       <AppointmentsTable />
     </div>

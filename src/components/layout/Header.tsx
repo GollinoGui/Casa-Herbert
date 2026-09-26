@@ -48,6 +48,15 @@ export function Header() {
     setMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
+
   function handleNavClick(href: string) {
     return (event: React.MouseEvent<HTMLAnchorElement>) => {
       setMenuOpen(false);
@@ -71,7 +80,7 @@ export function Header() {
           "mx-auto flex items-center justify-between gap-8 overflow-hidden transition-[background-color,border-color,border-radius,box-shadow,backdrop-filter,width,height,margin,padding] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
           scrolled
             ? "mt-4 h-[4.5rem] w-fit max-w-[95vw] rounded-full border border-brand-beige/70 bg-brand-cream/95 px-8 shadow-soft backdrop-blur-md sm:px-10"
-            : "mt-0 h-20 w-full max-w-6xl rounded-none border border-transparent bg-transparent px-5 sm:px-8"
+            : "mt-0 h-20 w-full max-w-6xl rounded-none 2xl:max-w-7xl border border-transparent bg-transparent px-5 sm:px-8"
         )}
       >
         <Link href="/" onClick={handleNavClick("/")} className="flex min-w-0 shrink-0 items-center gap-2.5">
@@ -143,17 +152,31 @@ export function Header() {
         </button>
       </div>
 
+      {/* O menu flutua sobre a página (absolute) em vez de crescer dentro do header sticky:
+          crescendo no fluxo, ele empurrava o conteúdo e a página dava um pulo ao abrir. */}
       <AnimatePresence>
         {menuOpen && (
+          <motion.div
+            key="mobile-nav-backdrop"
+            className="fixed inset-0 -z-10 bg-brand-graphite/20 lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+        {menuOpen && (
           <motion.nav
+            key="mobile-nav"
             id="mobile-nav"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              "mx-auto overflow-hidden bg-brand-cream shadow-soft lg:hidden",
-              scrolled ? "mt-2 w-[92%] max-w-3xl rounded-3xl border border-brand-beige/70" : "w-full border-t border-brand-beige"
+              "absolute inset-x-0 top-full mx-auto max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain bg-brand-cream shadow-soft lg:hidden",
+              scrolled ? "mt-2 w-[92%] max-w-3xl rounded-3xl border border-brand-beige/70" : "w-full rounded-b-3xl border-t border-brand-beige"
             )}
           >
             <div className="flex flex-col gap-1 px-5 py-4">

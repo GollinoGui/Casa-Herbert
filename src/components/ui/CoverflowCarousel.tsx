@@ -258,29 +258,34 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
       </div>
 
       {total > 1 ? (
-        <div className="mt-8 flex items-center justify-center gap-3">
+        <div className="mt-8 flex items-center justify-center gap-2">
           {autoplay ? (
             <button
               type="button"
               onClick={() => setIsPaused((v) => !v)}
               aria-label={isPaused ? "Retomar troca automática" : "Pausar troca automática"}
               aria-pressed={isPaused}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-brand-graphite/50 transition hover:bg-brand-beige hover:text-brand-forest"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-brand-graphite/50 transition hover:bg-brand-beige hover:text-brand-forest"
             >
               {isPaused ? <Play size={13} /> : <Pause size={13} />}
             </button>
           ) : null}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {items.map((item, idx) => (
               <button
                 key={item.id}
                 onClick={() => goToSlide(idx)}
                 aria-label={`Ir para ${item.titleLine1}`}
-                className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  idx === currentIndex ? "w-7 bg-brand-forest" : "w-2 bg-brand-beige"
-                )}
-              />
+                aria-current={idx === currentIndex ? "true" : undefined}
+                className="flex h-8 items-center px-1"
+              >
+                <span
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-300",
+                    idx === currentIndex ? "w-7 bg-brand-forest" : "w-2 bg-brand-beige"
+                  )}
+                />
+              </button>
             ))}
           </div>
         </div>

@@ -51,7 +51,7 @@ export function GalleryManager({ items }: { items: GalleryItem[] }) {
                   </span>
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="rounded-lg p-1.5 text-brand-graphite/50 hover:bg-red-50 hover:text-red-600"
+                    className="-mr-1.5 rounded-lg p-2 text-brand-graphite/50 hover:bg-red-50 hover:text-red-600"
                     aria-label="Remover"
                   >
                     <Trash2 size={16} />
