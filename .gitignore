@@ -53,3 +53,6 @@ skills-lock.json
 
 # Playwright MCP session artifacts (screenshots/snapshots from browser testing)
 /.playwright-mcp/
+
+# Claude Code project instructions (kept local only)
+CLAUDE.md
