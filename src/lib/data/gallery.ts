@@ -1,15 +1,17 @@
-import { randomUUID } from "node:crypto";
 import type { GalleryItem } from "@/types";
-import { mutateDb, readDb } from "./store";
+import { getSupabase, unwrap } from "@/lib/supabase/server";
+import { toGalleryItem } from "@/lib/supabase/mappers";
 
 export async function getPublishedGallery(): Promise<GalleryItem[]> {
-  const db = readDb();
-  return db.gallery.filter((g) => g.isPublished).sort((a, b) => a.displayOrder - b.displayOrder);
+  const rows = unwrap(
+    await getSupabase().from("gallery").select("*").eq("is_published", true).order("display_order")
+  );
+  return rows.map(toGalleryItem);
 }
 
 export async function getAllGallery(): Promise<GalleryItem[]> {
-  const db = readDb();
-  return [...db.gallery].sort((a, b) => a.displayOrder - b.displayOrder);
+  const rows = unwrap(await getSupabase().from("gallery").select("*").order("display_order"));
+  return rows.map(toGalleryItem);
 }
 
 export interface GalleryItemInput {
@@ -19,20 +21,23 @@ export interface GalleryItemInput {
 }
 
 export async function createGalleryItem(input: GalleryItemInput): Promise<GalleryItem> {
-  return mutateDb((db) => {
-    const item: GalleryItem = {
-      id: randomUUID(),
-      ...input,
-      displayOrder: db.gallery.length + 1,
-      createdAt: new Date().toISOString(),
-    };
-    db.gallery.push(item);
-    return item;
-  });
+  const supabase = getSupabase();
+  const { count } = await supabase.from("gallery").select("id", { count: "exact", head: true });
+  const row = unwrap(
+    await supabase
+      .from("gallery")
+      .insert({
+        caption: input.caption,
+        category: input.category,
+        is_published: input.isPublished,
+        display_order: (count ?? 0) + 1,
+      })
+      .select("*")
+      .single()
+  );
+  return toGalleryItem(row);
 }
 
 export async function deleteGalleryItem(id: string): Promise<void> {
-  mutateDb((db) => {
-    db.gallery = db.gallery.filter((g) => g.id !== id);
-  });
+  unwrap(await getSupabase().from("gallery").delete().eq("id", id));
 }

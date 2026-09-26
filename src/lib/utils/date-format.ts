@@ -11,9 +11,34 @@ export function formatDateOnly(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
 
-/** Data de hoje (fuso local do processo) como "YYYY-MM-DD". Ver limitação de timezone no documentação.md. */
+/**
+ * "Hoje"/"agora" sempre no fuso do salão, nunca no do processo: na Vercel o
+ * servidor roda em UTC, e a partir das 21h de Brasília já seria "amanhã".
+ */
+export const SALON_TIMEZONE = "America/Sao_Paulo";
+
+function salonParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SALON_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, time: `${get("hour")}:${get("minute")}` };
+}
+
+/** Data de hoje no fuso do salão, como "YYYY-MM-DD". */
 export function todayDateStr(): string {
-  return formatDateOnly(new Date());
+  return salonParts(new Date()).date;
+}
+
+/** Data ("YYYY-MM-DD") no fuso do salão de um timestamp ISO — ex.: createdAt de uma venda. */
+export function salonDateOf(isoTimestamp: string): string {
+  return salonParts(new Date(isoTimestamp)).date;
 }
 
 export function addDaysToDateStr(dateStr: string, days: number): string {
@@ -66,7 +91,7 @@ export function addMinutesToTime(time: string, minutes: number): string {
 }
 
 export function nowTimeStr(): string {
-  return format(new Date(), "HH:mm");
+  return salonParts(new Date()).time;
 }
 
 /** Formata um Date arbitrário (não necessariamente "agora") como "HH:mm". */

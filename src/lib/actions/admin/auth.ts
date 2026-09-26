@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE_NAME, createSessionToken, verifyAdminCredentials } from "@/lib/auth/session";
+import { SESSION_COOKIE_NAME, createSessionToken } from "@/lib/auth/session";
+import { verifyAdminCredentials } from "@/lib/auth/credentials";
 
 export interface AdminLoginState {
   error?: string;
@@ -16,7 +17,7 @@ export async function adminLoginAction(
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "");
 
-  if (!verifyAdminCredentials(email, password)) {
+  if (!(await verifyAdminCredentials(email, password))) {
     return { error: "E-mail ou senha inválidos." };
   }
 

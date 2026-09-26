@@ -1,9 +1,8 @@
 /**
- * Sessão do admin — implementação leve com Web Crypto (funciona igual em
- * middleware/Edge e em Server Actions/Node), sem libs extras. Protótipo
- * apenas: comparação de senha em texto puro contra env var. Na fase Supabase,
- * isso é substituído por Supabase Auth + tabela admin_profiles (ver
- * documentação.md > Roadmap e supabase/migrations/0001_schema.sql).
+ * Sessão do admin — cookie assinado com HMAC via Web Crypto (funciona igual em
+ * middleware/Edge e em Server Actions/Node), sem libs extras. A senha em si é
+ * conferida no Supabase Auth (ver credentials.ts); este arquivo só cuida do
+ * cookie depois que o login deu certo.
  */
 
 export const SESSION_COOKIE_NAME = "ch_admin_session";
@@ -71,11 +70,4 @@ export async function verifySessionToken(token: string | undefined | null): Prom
   } catch {
     return null;
   }
-}
-
-export function verifyAdminCredentials(email: string, password: string): boolean {
-  const expectedEmail = process.env.ADMIN_EMAIL;
-  const expectedPassword = process.env.ADMIN_PASSWORD;
-  if (!expectedEmail || !expectedPassword) return false;
-  return email.trim().toLowerCase() === expectedEmail.trim().toLowerCase() && password === expectedPassword;
 }

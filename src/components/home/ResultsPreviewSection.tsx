@@ -11,16 +11,10 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
   const results = galleryItems.filter((g) => g.category === "resultados");
   if (results.length === 0) return null;
 
-  const mainResults = results.slice(0, 3);
-  const highlightedResults = results.slice(3, 5);
-
   return (
     <section id="resultados" className="section-padding relative scroll-mt-28 overflow-hidden bg-white">
       <ParallaxLeaf className="pointer-events-none absolute -right-4 top-10 hidden sm:block" size={48} tone="moss" />
       <ParallaxLeaf className="pointer-events-none absolute -left-3 bottom-14 hidden sm:block" size={40} variant="branch" speed="slow" />
-      {highlightedResults.length > 0 && (
-        <div className="pointer-events-none absolute -right-10 bottom-0 h-72 w-72 rounded-full bg-brand-gold/20 blur-3xl" />
-      )}
       <MarginThread side="left" tone="sage" className="top-10 bottom-10" />
       <MarginThread side="right" tone="sage" className="top-10 bottom-10" />
       <div className="container-herbert relative">
@@ -32,9 +26,13 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
           />
         </FadeIn>
 
-        <StaggerContainer className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {mainResults.map((item) => (
-            <StaggerItem key={item.id}>
+        {/* flex-wrap em vez de grid: a quantidade vem do admin, e a última linha incompleta fica centralizada */}
+        <StaggerContainer className="mt-12 flex flex-wrap justify-center gap-5">
+          {results.map((item) => (
+            <StaggerItem
+              key={item.id}
+              className="w-full sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)]"
+            >
               <TiltCard className="group rounded-2xl">
                 <PlaceholderImage
                   label={item.caption ?? "Resultado do acompanhamento"}
@@ -45,22 +43,6 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
             </StaggerItem>
           ))}
         </StaggerContainer>
-
-        {highlightedResults.length > 0 && (
-          <StaggerContainer className="relative mt-6 flex justify-end gap-5 sm:mt-8">
-            {highlightedResults.map((item) => (
-              <StaggerItem key={item.id} className="w-[calc(50%-0.625rem)] sm:w-48 lg:w-56">
-                <TiltCard className="group rounded-2xl">
-                  <PlaceholderImage
-                    label={item.caption ?? "Resultado do acompanhamento"}
-                    tone="gold"
-                    className="aspect-square w-full ring-2 ring-brand-gold/50 transition-transform duration-500 group-hover:scale-105"
-                  />
-                </TiltCard>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        )}
 
         <FadeIn delay={0.2} className="mt-12 text-center">
           <p className="mx-auto max-w-xl text-sm text-brand-graphite/60">

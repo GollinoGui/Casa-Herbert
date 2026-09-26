@@ -1,15 +1,17 @@
-import { randomUUID } from "node:crypto";
 import type { Testimonial } from "@/types";
-import { mutateDb, readDb } from "./store";
+import { getSupabase, unwrap } from "@/lib/supabase/server";
+import { toTestimonial } from "@/lib/supabase/mappers";
 
 export async function getPublishedTestimonials(): Promise<Testimonial[]> {
-  const db = readDb();
-  return db.testimonials.filter((t) => t.isPublished).sort((a, b) => a.displayOrder - b.displayOrder);
+  const rows = unwrap(
+    await getSupabase().from("testimonials").select("*").eq("is_published", true).order("display_order")
+  );
+  return rows.map(toTestimonial);
 }
 
 export async function getAllTestimonials(): Promise<Testimonial[]> {
-  const db = readDb();
-  return [...db.testimonials].sort((a, b) => a.displayOrder - b.displayOrder);
+  const rows = unwrap(await getSupabase().from("testimonials").select("*").order("display_order"));
+  return rows.map(toTestimonial);
 }
 
 export interface TestimonialInput {
@@ -19,30 +21,35 @@ export interface TestimonialInput {
   isPublished: boolean;
 }
 
+function toRow(input: Partial<TestimonialInput>) {
+  const row: Record<string, unknown> = {};
+  if (input.customerName !== undefined) row.customer_name = input.customerName;
+  if (input.rating !== undefined) row.rating = input.rating;
+  if (input.content !== undefined) row.content = input.content;
+  if (input.isPublished !== undefined) row.is_published = input.isPublished;
+  return row;
+}
+
 export async function createTestimonial(input: TestimonialInput): Promise<Testimonial> {
-  return mutateDb((db) => {
-    const testimonial: Testimonial = {
-      id: randomUUID(),
-      ...input,
-      displayOrder: db.testimonials.length + 1,
-      createdAt: new Date().toISOString(),
-    };
-    db.testimonials.push(testimonial);
-    return testimonial;
-  });
+  const supabase = getSupabase();
+  const { count } = await supabase.from("testimonials").select("id", { count: "exact", head: true });
+  const row = unwrap(
+    await supabase
+      .from("testimonials")
+      .insert({ ...toRow(input), display_order: (count ?? 0) + 1 })
+      .select("*")
+      .single()
+  );
+  return toTestimonial(row);
 }
 
 export async function updateTestimonial(id: string, input: Partial<TestimonialInput>): Promise<Testimonial | null> {
-  return mutateDb((db) => {
-    const testimonial = db.testimonials.find((t) => t.id === id);
-    if (!testimonial) return null;
-    Object.assign(testimonial, input);
-    return testimonial;
-  });
+  const row = unwrap(
+    await getSupabase().from("testimonials").update(toRow(input)).eq("id", id).select("*").maybeSingle()
+  );
+  return row ? toTestimonial(row) : null;
 }
 
 export async function deleteTestimonial(id: string): Promise<void> {
-  mutateDb((db) => {
-    db.testimonials = db.testimonials.filter((t) => t.id !== id);
-  });
+  unwrap(await getSupabase().from("testimonials").delete().eq("id", id));
 }

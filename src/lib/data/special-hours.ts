@@ -1,10 +1,12 @@
-import { randomUUID } from "node:crypto";
 import type { SpecialHours, TimeRange } from "@/types";
-import { mutateDb, readDb } from "./store";
+import { getSupabase, unwrap } from "@/lib/supabase/server";
+import { toSpecialHours } from "@/lib/supabase/mappers";
 
 export async function getSpecialHours(): Promise<SpecialHours[]> {
-  const db = readDb();
-  return [...db.specialHours].sort((a, b) => a.date.localeCompare(b.date));
+  const rows = unwrap(
+    await getSupabase().from("special_hours").select("*, special_hours_ranges(*)").order("special_date")
+  );
+  return rows.map(toSpecialHours);
 }
 
 export async function upsertSpecialHours(input: {
@@ -13,28 +15,22 @@ export async function upsertSpecialHours(input: {
   reason?: string;
   ranges: TimeRange[];
 }): Promise<SpecialHours> {
-  return mutateDb((db) => {
-    const existing = db.specialHours.find((s) => s.date === input.date);
-    if (existing) {
-      existing.isClosed = input.isClosed;
-      existing.reason = input.reason ?? null;
-      existing.ranges = input.isClosed ? [] : input.ranges;
-      return existing;
-    }
-    const record: SpecialHours = {
-      id: randomUUID(),
-      date: input.date,
-      isClosed: input.isClosed,
-      reason: input.reason ?? null,
-      ranges: input.isClosed ? [] : input.ranges,
-    };
-    db.specialHours.push(record);
-    return record;
-  });
+  const supabase = getSupabase();
+  const id = unwrap(
+    await supabase.rpc("upsert_special_hours", {
+      p_date: input.date,
+      p_is_closed: input.isClosed,
+      p_reason: input.reason ?? null,
+      p_ranges: input.ranges,
+    })
+  );
+
+  const row = unwrap(
+    await supabase.from("special_hours").select("*, special_hours_ranges(*)").eq("id", id).single()
+  );
+  return toSpecialHours(row);
 }
 
 export async function deleteSpecialHours(id: string): Promise<void> {
-  mutateDb((db) => {
-    db.specialHours = db.specialHours.filter((s) => s.id !== id);
-  });
+  unwrap(await getSupabase().from("special_hours").delete().eq("id", id));
 }

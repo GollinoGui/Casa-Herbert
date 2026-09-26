@@ -1,0 +1,9 @@
+.env
+.env*.local
+.next
+node_modules
+.mockdata
+.agents
+.claude
+.playwright-mcp
+docs/design-references

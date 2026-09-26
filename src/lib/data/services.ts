@@ -1,20 +1,22 @@
-import { randomUUID } from "node:crypto";
 import type { Service } from "@/types";
-import { mutateDb, readDb } from "./store";
+import { getSupabase, unwrap } from "@/lib/supabase/server";
+import { toService } from "@/lib/supabase/mappers";
 
 export async function getActiveServices(): Promise<Service[]> {
-  const db = readDb();
-  return db.services.filter((s) => s.isActive).sort((a, b) => a.displayOrder - b.displayOrder);
+  const rows = unwrap(
+    await getSupabase().from("services").select("*").eq("is_active", true).order("display_order")
+  );
+  return rows.map(toService);
 }
 
 export async function getAllServices(): Promise<Service[]> {
-  const db = readDb();
-  return [...db.services].sort((a, b) => a.displayOrder - b.displayOrder);
+  const rows = unwrap(await getSupabase().from("services").select("*").order("display_order"));
+  return rows.map(toService);
 }
 
 export async function getServiceById(id: string): Promise<Service | null> {
-  const db = readDb();
-  return db.services.find((s) => s.id === id) ?? null;
+  const row = unwrap(await getSupabase().from("services").select("*").eq("id", id).maybeSingle());
+  return row ? toService(row) : null;
 }
 
 export interface ServiceInput {
@@ -36,36 +38,37 @@ function slugify(name: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+function toRow(input: Partial<ServiceInput>) {
+  const row: Record<string, unknown> = {};
+  if (input.name !== undefined) {
+    row.name = input.name;
+    row.slug = slugify(input.name);
+  }
+  if (input.description !== undefined) row.description = input.description;
+  if (input.durationMinutes !== undefined) row.duration_minutes = input.durationMinutes;
+  if (input.priceCents !== undefined) row.price_cents = input.priceCents;
+  if (input.isActive !== undefined) row.is_active = input.isActive;
+  return row;
+}
+
 export async function createService(input: ServiceInput): Promise<Service> {
-  return mutateDb((db) => {
-    const now = new Date().toISOString();
-    const service: Service = {
-      id: randomUUID(),
-      name: input.name,
-      slug: slugify(input.name),
-      description: input.description,
-      durationMinutes: input.durationMinutes,
-      priceCents: input.priceCents ?? null,
-      isActive: input.isActive,
-      displayOrder: db.services.length + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
-    db.services.push(service);
-    return service;
-  });
+  const supabase = getSupabase();
+  const { count } = await supabase.from("services").select("id", { count: "exact", head: true });
+  const row = unwrap(
+    await supabase
+      .from("services")
+      .insert({ ...toRow(input), price_cents: input.priceCents ?? null, display_order: (count ?? 0) + 1 })
+      .select("*")
+      .single()
+  );
+  return toService(row);
 }
 
 export async function updateService(id: string, input: Partial<ServiceInput>): Promise<Service | null> {
-  return mutateDb((db) => {
-    const service = db.services.find((s) => s.id === id);
-    if (!service) return null;
-    Object.assign(service, input, {
-      slug: input.name ? slugify(input.name) : service.slug,
-      updatedAt: new Date().toISOString(),
-    });
-    return service;
-  });
+  const row = unwrap(
+    await getSupabase().from("services").update(toRow(input)).eq("id", id).select("*").maybeSingle()
+  );
+  return row ? toService(row) : null;
 }
 
 export async function setServiceActive(id: string, isActive: boolean): Promise<Service | null> {

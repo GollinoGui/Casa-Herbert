@@ -1,22 +1,24 @@
-import { randomUUID } from "node:crypto";
 import type { Product } from "@/types";
-import { mutateDb, readDb } from "./store";
+import { getSupabase, unwrap } from "@/lib/supabase/server";
+import { toProduct } from "@/lib/supabase/mappers";
+
+function byName(a: Product, b: Product) {
+  return a.name.localeCompare(b.name, "pt-BR");
+}
 
 export async function getAllProducts(): Promise<Product[]> {
-  const db = readDb();
-  return [...db.products].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const rows = unwrap(await getSupabase().from("products").select("*"));
+  return rows.map(toProduct).sort(byName);
 }
 
 export async function getActiveProducts(): Promise<Product[]> {
-  const db = readDb();
-  return db.products
-    .filter((p) => p.isActive)
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const rows = unwrap(await getSupabase().from("products").select("*").eq("is_active", true));
+  return rows.map(toProduct).sort(byName);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  const db = readDb();
-  return db.products.find((p) => p.id === id) ?? null;
+  const row = unwrap(await getSupabase().from("products").select("*").eq("id", id).maybeSingle());
+  return row ? toProduct(row) : null;
 }
 
 export interface ProductInput {
@@ -26,30 +28,25 @@ export interface ProductInput {
   isActive: boolean;
 }
 
+function toRow(input: Partial<ProductInput>) {
+  const row: Record<string, unknown> = {};
+  if (input.name !== undefined) row.name = input.name;
+  if (input.priceCents !== undefined) row.price_cents = input.priceCents;
+  if (input.stockQuantity !== undefined) row.stock_quantity = input.stockQuantity;
+  if (input.isActive !== undefined) row.is_active = input.isActive;
+  return row;
+}
+
 export async function createProduct(input: ProductInput): Promise<Product> {
-  return mutateDb((db) => {
-    const now = new Date().toISOString();
-    const product: Product = {
-      id: randomUUID(),
-      name: input.name,
-      priceCents: input.priceCents,
-      stockQuantity: input.stockQuantity,
-      isActive: input.isActive,
-      createdAt: now,
-      updatedAt: now,
-    };
-    db.products.push(product);
-    return product;
-  });
+  const row = unwrap(await getSupabase().from("products").insert(toRow(input)).select("*").single());
+  return toProduct(row);
 }
 
 export async function updateProduct(id: string, input: Partial<ProductInput>): Promise<Product | null> {
-  return mutateDb((db) => {
-    const product = db.products.find((p) => p.id === id);
-    if (!product) return null;
-    Object.assign(product, input, { updatedAt: new Date().toISOString() });
-    return product;
-  });
+  const row = unwrap(
+    await getSupabase().from("products").update(toRow(input)).eq("id", id).select("*").maybeSingle()
+  );
+  return row ? toProduct(row) : null;
 }
 
 export async function setProductActive(id: string, isActive: boolean): Promise<Product | null> {

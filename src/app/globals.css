@@ -4,8 +4,8 @@
 
 /* framer-motion's useScroll() sem `container` explícito mede offsets contra
    document.documentElement — precisa de position não-static, senão avisa no
-   console (ver HeroPhotoParallax). Não afeta fixed/sticky (relative puro não
-   cria containing block pra eles). */
+   console (ver ScrollProgressScissors). Não afeta fixed/sticky (relative puro
+   não cria containing block pra eles). */
 html {
   position: relative;
 }

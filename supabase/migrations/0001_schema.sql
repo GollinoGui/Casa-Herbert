@@ -113,7 +113,7 @@ create index idx_special_hours_ranges_parent on public.special_hours_ranges (spe
 create table public.blocked_slots (
   id           uuid primary key default gen_random_uuid(),
   start_date   date not null,
-  end_date     date not null default start_date,
+  end_date     date not null, -- o app sempre envia; Postgres não aceita default referenciando outra coluna
   is_full_day  boolean not null default true,
   start_time   time,  -- obrigatório apenas se is_full_day = false
   end_time     time,  -- obrigatório apenas se is_full_day = false

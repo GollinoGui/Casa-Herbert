@@ -22,6 +22,11 @@ const inter = Inter({
 
 const SITE_URL = "https://casaherbert.com.br";
 
+// Todas as páginas leem o banco (no mínimo, settings aqui no layout). Sem isso o
+// Next 14 tenta gerá-las estáticas no build, e o supabase-js engole o sinal de
+// "rota dinâmica" que o fetch no-store deveria dar.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
