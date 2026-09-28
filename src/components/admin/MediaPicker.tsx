@@ -84,10 +84,16 @@ export function UploadButton({
         }}
       />
       <Button type="button" variant="secondary" onClick={() => inputRef.current?.click()} disabled={uploading}>
-        {uploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
-        {uploading ? "Enviando..." : label}
+        {uploading ? (
+          <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+        ) : (
+          <ImagePlus size={16} aria-hidden="true" />
+        )}
+        {uploading ? "Enviando…" : label}
       </Button>
-      {error ? <p className="mt-1.5 text-xs text-red-600">{error}</p> : null}
+      <p className="mt-1.5 text-xs text-red-600 empty:hidden" aria-live="polite">
+        {error}
+      </p>
     </div>
   );
 }
@@ -129,7 +135,7 @@ export function MediaPickerModal({ open, onClose, onSelect, selectedId, title = 
         </div>
 
         {media === null ? (
-          <p className="py-10 text-center text-sm text-brand-graphite/50">Carregando fotos...</p>
+          <p className="py-10 text-center text-sm text-brand-graphite/50">Carregando fotos…</p>
         ) : media.length === 0 ? (
           <p className="py-10 text-center text-sm text-brand-graphite/50">Nenhuma foto na biblioteca ainda.</p>
         ) : (
@@ -140,7 +146,7 @@ export function MediaPickerModal({ open, onClose, onSelect, selectedId, title = 
                   type="button"
                   onClick={() => onSelect(m)}
                   className={cn(
-                    "group relative block aspect-square w-full overflow-hidden rounded-xl ring-2 transition",
+                    "group relative block aspect-square w-full overflow-hidden rounded-xl ring-2 transition-shadow focus-visible:outline-none focus-visible:ring-brand-moss",
                     m.id === selectedId ? "ring-brand-forest" : "ring-transparent hover:ring-brand-sage"
                   )}
                   aria-label={`Escolher ${m.alt ?? "foto"}`}
@@ -148,7 +154,7 @@ export function MediaPickerModal({ open, onClose, onSelect, selectedId, title = 
                   <Image src={m.url} alt={m.alt ?? ""} fill sizes="200px" className="object-cover" />
                   {m.id === selectedId ? (
                     <span className="absolute right-2 top-2 rounded-full bg-brand-forest p-1 text-white">
-                      <Check size={14} />
+                      <Check size={14} aria-hidden="true" />
                     </span>
                   ) : null}
                 </button>

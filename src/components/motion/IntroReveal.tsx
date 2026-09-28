@@ -8,6 +8,24 @@ import { IntroGateProvider } from "@/components/motion/introGate";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+const SEEN_KEY = "casa-herbert:intro-seen";
+
+// sessionStorage pode lançar (Safari em aba privada antiga, cookies bloqueados) —
+// nesse caso a cortina só volta a tocar a cada carregamento, como antes.
+function hasSeenIntro(): boolean {
+  try {
+    return sessionStorage.getItem(SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markIntroSeen() {
+  try {
+    sessionStorage.setItem(SEEN_KEY, "1");
+  } catch {}
+}
+
 // Marcas em volta do círculo do badge, como um selo — 8 traços a 45° de distância,
 // da borda do círculo (raio 56) até um pouco além (raio 70), centrados em (72,72).
 const BADGE_TICKS = [
@@ -25,8 +43,9 @@ const BADGE_TICKS = [
  * Cortina de entrada da home: um traço entra pela esquerda no terço superior da tela,
  * desenha uma tesoura no centro e sai pela direita, enquanto no centro da tela desenha
  * o selo do logo (círculo, marcas ao redor e monograma "CH"), a tesoura, o nome da
- * marca e o subtítulo — com folhas discretas nos cantos. Toca a cada carregamento da
- * página. Renderiza vazio no SSR e na primeira pintura do cliente de propósito — só
+ * marca e o subtítulo — com folhas discretas nos cantos. Toca só na primeira visita à
+ * home em cada sessão do navegador (sessionStorage); voltar à home ou recarregar depois
+ * disso mostra a página direto. Renderiza vazio no SSR e na primeira pintura do cliente de propósito — só
  * decide se anima depois de montado, pra nunca disputar com o conteúdo real da Hero
  * nem gerar mismatch de hidratação.
  *
@@ -41,7 +60,7 @@ export function IntroReveal({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) {
+    if (reduceMotion || hasSeenIntro()) {
       setReady(true);
       return;
     }
@@ -55,7 +74,10 @@ export function IntroReveal({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!visible) return;
     document.body.style.overflow = "hidden";
+    // Marca como vista só no fim: se marcasse ao começar, o replay de efeitos do Strict
+    // Mode (dev) já leria "vista" no segundo mount e liberaria a página por baixo da cortina.
     const timer = setTimeout(() => {
+      markIntroSeen();
       setVisible(false);
       setReady(true);
     }, 2500);
