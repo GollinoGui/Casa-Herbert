@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { HeartHandshake, Leaf, Sparkles } from "lucide-react";
 import { SectionHeading } from "@/components/ui/Card";
-import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
+import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
@@ -52,7 +52,14 @@ export default function SobrePage() {
             </p>
           </FadeIn>
           <FadeIn direction="left" delay={0.15}>
-            <PlaceholderImage label="Retrato Casa Herbert" tone="gold" className="aspect-[4/5] w-full" />
+            <SiteImage
+              slot="sobre.retrato"
+              alt="Retrato Casa Herbert"
+              placeholderTone="gold"
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="aspect-[4/5] w-full"
+              priority
+            />
           </FadeIn>
         </div>
       </section>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Droplets, HeartHandshake, Leaf, Microscope, Sparkles, Sun } from "lucide-react";
 import { SectionHeading } from "@/components/ui/Card";
-import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
+import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
@@ -71,7 +71,14 @@ export default function TerapiaCapilarPage() {
             </div>
           </FadeIn>
           <FadeIn direction="left" delay={0.15}>
-            <PlaceholderImage label="Terapia capilar Casa Herbert" tone="sage" className="aspect-[4/5] w-full" />
+            <SiteImage
+              slot="terapia.hero"
+              alt="Terapia capilar Casa Herbert"
+              placeholderTone="sage"
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="aspect-[4/5] w-full"
+              priority
+            />
           </FadeIn>
         </div>
       </section>
@@ -106,7 +113,13 @@ export default function TerapiaCapilarPage() {
       <section className="section-padding bg-brand-sage/10">
         <div className="container-herbert grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <FadeIn direction="right">
-            <PlaceholderImage label="Sessão de fotobiomodulação" tone="gold" className="aspect-[4/3] w-full" />
+            <SiteImage
+              slot="terapia.fotobio"
+              alt="Sessão de fotobiomodulação"
+              placeholderTone="gold"
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="aspect-[4/3] w-full"
+            />
           </FadeIn>
           <FadeIn direction="left">
             <div className="flex items-center gap-2.5">

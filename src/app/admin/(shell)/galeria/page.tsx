@@ -12,8 +12,7 @@ export default async function GaleriaPage() {
         <p className="eyebrow mb-2">Galeria</p>
         <h1 className="font-serif text-2xl text-brand-forest sm:text-3xl">Galeria de fotos</h1>
         <p className="mt-2 max-w-2xl text-sm text-brand-graphite/70">
-          Upload de imagens reais será adicionado quando o Supabase Storage for conectado. Por enquanto, cada item
-          usa uma imagem ilustrativa.
+          Fotos da seção &quot;Resultados&quot; da página inicial. Item sem foto aparece com uma imagem ilustrativa.
         </p>
       </div>
       <GalleryManager items={items} />

@@ -7,6 +7,7 @@ import {
   updateService,
   setServiceActive,
   getActiveServices,
+  moveService,
   type ServiceInput,
 } from "@/lib/data/services";
 
@@ -29,6 +30,13 @@ export async function setServiceActiveAction(id: string, isActive: boolean) {
   const service = await setServiceActive(id, isActive);
   revalidatePath("/admin/servicos");
   return service;
+}
+
+export async function moveServiceAction(id: string, direction: "up" | "down") {
+  await requireAdmin();
+  await moveService(id, direction);
+  revalidatePath("/admin/servicos");
+  revalidatePath("/");
 }
 
 export async function listActiveServicesAction() {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
@@ -11,13 +12,15 @@ import { adminAppointmentFormSchema } from "@/lib/booking/validators";
 import { adminCreateAppointmentAction } from "@/lib/actions/admin/appointments";
 import { listActiveServicesAction } from "@/lib/actions/admin/services";
 import { listCustomersAction } from "@/lib/actions/admin/customers";
+import { canonicalPhone, formatPhoneDisplay } from "@/lib/utils/phone";
+import { matchesCustomerSearch } from "@/lib/utils/customer-search";
 import type { Customer, Service } from "@/types";
 
 type FormValues = z.infer<typeof adminAppointmentFormSchema>;
 
-const EMPTY_VALUES = (date: string, startTime: string): FormValues => ({
+const EMPTY_VALUES = (date: string, startTime: string, customerId = ""): FormValues => ({
   customerMode: "existing",
-  customerId: "",
+  customerId,
   newCustomerName: "",
   newCustomerPhone: "",
   newCustomerEmail: "",
@@ -35,6 +38,8 @@ interface NewAppointmentModalProps {
   onCreated: () => void;
   initialDate?: string;
   initialStartTime?: string;
+  /** Já abre com este cliente selecionado (ex.: botão "Agendar" na ficha do cliente). */
+  initialCustomerId?: string;
 }
 
 export function NewAppointmentModal({
@@ -43,9 +48,11 @@ export function NewAppointmentModal({
   onCreated,
   initialDate,
   initialStartTime,
+  initialCustomerId,
 }: NewAppointmentModalProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerQuery, setCustomerQuery] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
@@ -67,11 +74,32 @@ export function NewAppointmentModal({
       setServices(svc);
       setCustomers(cust);
     });
-    reset(EMPTY_VALUES(initialDate ?? "", initialStartTime ?? ""));
-  }, [open, initialDate, initialStartTime, reset]);
+    setCustomerQuery("");
+    reset(EMPTY_VALUES(initialDate ?? "", initialStartTime ?? "", initialCustomerId));
+  }, [open, initialDate, initialStartTime, initialCustomerId, reset]);
 
   const customerMode = watch("customerMode");
+  const customerId = watch("customerId");
   const serviceId = watch("serviceId");
+  const newCustomerPhone = watch("newCustomerPhone") ?? "";
+
+  const selectedCustomer = customers.find((c) => c.id === customerId) ?? null;
+  const customerMatches = useMemo(
+    () => customers.filter((c) => matchesCustomerSearch(c, customerQuery)).slice(0, 8),
+    [customers, customerQuery]
+  );
+  // O servidor liga ao cadastro existente de qualquer forma (findOrCreateCustomer);
+  // o aviso só evita a surpresa de o nome digitado aqui não ser usado.
+  const existingForNewPhone = useMemo(() => {
+    const phone = canonicalPhone(newCustomerPhone);
+    return phone.length >= 10 ? customers.find((c) => c.normalizedPhone === phone) ?? null : null;
+  }, [customers, newCustomerPhone]);
+
+  function pickCustomer(customer: Customer) {
+    setValue("customerMode", "existing");
+    setValue("customerId", customer.id, { shouldValidate: true });
+    setCustomerQuery("");
+  }
 
   function handleServiceChange(id: string) {
     setValue("serviceId", id, { shouldValidate: true });
@@ -127,14 +155,57 @@ export function NewAppointmentModal({
           </div>
           {customerMode === "existing" ? (
             <div>
-              <Select {...register("customerId")}>
-                <option value="">Selecione...</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName} — {c.phone}
-                  </option>
-                ))}
-              </Select>
+              {selectedCustomer ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-brand-moss/40 bg-brand-cream/50 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-brand-graphite">{selectedCustomer.fullName}</p>
+                    <p className="text-xs text-brand-graphite/60">{formatPhoneDisplay(selectedCustomer.phone)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setValue("customerId", "")}
+                    className="shrink-0 text-xs font-medium text-brand-moss hover:underline"
+                  >
+                    Trocar
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="relative">
+                    <Search
+                      size={15}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-graphite/40"
+                    />
+                    <Input
+                      value={customerQuery}
+                      onChange={(e) => setCustomerQuery(e.target.value)}
+                      placeholder="Buscar por nome ou telefone"
+                      aria-label="Buscar cliente"
+                      className="pl-9"
+                    />
+                  </div>
+                  <ul className="mt-2 max-h-52 overflow-y-auto overscroll-contain rounded-xl border border-brand-beige">
+                    {customerMatches.length === 0 ? (
+                      <li className="px-4 py-3 text-sm text-brand-graphite/50">
+                        {customers.length === 0 ? "Nenhum cliente cadastrado." : "Nenhum cliente encontrado."}
+                      </li>
+                    ) : (
+                      customerMatches.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => pickCustomer(c)}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-brand-cream"
+                          >
+                            <span className="truncate font-medium text-brand-graphite">{c.fullName}</span>
+                            <span className="shrink-0 text-xs text-brand-graphite/60">{formatPhoneDisplay(c.phone)}</span>
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              )}
               <FieldError>{errors.customerId?.message}</FieldError>
             </div>
           ) : (
@@ -144,8 +215,23 @@ export function NewAppointmentModal({
                 <FieldError>{errors.newCustomerName?.message}</FieldError>
               </div>
               <div>
-                <Input placeholder="WhatsApp com DDD" {...register("newCustomerPhone")} />
+                <Input placeholder="WhatsApp com DDD" inputMode="tel" {...register("newCustomerPhone")} />
                 <FieldError>{errors.newCustomerPhone?.message}</FieldError>
+                {existingForNewPhone ? (
+                  <div className="mt-2 rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-3 text-sm text-brand-graphite">
+                    <p>
+                      Esse telefone já é de <strong>{existingForNewPhone.fullName}</strong>. O agendamento vai para
+                      esse cadastro.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => pickCustomer(existingForNewPhone)}
+                      className="mt-1.5 text-xs font-medium text-brand-moss hover:underline"
+                    >
+                      Usar cadastro de {existingForNewPhone.fullName}
+                    </button>
+                  </div>
+                ) : null}
               </div>
               <div>
                 <Input placeholder="E-mail (opcional)" {...register("newCustomerEmail")} />

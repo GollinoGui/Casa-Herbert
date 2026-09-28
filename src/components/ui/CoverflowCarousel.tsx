@@ -18,7 +18,7 @@ export interface CoverflowCarouselItem {
   /** Quando presente, o CTA vira um botão que dispara isso em vez de navegar para ctaUrl. */
   onCtaClick?: () => void;
   placeholderTone?: "sage" | "cream" | "gold";
-  /** Caminho de uma foto real (ex: "/images/servicos/x.jpg"). Sem isso, usa PlaceholderImage. */
+  /** URL de uma foto real (a escolhida para o serviço no painel). Sem isso, usa PlaceholderImage. */
   imageSrc?: string;
   /** object-position da foto real, útil quando a foto já tem marca/texto embutido a recortar. */
   imagePosition?: string;

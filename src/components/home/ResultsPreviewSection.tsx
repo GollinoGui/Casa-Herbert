@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { GalleryItem } from "@/types";
 import { SectionHeading } from "@/components/ui/Card";
 import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
@@ -34,22 +35,36 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
               className="w-full sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)]"
             >
               <TiltCard className="group rounded-2xl">
-                <PlaceholderImage
-                  label={item.caption ?? "Resultado do acompanhamento"}
-                  tone="sage"
-                  className="aspect-square w-full ring-1 ring-brand-sage/30 transition-transform duration-500 group-hover:scale-105"
-                />
+                {item.imageUrl ? (
+                  <div className="relative aspect-square w-full overflow-hidden rounded-2xl ring-1 ring-brand-sage/30 transition-transform duration-500 group-hover:scale-105">
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.caption ?? "Resultado do acompanhamento"}
+                      fill
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <PlaceholderImage
+                    label={item.caption ?? "Resultado do acompanhamento"}
+                    tone="sage"
+                    className="aspect-square w-full ring-1 ring-brand-sage/30 transition-transform duration-500 group-hover:scale-105"
+                  />
+                )}
               </TiltCard>
             </StaggerItem>
           ))}
         </StaggerContainer>
 
-        <FadeIn delay={0.2} className="mt-12 text-center">
-          <p className="mx-auto max-w-xl text-sm text-brand-graphite/60">
-            Esta galeria é gerenciada pela Casa Herbert e será atualizada com fotografias reais dos
-            acompanhamentos ao longo do tempo.
-          </p>
-        </FadeIn>
+        {results.some((item) => item.imageUrl) ? null : (
+          <FadeIn delay={0.2} className="mt-12 text-center">
+            <p className="mx-auto max-w-xl text-sm text-brand-graphite/60">
+              Esta galeria é gerenciada pela Casa Herbert e será atualizada com fotografias reais dos
+              acompanhamentos ao longo do tempo.
+            </p>
+          </FadeIn>
+        )}
       </div>
     </section>
   );

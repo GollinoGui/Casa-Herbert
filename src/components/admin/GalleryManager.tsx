@@ -7,10 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input, FieldLabel } from "@/components/ui/Field";
-import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
-import { createGalleryItemAction, deleteGalleryItemAction } from "@/lib/actions/admin/gallery";
+import { ImageField } from "@/components/admin/MediaPicker";
+import {
+  createGalleryItemAction,
+  deleteGalleryItemAction,
+  updateGalleryItemImageAction,
+} from "@/lib/actions/admin/gallery";
 import { cn } from "@/lib/utils/cn";
-import type { GalleryItem } from "@/types";
+import type { GalleryItem, Media } from "@/types";
 
 export function GalleryManager({ items }: { items: GalleryItem[] }) {
   const router = useRouter();
@@ -19,6 +23,11 @@ export function GalleryManager({ items }: { items: GalleryItem[] }) {
   async function handleDelete(id: string) {
     if (!confirm("Remover este item da galeria?")) return;
     await deleteGalleryItemAction(id);
+    router.refresh();
+  }
+
+  async function handleImageChange(id: string, media: Media | null) {
+    await updateGalleryItemImageAction(id, media?.id ?? null);
     router.refresh();
   }
 
@@ -35,9 +44,15 @@ export function GalleryManager({ items }: { items: GalleryItem[] }) {
           <p className="text-sm text-brand-graphite/60">Nenhum item na galeria.</p>
         ) : (
           items.map((item) => (
-            <Card key={item.id} className={cn("overflow-hidden p-0", !item.isPublished && "opacity-60")}>
-              <PlaceholderImage label={item.caption ?? item.category} className="aspect-[4/3] w-full rounded-none" />
-              <div className="p-3">
+            <Card key={item.id} className={cn("p-3", !item.isPublished && "opacity-60")}>
+              <ImageField
+                label={item.caption || item.category}
+                aspect="1/1"
+                imageUrl={item.imageUrl}
+                mediaId={item.mediaId}
+                onChange={(media) => handleImageChange(item.id, media)}
+              />
+              <div className="mt-3">
                 <p className="text-sm font-medium text-brand-graphite">{item.caption || "Sem legenda"}</p>
                 <p className="text-xs text-brand-graphite/60">{item.category}</p>
                 <div className="mt-2 flex items-center justify-between">
@@ -77,28 +92,38 @@ export function GalleryManager({ items }: { items: GalleryItem[] }) {
 
 function GalleryFormModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const [caption, setCaption] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("resultados");
   const [isPublished, setIsPublished] = useState(true);
+  const [media, setMedia] = useState<Media | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await createGalleryItemAction({ caption, category, isPublished });
+    await createGalleryItemAction({ caption, category, isPublished, mediaId: media?.id ?? null });
     setSaving(false);
     setCaption("");
-    setCategory("");
+    setCategory("resultados");
     setIsPublished(true);
+    setMedia(null);
     onSaved();
   }
 
   return (
     <Modal open={open} onClose={onClose} title="Novo item da galeria">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <p className="rounded-xl bg-brand-cream/60 p-3 text-xs text-brand-graphite/60">
-          Upload de imagens reais será adicionado quando o Supabase Storage for conectado. Este item usará uma
-          imagem ilustrativa.
-        </p>
+        <div>
+          <FieldLabel>Foto</FieldLabel>
+          <div className="max-w-xs">
+            <ImageField
+              label={caption || "Novo item"}
+              aspect="1/1"
+              imageUrl={media?.url ?? null}
+              mediaId={media?.id ?? null}
+              onChange={setMedia}
+            />
+          </div>
+        </div>
         <div>
           <FieldLabel htmlFor="g-caption">Legenda</FieldLabel>
           <Input id="g-caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
@@ -109,9 +134,12 @@ function GalleryFormModal({ open, onClose, onSaved }: { open: boolean; onClose: 
             id="g-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="Ex.: Ambiente, Resultados, Produtos"
+            placeholder="Ex.: resultados"
             required
           />
+          <p className="mt-1.5 text-xs text-brand-graphite/50">
+            A seção &quot;Resultados&quot; da página inicial mostra os itens da categoria &quot;resultados&quot;.
+          </p>
         </div>
         <label className="flex items-center gap-2 text-sm text-brand-graphite">
           <input

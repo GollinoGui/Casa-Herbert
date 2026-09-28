@@ -22,8 +22,37 @@ export interface Service {
   priceCents: number | null;
   isActive: boolean;
   displayOrder: number;
+  imageId: string | null;
+  imageUrl: string | null;
+  imagePosition: ImagePosition | null;
+  showOnHome: boolean; // aparece no carrossel "Nossos cuidados" da home
   createdAt: string;
   updatedAt: string;
+}
+
+/** Recorte da foto quando ela não tem a mesma proporção do espaço (object-position). */
+export type ImagePosition = "center" | "top" | "bottom";
+
+export interface Media {
+  id: string;
+  url: string;
+  storagePath: string | null; // null = arquivo estático do site (/public)
+  alt: string | null;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
+}
+
+export interface ResolvedImage {
+  src: string;
+  position: ImagePosition | null;
+}
+
+export interface SiteImageSlotAssignment {
+  slotKey: string;
+  mediaId: string;
+  url: string;
+  position: ImagePosition | null;
 }
 
 export interface Customer {
@@ -156,6 +185,8 @@ export interface GalleryItem {
   id: string;
   caption: string | null;
   category: string;
+  mediaId: string | null;
+  imageUrl: string | null;
   isPublished: boolean;
   displayOrder: number;
   createdAt: string;

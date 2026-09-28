@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { MessageCircle, Phone } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -19,6 +20,7 @@ import {
   updateAdminNotesAction,
   updateAppointmentPriceAction,
 } from "@/lib/actions/admin/appointments";
+import { getCustomerAppointmentsAction } from "@/lib/actions/admin/customers";
 import { CheckoutModal } from "@/components/admin/CheckoutModal";
 import { getSettingsAction } from "@/lib/actions/admin/settings";
 import type { AppointmentWithRelations, Settings } from "@/types";
@@ -49,6 +51,7 @@ export function AppointmentDetailModal({
   const [priceDraft, setPriceDraft] = useState("");
   const [priceDirty, setPriceDirty] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [otherVisits, setOtherVisits] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -59,10 +62,16 @@ export function AppointmentDetailModal({
     setShowCancelForm(false);
     setRejectReason("");
     setCancelReason("");
+    setOtherVisits(null);
     Promise.all([getAppointmentAction(appointmentId), getSettingsAction()]).then(([appt, sett]) => {
       if (cancelled) return;
       setAppointment(appt);
       setSettings(sett);
+      if (appt) {
+        getCustomerAppointmentsAction(appt.customerId).then((history) => {
+          if (!cancelled) setOtherVisits(history.filter((a) => a.id !== appt.id).length);
+        });
+      }
       setNotesDraft(appt?.adminNotes ?? "");
       setNotesDirty(false);
       setPriceDraft(appt?.priceCents != null ? String(appt.priceCents) : "");
@@ -162,6 +171,23 @@ export function AppointmentDetailModal({
             <div className="min-w-0">
               <h4 className="break-words font-serif text-lg text-brand-forest">{appointment.customer.fullName}</h4>
               <p className="text-sm text-brand-graphite/70">{formatPhoneDisplay(appointment.customer.phone)}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-brand-graphite/60">
+                {otherVisits === null ? null : otherVisits === 0 ? (
+                  <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 font-medium text-brand-graphite/80">
+                    Primeiro agendamento
+                  </span>
+                ) : (
+                  <span>
+                    Cliente cadastrado · {otherVisits} {otherVisits === 1 ? "outro agendamento" : "outros agendamentos"}
+                  </span>
+                )}
+                <Link
+                  href={`/admin/clientes?cliente=${appointment.customerId}`}
+                  className="font-medium text-brand-moss hover:underline"
+                >
+                  Ver ficha
+                </Link>
+              </p>
             </div>
             <StatusBadge status={appointment.status} />
           </div>

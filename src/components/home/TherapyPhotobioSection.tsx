@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Leaf, Microscope, Sparkles, Sun } from "lucide-react";
 import { LinkButton } from "@/components/ui/Button";
-import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
+import { SiteImage } from "@/components/ui/SiteImage";
 import { SectionHeading } from "@/components/ui/Card";
 import { AnimatedTabs } from "@/components/ui/AnimatedTabs";
 import { FadeIn } from "@/components/motion/FadeIn";
@@ -15,6 +15,7 @@ interface Tab {
   title: string;
   description: string;
   points: { icon: LucideIcon; label: string }[];
+  imageSlot: string;
   imageLabel: string;
   imageTone: "sage" | "gold" | "cream";
 }
@@ -31,6 +32,7 @@ const TABS: Tab[] = [
       { icon: Microscope, label: "Acompanhamento por tricoscopia" },
       { icon: Sun, label: "Protocolos personalizados de cuidado" },
     ],
+    imageSlot: "home.terapia",
     imageLabel: "Avaliação capilar individual",
     imageTone: "sage",
   },
@@ -45,6 +47,7 @@ const TABS: Tab[] = [
       { icon: Sparkles, label: "Indicada dentro do protocolo individual" },
       { icon: Leaf, label: "Acompanhamento contínuo da resposta capilar" },
     ],
+    imageSlot: "home.fotobio",
     imageLabel: "Sessão de fotobiomodulação",
     imageTone: "gold",
   },
@@ -57,7 +60,13 @@ export function TherapyPhotobioSection() {
     content: (
       <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <FadeIn direction="right">
-          <PlaceholderImage label={tab.imageLabel} tone={tab.imageTone} className="aspect-[4/3] w-full" />
+          <SiteImage
+            slot={tab.imageSlot}
+            alt={tab.imageLabel}
+            placeholderTone={tab.imageTone}
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            className="aspect-[4/3] w-full"
+          />
         </FadeIn>
         <FadeIn direction="left" delay={0.05}>
           <h3 className="font-serif text-2xl text-brand-forest sm:text-3xl">{tab.title}</h3>

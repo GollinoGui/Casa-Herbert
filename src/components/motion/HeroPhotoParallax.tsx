@@ -8,10 +8,11 @@ import { Lens } from "@/components/motion/Lens";
 interface HeroPhotoParallaxProps {
   src: string;
   alt: string;
+  position?: string | null;
 }
 
 /** Versão pesada: zoom e parallax sutis atados ao scroll. Só monta em telas maiores, ver useLiteMotion. */
-export function HeroPhotoParallax({ src, alt }: HeroPhotoParallaxProps) {
+export function HeroPhotoParallax({ src, alt, position }: HeroPhotoParallaxProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const scale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
@@ -27,6 +28,7 @@ export function HeroPhotoParallax({ src, alt }: HeroPhotoParallaxProps) {
             fill
             sizes="(min-width: 1024px) 50vw, 100vw"
             className="object-cover"
+            style={{ objectPosition: position ?? "center" }}
             priority
           />
         </Lens>

@@ -5,6 +5,7 @@ import type {
   BusinessHourRule,
   Customer,
   GalleryItem,
+  Media,
   Product,
   Service,
   Settings,
@@ -21,6 +22,9 @@ export function hhmm(time: string | null): string | null {
   return time ? time.slice(0, 5) : null;
 }
 
+/** Select de services com a URL da foto. Sem o join (ex.: dentro de um agendamento), imageUrl vem null. */
+export const SERVICE_WITH_IMAGE = "*, image:media(url)";
+
 export function toService(r: Row): Service {
   return {
     id: r.id,
@@ -31,8 +35,24 @@ export function toService(r: Row): Service {
     priceCents: r.price_cents,
     isActive: r.is_active,
     displayOrder: r.display_order,
+    imageId: r.image_id ?? null,
+    imageUrl: r.image?.url ?? null,
+    imagePosition: r.image_position ?? null,
+    showOnHome: r.show_on_home ?? true,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+  };
+}
+
+export function toMedia(r: Row): Media {
+  return {
+    id: r.id,
+    url: r.url,
+    storagePath: r.storage_path,
+    alt: r.alt,
+    width: r.width,
+    height: r.height,
+    createdAt: r.created_at,
   };
 }
 
@@ -152,11 +172,15 @@ export function toTestimonial(r: Row): Testimonial {
   };
 }
 
+export const GALLERY_WITH_IMAGE = "*, media(url)";
+
 export function toGalleryItem(r: Row): GalleryItem {
   return {
     id: r.id,
     caption: r.caption,
     category: r.category ?? "",
+    mediaId: r.media_id ?? null,
+    imageUrl: r.media?.url ?? null,
     isPublished: r.is_published,
     displayOrder: r.display_order,
     createdAt: r.created_at,

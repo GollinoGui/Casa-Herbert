@@ -13,14 +13,6 @@ import { BookingModal } from "@/components/booking/BookingModal";
 
 const placeholderTones: CoverflowCarouselItem["placeholderTone"][] = ["sage", "cream", "gold"];
 
-// Fotos reais já recebidas, por slug do serviço. Os demais continuam com PlaceholderImage
-// até termos a foto correspondente (ver CLAUDE.md > Fotos).
-const serviceImages: Record<string, { src: string; position?: string }> = {
-  velaterapia: { src: "/images/servicos/velaterapia.jpg", position: "bottom" },
-  "terapia-capilar": { src: "/images/servicos/terapia-capilar.jpg" },
-  fotobiomodulacao: { src: "/images/servicos/fotobiomodulacao.jpg" },
-};
-
 interface ServicesPreviewSectionProps {
   services: Service[];
   whatsappNumber: string;
@@ -31,23 +23,21 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [bookingServiceId, setBookingServiceId] = useState<string | null>(null);
 
-  const preview = services.slice(0, 6);
+  // Quais serviços entram e a foto de cada um são escolhidos em /admin/servicos.
+  const preview = services.filter((s) => s.showOnHome);
   if (preview.length === 0) return null;
 
-  const items: CoverflowCarouselItem[] = preview.map((service, idx) => {
-    const image = serviceImages[service.slug];
-    return {
-      id: service.id,
-      tag: formatServiceDuration(service.durationMinutes),
-      titleLine1: service.name,
-      desc: service.description,
-      ctaText: "Saiba mais",
-      onCtaClick: () => setSelectedService(service),
-      placeholderTone: placeholderTones[idx % placeholderTones.length],
-      imageSrc: image?.src,
-      imagePosition: image?.position,
-    };
-  });
+  const items: CoverflowCarouselItem[] = preview.map((service, idx) => ({
+    id: service.id,
+    tag: formatServiceDuration(service.durationMinutes),
+    titleLine1: service.name,
+    desc: service.description,
+    ctaText: "Saiba mais",
+    onCtaClick: () => setSelectedService(service),
+    placeholderTone: placeholderTones[idx % placeholderTones.length],
+    imageSrc: service.imageUrl ?? undefined,
+    imagePosition: service.imagePosition ?? undefined,
+  }));
 
   return (
     <section

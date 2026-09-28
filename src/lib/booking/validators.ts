@@ -54,6 +54,19 @@ export const serviceFormSchema = z.object({
     .refine((v) => v % 5 === 0, "Duração deve ser múltiplo de 5 minutos."),
   priceCents: z.coerce.number().int().nonnegative().optional().nullable(),
   isActive: z.boolean().default(true),
+  imageId: z.string().nullable(),
+  imagePosition: z.enum(["center", "top", "bottom"]).nullable(),
+  showOnHome: z.boolean(),
+});
+
+export const customerFormSchema = z.object({
+  fullName: z.string().trim().min(3, "Informe o nome completo.").max(120, "Nome muito longo."),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => v.replace(/\D/g, "").length >= 10, "Informe um WhatsApp válido com DDD.")
+    .refine((v) => v.replace(/\D/g, "").length <= 13, "Telefone inválido."),
+  email: z.union([z.string().trim().email("E-mail inválido."), z.literal("")]),
 });
 
 export const adminAppointmentFormSchema = z

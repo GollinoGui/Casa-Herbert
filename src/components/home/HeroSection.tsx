@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Leaf, Sparkles } from "lucide-react";
+import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { HeroPhoto } from "@/components/motion/HeroPhoto";
@@ -58,15 +58,13 @@ export function HeroSection() {
 
           <FadeIn delay={0.56}>
             <div className="mt-10 flex max-w-sm items-end gap-3 sm:mt-12 sm:gap-4">
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-soft sm:h-28 sm:w-28">
-                <Image
-                  src="/images/servicos/terapia-capilar.jpg"
-                  alt="Sessão de terapia capilar na Casa Herbert"
-                  fill
-                  sizes="112px"
-                  className="object-cover"
-                />
-              </div>
+              <SiteImage
+                slot="home.hero-thumb"
+                alt="Sessão de terapia capilar na Casa Herbert"
+                placeholderLabel=""
+                sizes="112px"
+                className="h-20 w-20 shrink-0 shadow-soft sm:h-28 sm:w-28"
+              />
               <div className="mb-1 min-w-0 rounded-2xl bg-brand-moss px-4 py-3 shadow-soft sm:px-5 sm:py-4">
                 <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-brand-cream/80 sm:text-xs">
                   <Sparkles size={12} aria-hidden="true" className="shrink-0" />
@@ -79,7 +77,7 @@ export function HeroSection() {
         </div>
 
         <FadeIn direction="left" delay={0.2}>
-          <HeroPhoto src="/images/hero-fachada.png" alt="Fachada da Casa Herbert em Orlândia" />
+          <HeroPhoto slot="home.hero" alt="Fachada da Casa Herbert em Orlândia" />
         </FadeIn>
       </div>
     </section>

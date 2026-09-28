@@ -2,7 +2,12 @@
 
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
-import { createGalleryItem, deleteGalleryItem, type GalleryItemInput } from "@/lib/data/gallery";
+import {
+  createGalleryItem,
+  deleteGalleryItem,
+  updateGalleryItemImage,
+  type GalleryItemInput,
+} from "@/lib/data/gallery";
 
 function revalidateGalleryPaths() {
   revalidatePath("/admin/galeria");
@@ -14,6 +19,12 @@ export async function createGalleryItemAction(input: GalleryItemInput) {
   const item = await createGalleryItem(input);
   revalidateGalleryPaths();
   return item;
+}
+
+export async function updateGalleryItemImageAction(id: string, mediaId: string | null) {
+  await requireAdmin();
+  await updateGalleryItemImage(id, mediaId);
+  revalidateGalleryPaths();
 }
 
 export async function deleteGalleryItemAction(id: string) {

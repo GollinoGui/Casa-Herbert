@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { MessageCircle } from "lucide-react";
 import { getSettings } from "@/lib/data/settings";
 import { Card, SectionHeading } from "@/components/ui/Card";
-import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
+import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
@@ -17,26 +17,32 @@ export const metadata: Metadata = {
 const PRODUCT_LINES = [
   {
     name: "Shampoo de Limpeza Suave",
+    imageSlot: "produto.shampoo",
     description: "Higienização delicada, pensada para preservar o equilíbrio do couro cabeludo.",
   },
   {
     name: "Tônico Fortalecedor",
+    imageSlot: "produto.tonico",
     description: "Uso complementar ao protocolo, indicado para apoiar a saúde dos fios entre sessões.",
   },
   {
     name: "Sérum Pós-Terapia",
+    imageSlot: "produto.serum",
     description: "Finalização recomendada após sessões de terapia capilar e fotobiomodulação.",
   },
   {
     name: "Máscara de Nutrição",
+    imageSlot: "produto.mascara",
     description: "Cuidado intensivo indicado conforme a necessidade identificada na avaliação.",
   },
   {
     name: "Condicionador de Manutenção",
+    imageSlot: "produto.condicionador",
     description: "Uso contínuo no dia a dia, alinhado ao protocolo definido para você.",
   },
   {
     name: "Óleo de Finalização",
+    imageSlot: "produto.oleo",
     description: "Toque final para fios e comprimentos, recomendado conforme cada rotina.",
   },
 ];
@@ -61,9 +67,11 @@ export default async function ProdutosPage() {
             {PRODUCT_LINES.map((product) => (
               <StaggerItem key={product.name}>
                 <Card className="group flex h-full flex-col overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-soft">
-                  <PlaceholderImage
-                    label={product.name}
-                    tone="gold"
+                  <SiteImage
+                    slot={product.imageSlot}
+                    alt={product.name}
+                    placeholderTone="gold"
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="aspect-[4/3] w-full rounded-none transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="flex flex-1 flex-col p-6">

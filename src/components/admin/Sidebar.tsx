@@ -16,6 +16,7 @@ import {
   CalendarClock,
   MessageSquareQuote,
   Images,
+  ImageIcon,
   Settings,
   LogOut,
   ChevronDown,
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { href: "/admin/bloqueios", label: "Bloqueios", icon: Ban },
   { href: "/admin/horarios-especiais", label: "Horários Especiais", icon: CalendarClock },
   { href: "/admin/depoimentos", label: "Depoimentos", icon: MessageSquareQuote },
+  { href: "/admin/fotos", label: "Fotos do site", icon: ImageIcon },
   { href: "/admin/galeria", label: "Galeria", icon: Images },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ] as const;

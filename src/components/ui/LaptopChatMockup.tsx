@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MoreVertical, Smile, Paperclip, Mic, CheckCheck, MessageCircle } from "lucide-react";
-import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
+import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 import { useIntroGate } from "@/components/motion/introGate";
@@ -13,7 +13,7 @@ interface ChatMessage {
   id: number;
   fromBusiness: boolean;
   text: string;
-  product?: { name: string; tone: "sage" | "cream" | "gold" };
+  product?: { name: string; slot: string; tone: "sage" | "cream" | "gold" };
   cta?: boolean;
   time: string;
 }
@@ -24,42 +24,42 @@ const CONVERSATION: ChatMessage[] = [
     id: 2,
     fromBusiness: true,
     text: "Higienização delicada, preserva o equilíbrio do couro cabeludo.",
-    product: { name: "Shampoo de Limpeza Suave", tone: "sage" },
+    product: { name: "Shampoo de Limpeza Suave", slot: "produto.shampoo", tone: "sage" },
     time: "14:03",
   },
   {
     id: 3,
     fromBusiness: true,
     text: "Apoia a saúde dos fios entre as sessões.",
-    product: { name: "Tônico Fortalecedor", tone: "gold" },
+    product: { name: "Tônico Fortalecedor", slot: "produto.tonico", tone: "gold" },
     time: "14:03",
   },
   {
     id: 4,
     fromBusiness: true,
     text: "Finalização recomendada após a terapia capilar.",
-    product: { name: "Sérum Pós-Terapia", tone: "cream" },
+    product: { name: "Sérum Pós-Terapia", slot: "produto.serum", tone: "cream" },
     time: "14:04",
   },
   {
     id: 5,
     fromBusiness: true,
     text: "Cuidado intensivo, conforme sua avaliação.",
-    product: { name: "Máscara de Nutrição", tone: "sage" },
+    product: { name: "Máscara de Nutrição", slot: "produto.mascara", tone: "sage" },
     time: "14:04",
   },
   {
     id: 6,
     fromBusiness: true,
     text: "Uso contínuo, alinhado ao seu protocolo.",
-    product: { name: "Condicionador de Manutenção", tone: "gold" },
+    product: { name: "Condicionador de Manutenção", slot: "produto.condicionador", tone: "gold" },
     time: "14:05",
   },
   {
     id: 7,
     fromBusiness: true,
     text: "Toque final para fios e comprimentos.",
-    product: { name: "Óleo de Finalização", tone: "cream" },
+    product: { name: "Óleo de Finalização", slot: "produto.oleo", tone: "cream" },
     time: "14:05",
   },
   { id: 8, fromBusiness: false, text: "Onde posso encontrar mais detalhes?", time: "14:06" },
@@ -171,9 +171,11 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
                     )}
                   >
                     {msg.product && (
-                      <PlaceholderImage
-                        label={msg.product.name}
-                        tone={msg.product.tone}
+                      <SiteImage
+                        slot={msg.product.slot}
+                        alt={msg.product.name}
+                        placeholderTone={msg.product.tone}
+                        sizes="160px"
                         className="mb-1.5 aspect-[4/3] w-40"
                       />
                     )}

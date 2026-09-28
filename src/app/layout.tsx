@@ -7,6 +7,8 @@ import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFloatingButton } from "@/components/layout/WhatsAppFloatingButton";
 import { ScrollRestoration } from "@/components/layout/ScrollRestoration";
 import { getSettings } from "@/lib/data/settings";
+import { getSiteImageMap } from "@/lib/data/media";
+import { SiteImagesProvider } from "@/components/ui/SiteImage";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -63,9 +65,12 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const settings = await getSettings();
   const pathname = headers().get("x-pathname") ?? "";
   const isAdminRoute = pathname.startsWith("/admin");
+  const [settings, siteImages] = await Promise.all([
+    getSettings(),
+    isAdminRoute ? Promise.resolve({}) : getSiteImageMap(),
+  ]);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -111,12 +116,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {isAdminRoute ? (
           children
         ) : (
-          <>
+          <SiteImagesProvider images={siteImages}>
             <Header />
             <main>{children}</main>
             <Footer whatsappNumber={settings.whatsappNumber} address={settings.salonAddress} />
             <WhatsAppFloatingButton whatsappNumber={settings.whatsappNumber} />
-          </>
+          </SiteImagesProvider>
         )}
       </body>
     </html>

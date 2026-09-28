@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { MessageCircle, Repeat, Search, Sparkles } from "lucide-react";
-import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
+import { SiteImage } from "@/components/ui/SiteImage";
 import { SectionHeading } from "@/components/ui/Card";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { GrowLine } from "@/components/motion/GrowLine";
@@ -10,6 +10,7 @@ interface JourneyStep {
   label: string;
   title: string;
   description: string;
+  imageSlot: string;
   imageLabel: string;
   tone: "sage" | "cream" | "gold";
 }
@@ -20,6 +21,7 @@ const STEPS: JourneyStep[] = [
     label: "Etapa 1",
     title: "Conversa inicial",
     description: "Ouvimos sua história, sua rotina e o que te trouxe até a Casa Herbert.",
+    imageSlot: "sobre.jornada-1",
     imageLabel: "Conversa inicial",
     tone: "sage",
   },
@@ -28,6 +30,7 @@ const STEPS: JourneyStep[] = [
     label: "Etapa 2",
     title: "Avaliação individual",
     description: "Observamos o couro cabeludo e os fios com atenção, sem pressa e sem fórmulas prontas.",
+    imageSlot: "sobre.jornada-2",
     imageLabel: "Avaliação capilar",
     tone: "gold",
   },
@@ -36,6 +39,7 @@ const STEPS: JourneyStep[] = [
     label: "Etapa 3",
     title: "Protocolo personalizado",
     description: "Definimos juntos um caminho de cuidado alinhado à sua necessidade específica.",
+    imageSlot: "sobre.jornada-3",
     imageLabel: "Protocolo personalizado",
     tone: "cream",
   },
@@ -44,6 +48,7 @@ const STEPS: JourneyStep[] = [
     label: "Etapa 4",
     title: "Acompanhamento contínuo",
     description: "Retornamos, ajustamos e seguimos cuidando — o protocolo evolui com você ao longo do tempo.",
+    imageSlot: "sobre.jornada-4",
     imageLabel: "Retorno de acompanhamento",
     tone: "sage",
   },
@@ -81,9 +86,11 @@ export function AttendanceJourneySection() {
                     </span>
 
                     <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-4 hidden w-48 -translate-x-1/2 scale-95 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100 lg:block">
-                      <PlaceholderImage
-                        label={step.imageLabel}
-                        tone={step.tone}
+                      <SiteImage
+                        slot={step.imageSlot}
+                        alt={step.imageLabel}
+                        placeholderTone={step.tone}
+                        sizes="192px"
                         className="aspect-[4/3] w-full shadow-md ring-1 ring-brand-beige"
                       />
                     </div>
@@ -93,9 +100,11 @@ export function AttendanceJourneySection() {
                     <p className="text-xs font-medium uppercase tracking-[0.2em] text-brand-gold">{step.label}</p>
                     <h3 className="mt-1 font-serif text-lg text-brand-forest">{step.title}</h3>
                     <p className="mt-1.5 text-sm text-brand-graphite/75">{step.description}</p>
-                    <PlaceholderImage
-                      label={step.imageLabel}
-                      tone={step.tone}
+                    <SiteImage
+                      slot={step.imageSlot}
+                      alt={step.imageLabel}
+                      placeholderTone={step.tone}
+                      sizes="128px"
                       className="mt-3 aspect-[4/3] w-32 lg:hidden"
                     />
                   </div>

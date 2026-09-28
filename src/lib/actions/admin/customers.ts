@@ -2,8 +2,15 @@
 
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
-import { getCustomers, updateCustomerNotes } from "@/lib/data/customers";
-import { listAppointments } from "@/lib/data/appointments";
+import {
+  createCustomer,
+  getCustomerAppointments,
+  getCustomers,
+  updateCustomer,
+  updateCustomerNotes,
+  type SaveCustomerResult,
+} from "@/lib/data/customers";
+import { customerFormSchema } from "@/lib/booking/validators";
 
 export async function updateCustomerNotesAction(id: string, notes: string) {
   await requireAdmin();
@@ -17,12 +24,23 @@ export async function listCustomersAction() {
   return getCustomers();
 }
 
-/**
- * `listAppointments` não filtra por cliente nativamente — busca tudo e
- * filtra aqui mesmo, evitando alterar a assinatura do data layer.
- */
 export async function getCustomerAppointmentsAction(customerId: string) {
   await requireAdmin();
-  const all = await listAppointments();
-  return all.filter((a) => a.customerId === customerId);
+  return getCustomerAppointments(customerId);
+}
+
+export async function saveCustomerAction(
+  id: string | null,
+  input: { fullName: string; phone: string; email: string }
+): Promise<SaveCustomerResult> {
+  await requireAdmin();
+  const parsed = customerFormSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+
+  const values = { ...parsed.data, email: parsed.data.email || null };
+  const result = id ? await updateCustomer(id, values) : await createCustomer(values);
+  revalidatePath("/admin/clientes");
+  revalidatePath("/admin/agendamentos");
+  revalidatePath("/admin/agenda");
+  return result;
 }
