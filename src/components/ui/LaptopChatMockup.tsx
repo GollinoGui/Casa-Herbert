@@ -150,6 +150,7 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
 
           <div
             ref={scrollAreaRef}
+            data-lenis-prevent
             className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-brand-beige/30 p-3"
           >
             <div className="flex-1" />

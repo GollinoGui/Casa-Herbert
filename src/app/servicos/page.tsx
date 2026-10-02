@@ -5,7 +5,7 @@ import { Card, SectionHeading } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
-import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
+import { DominoCard } from "@/components/motion/DominoCard";
 import { formatServiceDuration, formatServicePrice } from "@/lib/utils/service-format";
 
 export const metadata: Metadata = {
@@ -32,9 +32,9 @@ export default async function ServicosPage() {
           </FadeIn>
 
           {services.length > 0 ? (
-            <StaggerContainer className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {services.map((service) => (
-                <StaggerItem key={service.id}>
+                <DominoCard key={service.id}>
                   <Card className="flex h-full flex-col p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-soft">
                     <h3 className="font-serif text-xl text-brand-forest">{service.name}</h3>
                     <p className="mt-3 flex-1 text-sm text-brand-graphite/75">{service.description}</p>
@@ -54,9 +54,9 @@ export default async function ServicosPage() {
                       Solicitar agendamento
                     </LinkButton>
                   </Card>
-                </StaggerItem>
+                </DominoCard>
               ))}
-            </StaggerContainer>
+            </div>
           ) : (
             <p className="mt-14 text-center text-brand-graphite/70">
               Nenhum serviço disponível no momento. Entre em contato conosco pelo WhatsApp.

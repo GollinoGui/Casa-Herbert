@@ -5,6 +5,7 @@ import { SiteImage } from "@/components/ui/SiteImage";
 import { SectionHeading } from "@/components/ui/Card";
 import { AnimatedTabs } from "@/components/ui/AnimatedTabs";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { CurtainReveal } from "@/components/motion/CurtainReveal";
 import { FloatingIcon } from "@/components/motion/FloatingIcon";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { MarginThread } from "@/components/motion/MarginThread";
@@ -59,7 +60,7 @@ export function TherapyPhotobioSection() {
     label: tab.tabLabel,
     content: (
       <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-        <FadeIn direction="right">
+        <CurtainReveal>
           <SiteImage
             slot={tab.imageSlot}
             alt={tab.imageLabel}
@@ -67,7 +68,7 @@ export function TherapyPhotobioSection() {
             sizes="(min-width: 1024px) 50vw, 100vw"
             className="aspect-[4/3] w-full"
           />
-        </FadeIn>
+        </CurtainReveal>
         <FadeIn direction="left" delay={0.05}>
           <h3 className="font-serif text-2xl text-brand-forest sm:text-3xl">{tab.title}</h3>
           <p className="mt-5 text-brand-graphite/80">{tab.description}</p>
@@ -90,7 +91,7 @@ export function TherapyPhotobioSection() {
   }));
 
   return (
-    <section className="section-padding relative overflow-hidden bg-gradient-to-br from-brand-beige/50 via-brand-cream to-brand-sage/15">
+    <section className="wave-top section-padding relative overflow-hidden bg-brand-cream bg-gradient-to-br from-brand-beige/50 via-brand-cream to-brand-sage/15">
       <div className="pointer-events-none absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-brand-moss/10 blur-3xl" />
       <FloatingIcon icon={Sparkles} size={26} speed="slow" className="pointer-events-none absolute right-10 top-14 hidden text-brand-gold/40 lg:block" />
       <ParallaxLeaf className="pointer-events-none absolute left-4 bottom-8 hidden lg:block" size={50} variant="branch" tone="moss" />

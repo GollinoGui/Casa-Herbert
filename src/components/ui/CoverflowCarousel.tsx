@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
+import { useInView } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
 import { cn } from "@/lib/utils/cn";
@@ -24,6 +25,54 @@ export interface CoverflowCarouselItem {
   imagePosition?: string;
 }
 
+interface SlotStyle {
+  x: number;
+  y: number;
+  scale: number;
+  rotateY: number;
+  rotateZ: number;
+  opacity: number;
+  zIndex: number;
+  brightness: number;
+}
+
+// Todas as poses usam a mesma lista de funções de transform, na mesma ordem — só
+// assim a transição CSS interpola cada valor em vez de cair numa matriz e "torcer".
+function toTransform(s: SlotStyle) {
+  return `translateX(${s.x}px) translateY(${s.y}px) scale(${s.scale}) rotateY(${s.rotateY}deg) rotateZ(${s.rotateZ}deg)`;
+}
+
+const HIDDEN_SLOT: SlotStyle = { x: 0, y: 0, scale: 0.4, rotateY: 0, rotateZ: 0, opacity: 0, zIndex: 0, brightness: 0.5 };
+
+function slotFor(offset: number, total: number): SlotStyle {
+  if (offset === 0) return { x: 0, y: 0, scale: 1, rotateY: 0, rotateZ: 0, opacity: 1, zIndex: 30, brightness: 1 };
+  if (offset === 1) return { x: 260, y: 0, scale: 0.84, rotateY: -24, rotateZ: 0, opacity: 0.65, zIndex: 20, brightness: 0.85 };
+  if (offset === 2) return { x: 460, y: 0, scale: 0.68, rotateY: -38, rotateZ: 0, opacity: 0.38, zIndex: 10, brightness: 0.7 };
+  if (offset === total - 1) return { x: -260, y: 0, scale: 0.84, rotateY: 24, rotateZ: 0, opacity: 0.65, zIndex: 20, brightness: 0.85 };
+  if (offset === total - 2) return { x: -460, y: 0, scale: 0.68, rotateY: 38, rotateZ: 0, opacity: 0.38, zIndex: 10, brightness: 0.7 };
+  return HIDDEN_SLOT;
+}
+
+/** Ordem em que os cards são "distribuídos" na entrada: centro, depois direita/esquerda alternando para fora. */
+function dealOrder(offset: number, total: number) {
+  if (offset === 0) return 0;
+  const distance = Math.min(offset, total - offset);
+  return distance * 2 - (offset <= total / 2 ? 1 : 0);
+}
+
+const DEAL_STAGGER_MS = 170;
+const DEAL_DURATION_MS = 900;
+// Leve "quique" ao assentar — só durante a distribuição; depois volta a curva normal do carrossel.
+const DEAL_EASE = "cubic-bezier(0.34, 1.35, 0.64, 1)";
+
+/** Pose antes de entrar: o centro espera embaixo, inclinado; os demais escondidos atrás dele. */
+function predealSlot(slot: SlotStyle, offset: number): SlotStyle {
+  if (offset === 0) return { ...slot, y: 160, scale: 0.86, rotateZ: -6, opacity: 0 };
+  return { ...slot, x: 0, scale: 0.7, rotateY: 0, opacity: 0 };
+}
+
+type DealPhase = "waiting" | "dealing" | "done";
+
 interface CoverflowCarouselProps {
   items: CoverflowCarouselItem[];
   autoplay?: boolean;
@@ -41,22 +90,49 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef(0);
   const total = items.length;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef, { once: true, margin: "0px 0px -25% 0px" });
+  const [phase, setPhase] = useState<DealPhase>("waiting");
+  const visibleSlots = Math.min(total, 5);
+
+  useEffect(() => {
+    if (!inView || phase !== "waiting") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPhase("done");
+      return;
+    }
+    // Um quadro na pose inicial antes de trocar: sem isso o navegador nem pinta o
+    // "antes" e os cards aparecem direto no lugar, sem transição.
+    const frame = requestAnimationFrame(() => setPhase("dealing"));
+    return () => cancelAnimationFrame(frame);
+  }, [inView, phase]);
+
+  useEffect(() => {
+    if (phase !== "dealing") return;
+    const timer = setTimeout(() => setPhase("done"), (visibleSlots - 1) * DEAL_STAGGER_MS + DEAL_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [phase, visibleSlots]);
 
   const nextSlide = useCallback(() => {
+    setPhase("done");
     setCurrentIndex((prev) => (prev + 1) % total);
   }, [total]);
 
   const prevSlide = useCallback(() => {
+    setPhase("done");
     setCurrentIndex((prev) => (prev - 1 + total) % total);
   }, [total]);
 
-  const goToSlide = (idx: number) => setCurrentIndex(idx % total);
+  const goToSlide = (idx: number) => {
+    setPhase("done");
+    setCurrentIndex(idx % total);
+  };
 
   useEffect(() => {
-    if (!autoplay || isPaused || isHovered || total <= 1) return;
+    if (!autoplay || isPaused || isHovered || total <= 1 || phase !== "done") return;
     const interval = setInterval(nextSlide, autoplayDelay);
     return () => clearInterval(interval);
-  }, [autoplay, autoplayDelay, isPaused, isHovered, nextSlide, total]);
+  }, [autoplay, autoplayDelay, isPaused, isHovered, nextSlide, total, phase]);
 
   // Ativo só enquanto o mouse está sobre o carrossel — evita sequestrar as
   // setas do teclado do resto da página (ex: usuário digitando um campo mais
@@ -87,6 +163,7 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
 
   return (
     <div
+      ref={rootRef}
       className={cn("relative w-full", className)}
       role="region"
       aria-roledescription="carrossel"
@@ -106,48 +183,14 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
       >
         {items.map((item, idx) => {
           const offset = (idx - currentIndex + total) % total;
-
-          let transform = "translateX(0px) scale(0.4) rotateY(0deg)";
-          let opacity = 0;
-          let zIndex = 0;
-          let filter = "brightness(0.5)";
+          const isCenter = offset === 0;
+          const slot = slotFor(offset, total);
+          const pose = phase === "waiting" ? predealSlot(slot, offset) : slot;
+          const dealing = phase === "dealing";
           // Espelha o scale() do transform: o card tem sempre 290px de layout, mas o
           // tamanho exibido de fato varia com o scale — usado pra pedir do next/image
           // só os pixels realmente visíveis (ver achado do Lighthouse sobre isso).
-          let visualScale = 0.4;
-          const isCenter = offset === 0;
-
-          if (offset === 0) {
-            transform = "translateX(0px) scale(1) rotateY(0deg)";
-            opacity = 1;
-            zIndex = 30;
-            filter = "brightness(1)";
-            visualScale = 1;
-          } else if (offset === 1) {
-            transform = "translateX(260px) scale(0.84) rotateY(-24deg)";
-            opacity = 0.65;
-            zIndex = 20;
-            filter = "brightness(0.85)";
-            visualScale = 0.84;
-          } else if (offset === 2) {
-            transform = "translateX(460px) scale(0.68) rotateY(-38deg)";
-            opacity = 0.38;
-            zIndex = 10;
-            filter = "brightness(0.7)";
-            visualScale = 0.68;
-          } else if (offset === total - 1) {
-            transform = "translateX(-260px) scale(0.84) rotateY(24deg)";
-            opacity = 0.65;
-            zIndex = 20;
-            filter = "brightness(0.85)";
-            visualScale = 0.84;
-          } else if (offset === total - 2) {
-            transform = "translateX(-460px) scale(0.68) rotateY(38deg)";
-            opacity = 0.38;
-            zIndex = 10;
-            filter = "brightness(0.7)";
-            visualScale = 0.68;
-          }
+          const visualScale = slot.scale;
 
           const imageSizes = `${Math.round(290 * visualScale)}px`;
 
@@ -171,7 +214,18 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
                   ? "shadow-soft ring-2 ring-brand-forest/30"
                   : "cursor-pointer shadow-softer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-forest/50"
               )}
-              style={{ transform, opacity, zIndex, filter, transformOrigin: "center center" }}
+              style={{
+                transform: toTransform(pose),
+                opacity: pose.opacity,
+                zIndex: pose.zIndex,
+                filter: `brightness(${pose.brightness})`,
+                transformOrigin: "center center",
+                ...(dealing && {
+                  transitionDelay: `${dealOrder(offset, total) * DEAL_STAGGER_MS}ms`,
+                  transitionDuration: `${DEAL_DURATION_MS}ms`,
+                  transitionTimingFunction: DEAL_EASE,
+                }),
+              }}
             >
               <div className="relative h-[210px] w-full shrink-0">
                 {item.imageSrc ? (
@@ -238,7 +292,7 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
         })}
 
         {total > 1 ? (
-          <>
+          <div className={cn("transition-opacity duration-700", phase === "done" ? "opacity-100" : "opacity-0")}>
             <button
               onClick={prevSlide}
               aria-label="Cuidado anterior"
@@ -253,12 +307,17 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
             >
               <ChevronRight size={20} />
             </button>
-          </>
+          </div>
         ) : null}
       </div>
 
       {total > 1 ? (
-        <div className="mt-8 flex items-center justify-center gap-2">
+        <div
+          className={cn(
+            "mt-8 flex items-center justify-center gap-2 transition-opacity duration-700",
+            phase === "done" ? "opacity-100" : "opacity-0"
+          )}
+        >
           {autoplay ? (
             <button
               type="button"

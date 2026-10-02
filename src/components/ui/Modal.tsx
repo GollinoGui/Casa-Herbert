@@ -2,7 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   open: boolean;
@@ -19,6 +20,9 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => setPortalReady(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -54,10 +58,15 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
     };
   }, [open, onClose]);
 
-  return (
+  if (!portalReady) return null;
+
+  // Portal no <body>: um `fixed` dentro de um ancestral com transform (as seções
+  // animadas do site) passaria a se posicionar em relação a ele, não à tela.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
+          data-lenis-prevent
           className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-brand-graphite/40 backdrop-blur-sm sm:items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -98,6 +107,7 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

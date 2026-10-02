@@ -2,9 +2,14 @@
 
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+// Na primeira carga não há entrada: o HTML do servidor já chega visível e a foto do
+// Hero é pintada sem esperar o JS (com `opacity: 0` no SSR, o LCP ficava preso à
+// hidratação). A entrada só toca nas trocas de rota feitas pelo app.
+let isFirstLoad = true;
 
 /**
  * template.tsx remonta a cada navegação (diferente de layout.tsx), então dá pra
@@ -14,6 +19,11 @@ const EASE = [0.22, 1, 0.36, 1] as const;
  */
 export default function Template({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const skipEntrance = isFirstLoad;
+
+  useEffect(() => {
+    isFirstLoad = false;
+  }, []);
 
   if (pathname.startsWith("/admin")) {
     return <>{children}</>;
@@ -21,7 +31,7 @@ export default function Template({ children }: { children: ReactNode }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={skipEntrance ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: EASE }}
     >

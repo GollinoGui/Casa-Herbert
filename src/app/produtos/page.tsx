@@ -6,7 +6,7 @@ import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
-import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
+import { DominoCard } from "@/components/motion/DominoCard";
 
 export const metadata: Metadata = {
   title: "Produtos",
@@ -63,9 +63,9 @@ export default async function ProdutosPage() {
             />
           </FadeIn>
 
-          <StaggerContainer className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {PRODUCT_LINES.map((product) => (
-              <StaggerItem key={product.name}>
+              <DominoCard key={product.name}>
                 <Card className="group flex h-full flex-col overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-soft">
                   <SiteImage
                     slot={product.imageSlot}
@@ -79,9 +79,9 @@ export default async function ProdutosPage() {
                     <p className="mt-2 flex-1 text-sm text-brand-graphite/75">{product.description}</p>
                   </div>
                 </Card>
-              </StaggerItem>
+              </DominoCard>
             ))}
-          </StaggerContainer>
+          </div>
         </div>
       </section>
 

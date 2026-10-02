@@ -47,6 +47,10 @@ const config: Config = {
           from: { transform: "translateY(0)" },
           to: { transform: "translateY(calc(-100% - var(--gap)))" },
         },
+        "nudge-x": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "50%": { transform: "translateX(6px)" },
+        },
       },
       animation: {
         float: "float 7s ease-in-out infinite",
@@ -54,6 +58,7 @@ const config: Config = {
         pulseSoft: "pulseSoft 2.4s ease-out infinite",
         marquee: "marquee var(--duration) linear infinite",
         "marquee-vertical": "marquee-vertical var(--duration) linear infinite",
+        "nudge-x": "nudge-x 1.6s ease-in-out infinite",
       },
     },
   },

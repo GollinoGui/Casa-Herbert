@@ -4,7 +4,12 @@ import { SectionHeading } from "@/components/ui/Card";
 import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
-import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
+import { CurtainReveal } from "@/components/motion/CurtainReveal";
+import { Marker } from "@/components/motion/Marker";
+import { ScrollSlide } from "@/components/motion/ScrollSlide";
+import { TypewriterText } from "@/components/motion/TypewriterText";
+import { WordsRise } from "@/components/motion/WordsRise";
+import { DominoCard } from "@/components/motion/DominoCard";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 
 export const metadata: Metadata = {
@@ -54,11 +59,18 @@ export default function TerapiaCapilarPage() {
         <ParallaxLeaf className="pointer-events-none absolute -left-4 top-8 hidden sm:block" size={80} speed="slow" />
         <ParallaxLeaf className="pointer-events-none absolute right-6 bottom-6 hidden md:block" size={56} variant="branch" />
         <div className="container-herbert relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <FadeIn>
-            <p className="eyebrow mb-4">Terapia Capilar</p>
-            <h1 className="font-serif text-4xl leading-tight text-brand-forest sm:text-5xl">
-              Acompanhamento contínuo da saúde do couro cabeludo
-            </h1>
+          <div>
+            <p className="eyebrow mb-4">
+              <TypewriterText text="Terapia Capilar" />
+            </p>
+            <WordsRise
+              as="h1"
+              trigger="load"
+              text="Acompanhamento contínuo da saúde do couro cabeludo"
+              delay={0.1}
+              className="font-serif text-4xl leading-tight text-brand-forest sm:text-5xl"
+            />
+            <FadeIn trigger="load" delay={0.6}>
             <p className="mt-6 max-w-lg text-brand-graphite/80">
               A terapia capilar na Casa Herbert reúne avaliação, observação e tecnologias de
               acompanhamento em um protocolo pensado individualmente — sempre a partir da sua
@@ -69,8 +81,9 @@ export default function TerapiaCapilarPage() {
                 Agendar avaliação
               </LinkButton>
             </div>
-          </FadeIn>
-          <FadeIn direction="left" delay={0.15}>
+            </FadeIn>
+          </div>
+          <CurtainReveal mode="load" delay={0.15}>
             <SiteImage
               slot="terapia.hero"
               alt="Terapia capilar Casa Herbert"
@@ -79,7 +92,7 @@ export default function TerapiaCapilarPage() {
               className="aspect-[4/5] w-full"
               priority
             />
-          </FadeIn>
+          </CurtainReveal>
         </div>
       </section>
 
@@ -94,9 +107,9 @@ export default function TerapiaCapilarPage() {
             />
           </FadeIn>
 
-          <StaggerContainer className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => (
-              <StaggerItem key={feature.title}>
+              <DominoCard key={feature.title}>
                 <div className="h-full rounded-2xl border border-brand-beige bg-brand-cream/60 p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-soft">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss">
                     <feature.icon size={22} strokeWidth={1.5} />
@@ -104,15 +117,15 @@ export default function TerapiaCapilarPage() {
                   <h3 className="mt-4 font-serif text-lg text-brand-forest">{feature.title}</h3>
                   <p className="mt-2 text-sm text-brand-graphite/75">{feature.description}</p>
                 </div>
-              </StaggerItem>
+              </DominoCard>
             ))}
-          </StaggerContainer>
+          </div>
         </div>
       </section>
 
       <section className="section-padding bg-brand-sage/10">
         <div className="container-herbert grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <FadeIn direction="right">
+          <CurtainReveal>
             <SiteImage
               slot="terapia.fotobio"
               alt="Sessão de fotobiomodulação"
@@ -120,8 +133,8 @@ export default function TerapiaCapilarPage() {
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="aspect-[4/3] w-full"
             />
-          </FadeIn>
-          <FadeIn direction="left">
+          </CurtainReveal>
+          <ScrollSlide from="right">
             <div className="flex items-center gap-2.5">
               <Droplets size={18} className="text-brand-moss" />
               <p className="eyebrow">Fotobiomodulação em destaque</p>
@@ -132,9 +145,10 @@ export default function TerapiaCapilarPage() {
             <p className="mt-5 text-brand-graphite/80">
               A fotobiomodulação é indicada dentro do protocolo individual de cada cliente,
               acompanhando a saúde do couro cabeludo ao longo das sessões. É mais uma ferramenta a
-              serviço do seu bem-estar capilar — nunca um procedimento isolado ou padronizado.
+              serviço do seu bem-estar capilar —{" "}
+              <Marker>nunca um procedimento isolado ou padronizado</Marker>.
             </p>
-          </FadeIn>
+          </ScrollSlide>
         </div>
       </section>
 

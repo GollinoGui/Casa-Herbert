@@ -1,12 +1,14 @@
 "use client";
 
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { ScissorCombIcon } from "@/components/icons/ScissorCombIcon";
 
-/** Barra de progresso de leitura: uma tesoura "corta" a linha tracejada conforme o usuário rola a página. */
+/**
+ * Barra de progresso de leitura: uma tesoura "corta" a linha tracejada conforme o usuário rola a página.
+ * Sem useSpring: o Lenis já suaviza a rolagem, e uma mola por cima deixava a tesoura atrasada.
+ */
 export function ScrollProgressScissors() {
-  const { scrollYProgress } = useScroll();
-  const progress = useSpring(scrollYProgress, { stiffness: 220, damping: 32, restDelta: 0.001 });
+  const { scrollYProgress: progress } = useScroll();
   const leftPercent = useTransform(progress, (v) => `${Math.min(Math.max(v, 0), 1) * 100}%`);
 
   return (

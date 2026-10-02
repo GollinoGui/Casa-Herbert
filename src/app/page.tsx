@@ -3,7 +3,7 @@ import { getSettings } from "@/lib/data/settings";
 import { getActiveServices } from "@/lib/data/services";
 import { getPublishedTestimonials } from "@/lib/data/testimonials";
 import { getPublishedGallery } from "@/lib/data/gallery";
-import { isOpenNow } from "@/lib/data/business-hours";
+import { getBusinessHours, isOpenNow } from "@/lib/data/business-hours";
 import { IntroReveal } from "@/components/motion/IntroReveal";
 import { HeroSection } from "@/components/home/HeroSection";
 import { ManifestoSection } from "@/components/home/ManifestoSection";
@@ -26,12 +26,13 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [settings, services, testimonials, gallery, isOpen] = await Promise.all([
+  const [settings, services, testimonials, gallery, isOpen, businessHours] = await Promise.all([
     getSettings(),
     getActiveServices(),
     getPublishedTestimonials(),
     getPublishedGallery(),
     isOpenNow(),
+    getBusinessHours(),
   ]);
 
   return (
@@ -49,7 +50,7 @@ export default async function HomePage() {
       <ResultsPreviewSection galleryItems={gallery} />
       <TestimonialsSection testimonials={testimonials} />
       <ProductsPreviewSection whatsappNumber={settings.whatsappNumber} />
-      <LocationSection settings={settings} isOpen={isOpen} />
+      <LocationSection settings={settings} isOpen={isOpen} businessHours={businessHours} />
       <FinalCtaSection whatsappNumber={settings.whatsappNumber} />
     </IntroReveal>
   );

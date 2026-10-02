@@ -5,7 +5,7 @@ import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { MarginThread } from "@/components/motion/MarginThread";
-import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
+import { ScrollSlide } from "@/components/motion/ScrollSlide";
 import { TiltCard } from "@/components/motion/TiltCard";
 
 export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryItem[] }) {
@@ -13,7 +13,7 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
   if (results.length === 0) return null;
 
   return (
-    <section id="resultados" className="section-padding relative scroll-mt-28 overflow-hidden bg-white">
+    <section id="resultados" className="wave-top-alt section-padding relative scroll-mt-28 overflow-hidden bg-white">
       <ParallaxLeaf className="pointer-events-none absolute -right-4 top-10 hidden sm:block" size={48} tone="moss" />
       <ParallaxLeaf className="pointer-events-none absolute -left-3 bottom-14 hidden sm:block" size={40} variant="branch" speed="slow" />
       <MarginThread side="left" tone="sage" className="top-10 bottom-10" />
@@ -28,10 +28,11 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
         </FadeIn>
 
         {/* flex-wrap em vez de grid: a quantidade vem do admin, e a última linha incompleta fica centralizada */}
-        <StaggerContainer className="mt-12 flex flex-wrap justify-center gap-5">
-          {results.map((item) => (
-            <StaggerItem
+        <div className="mt-12 flex flex-wrap justify-center gap-5">
+          {results.map((item, index) => (
+            <ScrollSlide
               key={item.id}
+              from={index % 2 === 0 ? "left" : "right"}
               className="w-full sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)]"
             >
               <TiltCard className="group rounded-2xl">
@@ -53,9 +54,9 @@ export function ResultsPreviewSection({ galleryItems }: { galleryItems: GalleryI
                   />
                 )}
               </TiltCard>
-            </StaggerItem>
+            </ScrollSlide>
           ))}
-        </StaggerContainer>
+        </div>
 
         {results.some((item) => item.imageUrl) ? null : (
           <FadeIn delay={0.2} className="mt-12 text-center">

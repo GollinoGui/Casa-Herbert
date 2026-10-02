@@ -2,7 +2,10 @@ import { Leaf, Sparkles } from "lucide-react";
 import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { TypewriterText } from "@/components/motion/TypewriterText";
+import { WordsRise } from "@/components/motion/WordsRise";
 import { HeroPhoto } from "@/components/motion/HeroPhoto";
+import { CurtainReveal } from "@/components/motion/CurtainReveal";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { EdgeBranchArt } from "@/components/motion/EdgeBranchArt";
 import { MarginThread } from "@/components/motion/MarginThread";
@@ -24,28 +27,28 @@ export function HeroSection() {
 
       <div className="container-herbert relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <div>
-          <FadeIn>
+          <FadeIn trigger="load">
             <p className="eyebrow mb-5 inline-flex items-center gap-1.5">
               <Leaf size={12} className="text-brand-moss" aria-hidden="true" />
-              Orlândia, SP
+              <TypewriterText text="Orlândia, SP" />
             </p>
           </FadeIn>
-          <FadeIn delay={0.1}>
-            <h1 className="font-serif text-[2.6rem] leading-[1.05] text-brand-forest min-[360px]:text-5xl sm:text-6xl lg:text-7xl">
-              Casa Herbert
-            </h1>
-          </FadeIn>
-          <FadeIn delay={0.2}>
-            <p className="mt-3 font-serif text-xl italic text-brand-moss sm:text-2xl">
-              Embelezamento e Saúde Capilar
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.32}>
+          <WordsRise
+            as="h1"
+            trigger="load"
+            text="Casa Herbert"
+            delay={0.1}
+            className="font-serif text-[2.6rem] leading-[1.05] text-brand-forest min-[360px]:text-5xl sm:text-6xl lg:text-7xl"
+          />
+          <p className="mt-3 font-serif text-xl italic text-brand-moss sm:text-2xl">
+            <TypewriterText text="Embelezamento e Saúde Capilar" delay={0.55} />
+          </p>
+          <FadeIn trigger="load" delay={1.2}>
             <p className="mt-7 max-w-md text-balance text-lg text-brand-graphite/80">
               Cuidar do seu couro cabeludo é cuidar de você.
             </p>
           </FadeIn>
-          <FadeIn delay={0.44}>
+          <FadeIn trigger="load" delay={1.35}>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <LinkButton href="/agendar" variant="primary">
                 Agendar avaliação
@@ -56,7 +59,7 @@ export function HeroSection() {
             </div>
           </FadeIn>
 
-          <FadeIn delay={0.56}>
+          <FadeIn trigger="load" delay={1.5}>
             <div className="mt-10 flex max-w-sm items-end gap-3 sm:mt-12 sm:gap-4">
               <SiteImage
                 slot="home.hero-thumb"
@@ -76,9 +79,9 @@ export function HeroSection() {
           </FadeIn>
         </div>
 
-        <FadeIn direction="left" delay={0.2}>
+        <CurtainReveal mode="load" direction="right" delay={0.2}>
           <HeroPhoto slot="home.hero" alt="Fachada da Casa Herbert em Orlândia" />
-        </FadeIn>
+        </CurtainReveal>
       </div>
     </section>
   );

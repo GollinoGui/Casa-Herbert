@@ -2,6 +2,8 @@ import { MessageCircle, Search, Sparkles } from "lucide-react";
 import { LinkButton } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/Card";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { Marker } from "@/components/motion/Marker";
+import { ScrollSlide } from "@/components/motion/ScrollSlide";
 import { StepConnector } from "@/components/motion/StepConnector";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { FloatingIcon } from "@/components/motion/FloatingIcon";
@@ -28,9 +30,17 @@ const STEPS = [
   },
 ];
 
+const SLIDE_FROM = ["left", "up", "right"] as const;
+
 export function PersonalizedEvaluationSection() {
   return (
-    <section className="section-padding relative overflow-hidden bg-gradient-to-b from-white via-brand-sage/10 to-white">
+    // Fica atrás do papel cortado no fim da seção de cuidados e vem para a frente
+    // quando ele cai (data-cut-reveal); por isso não entra como "folha empilhada".
+    <section
+      data-no-stack
+      data-cut-reveal
+      className="wave-top-alt section-padding relative overflow-hidden bg-brand-cream bg-gradient-to-b from-white via-brand-sage/10 to-white"
+    >
       <ParallaxLeaf className="pointer-events-none absolute left-[6%] top-6 hidden sm:block" size={44} tone="moss" speed="slow" />
       <ParallaxLeaf className="pointer-events-none absolute right-[8%] bottom-4 hidden sm:block" size={52} variant="leaf" />
       <FloatingIcon icon={Sparkles} size={26} speed="slow" className="pointer-events-none absolute right-8 top-10 hidden text-brand-gold/40 lg:block" />
@@ -41,7 +51,12 @@ export function PersonalizedEvaluationSection() {
           <SectionHeading
             eyebrow="O diferencial Casa Herbert"
             title="Nada de fórmula fixa: cada atendimento começa com você"
-            description="Antes de qualquer protocolo, dedicamos tempo a entender a sua saúde capilar. É essa avaliação individual que orienta cada decisão de cuidado."
+            description={
+              <>
+                Antes de qualquer protocolo, dedicamos tempo a entender a sua saúde capilar. É essa{" "}
+                <Marker>avaliação individual</Marker> que orienta cada decisão de cuidado.
+              </>
+            }
           />
         </FadeIn>
 
@@ -54,7 +69,7 @@ export function PersonalizedEvaluationSection() {
 
         <div className="mt-12 grid gap-10 sm:mt-8 sm:grid-cols-3 sm:gap-8">
           {STEPS.map((step, index) => (
-            <FadeIn key={step.title} delay={index * 0.08}>
+            <ScrollSlide key={step.title} from={SLIDE_FROM[index % SLIDE_FROM.length]}>
               <div className="relative flex flex-col items-center text-center">
                 <span className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-1 ring-brand-moss/25 sm:hidden">
                   <step.icon size={22} strokeWidth={1.5} aria-hidden="true" />
@@ -71,7 +86,7 @@ export function PersonalizedEvaluationSection() {
                 <h3 className="relative mt-2 font-serif text-lg text-brand-forest">{step.title}</h3>
                 <p className="relative mt-2 max-w-xs text-sm text-brand-graphite/75">{step.description}</p>
               </div>
-            </FadeIn>
+            </ScrollSlide>
           ))}
         </div>
 

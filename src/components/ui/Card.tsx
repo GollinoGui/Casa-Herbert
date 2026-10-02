@@ -1,6 +1,8 @@
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { Leaf } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { TypewriterText } from "@/components/motion/TypewriterText";
+import { WordsRise } from "@/components/motion/WordsRise";
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
@@ -23,7 +25,7 @@ export function SectionHeading({
 }: {
   eyebrow?: string;
   title: string;
-  description?: string;
+  description?: ReactNode;
   align?: "center" | "left";
   className?: string;
 }) {
@@ -32,10 +34,10 @@ export function SectionHeading({
       {eyebrow ? (
         <p className={cn("eyebrow mb-3 inline-flex items-center gap-1.5", align === "center" && "justify-center")}>
           <Leaf size={12} className="shrink-0 text-brand-moss" aria-hidden="true" />
-          {eyebrow}
+          <TypewriterText text={eyebrow} />
         </p>
       ) : null}
-      <h2 className="font-serif text-3xl text-brand-forest sm:text-4xl">{title}</h2>
+      <WordsRise text={title} delay={0.15} className="font-serif text-3xl text-brand-forest sm:text-4xl" />
       {description ? (
         <p className={cn("mt-4 text-brand-graphite/80", align === "center" ? "mx-auto max-w-2xl" : "max-w-2xl")}>
           {description}

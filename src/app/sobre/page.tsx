@@ -4,7 +4,11 @@ import { SectionHeading } from "@/components/ui/Card";
 import { SiteImage } from "@/components/ui/SiteImage";
 import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
-import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerChildren";
+import { CurtainReveal } from "@/components/motion/CurtainReveal";
+import { Marker } from "@/components/motion/Marker";
+import { TypewriterText } from "@/components/motion/TypewriterText";
+import { WordsRise } from "@/components/motion/WordsRise";
+import { DominoCard } from "@/components/motion/DominoCard";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { GoldDivider } from "@/components/motion/GoldDivider";
 import { AttendanceJourneySection } from "@/components/sobre/AttendanceJourneySection";
@@ -40,18 +44,26 @@ export default function SobrePage() {
         <ParallaxLeaf className="pointer-events-none absolute -left-4 top-10 hidden sm:block" size={80} speed="slow" />
         <ParallaxLeaf className="pointer-events-none absolute right-4 bottom-4 hidden md:block" size={60} variant="branch" />
         <div className="container-herbert relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <FadeIn>
-            <p className="eyebrow mb-4">Sobre nós</p>
-            <h1 className="font-serif text-4xl leading-tight text-brand-forest sm:text-5xl">
-              Um espaço de cuidado individual para a sua saúde capilar
-            </h1>
+          <div>
+            <p className="eyebrow mb-4">
+              <TypewriterText text="Sobre nós" />
+            </p>
+            <WordsRise
+              as="h1"
+              trigger="load"
+              text="Um espaço de cuidado individual para a sua saúde capilar"
+              delay={0.1}
+              className="font-serif text-4xl leading-tight text-brand-forest sm:text-5xl"
+            />
+            <FadeIn trigger="load" delay={0.6}>
             <p className="mt-6 max-w-lg text-brand-graphite/80">
               A Casa Herbert nasceu do desejo de oferecer um cuidado capilar próximo, atento e
               verdadeiramente individual — em que cada pessoa é ouvida antes de qualquer protocolo
               ser pensado.
             </p>
-          </FadeIn>
-          <FadeIn direction="left" delay={0.15}>
+            </FadeIn>
+          </div>
+          <CurtainReveal mode="load" delay={0.15}>
             <SiteImage
               slot="sobre.retrato"
               alt="Retrato Casa Herbert"
@@ -60,7 +72,7 @@ export default function SobrePage() {
               className="aspect-[4/5] w-full"
               priority
             />
-          </FadeIn>
+          </CurtainReveal>
         </div>
       </section>
 
@@ -83,14 +95,14 @@ export default function SobrePage() {
                 do couro cabeludo e dos fios.
               </p>
               <p>
-                Não trabalhamos com pacotes fechados ou fórmulas padronizadas. Cada protocolo de
+                <Marker>Não trabalhamos com pacotes fechados ou fórmulas padronizadas.</Marker> Cada protocolo de
                 cuidado é desenhado a partir da necessidade específica de cada cliente, respeitando
                 o tempo e as particularidades de cada pessoa.
               </p>
               <p>
                 São anos de dedicação ao cuidado capilar que moldaram a forma como recebemos cada
-                cliente na Casa Herbert: com atenção, paciência e acompanhamento contínuo — porque
-                cuidar do seu couro cabeludo é cuidar de você.
+                cliente na Casa Herbert: com atenção, paciência e acompanhamento contínuo — porque{" "}
+                <Marker tone="gold">cuidar do seu couro cabeludo é cuidar de você</Marker>.
               </p>
             </div>
           </FadeIn>
@@ -105,9 +117,9 @@ export default function SobrePage() {
           <FadeIn>
             <SectionHeading eyebrow="O que nos guia" title="Valores que estão em cada atendimento" />
           </FadeIn>
-          <StaggerContainer className="mt-12 grid gap-8 sm:grid-cols-3">
+          <div className="mt-12 grid gap-8 sm:grid-cols-3">
             {VALUES.map((value) => (
-              <StaggerItem key={value.title}>
+              <DominoCard key={value.title}>
                 <div className="flex flex-col items-center text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-1 ring-brand-moss/25">
                     <value.icon size={26} strokeWidth={1.5} />
@@ -115,9 +127,9 @@ export default function SobrePage() {
                   <h3 className="mt-5 font-serif text-lg text-brand-forest">{value.title}</h3>
                   <p className="mt-2 text-sm text-brand-graphite/75">{value.description}</p>
                 </div>
-              </StaggerItem>
+              </DominoCard>
             ))}
-          </StaggerContainer>
+          </div>
         </div>
       </section>
 

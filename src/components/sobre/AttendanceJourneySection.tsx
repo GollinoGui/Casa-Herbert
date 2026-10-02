@@ -4,6 +4,7 @@ import { SiteImage } from "@/components/ui/SiteImage";
 import { SectionHeading } from "@/components/ui/Card";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { GrowLine } from "@/components/motion/GrowLine";
+import { ScrollSlide } from "@/components/motion/ScrollSlide";
 
 interface JourneyStep {
   icon: LucideIcon;
@@ -54,8 +55,8 @@ const STEPS: JourneyStep[] = [
   },
 ];
 
-/** Timeline vertical: cada etapa entra conforme a pessoa rola até ela (whileInView
- * individual, não um stagger disparado de uma vez), e o traço que liga os passos
+/** Timeline vertical: cada etapa desliza da direita em direção à linha junto com a
+ * rolagem (ScrollSlide), e o traço que liga os passos
  * cresce de cima para baixo junto com a rolagem. A foto de cada etapa aparece no
  * hover em telas com mouse; no touch, sem hover, ela já fica sempre visível. */
 export function AttendanceJourneySection() {
@@ -66,7 +67,7 @@ export function AttendanceJourneySection() {
           <SectionHeading eyebrow="Como cuidamos" title="Sua jornada de cuidado na Casa Herbert" />
         </FadeIn>
         <FadeIn delay={0.05}>
-          <p className="mx-auto -mt-2 max-w-xl text-center text-brand-graphite/80">
+          <p className="mx-auto mt-4 max-w-xl text-center text-brand-graphite/80">
             Da primeira conversa ao acompanhamento contínuo — cada etapa existe para que o protocolo
             faça sentido pra você.{" "}
             <span className="hidden lg:inline">Passe o mouse sobre cada uma para ver um pouco mais.</span>
@@ -78,8 +79,8 @@ export function AttendanceJourneySection() {
 
           <ol className="relative flex flex-col gap-12">
             {STEPS.map((step, index) => (
-              <FadeIn key={step.title} delay={index === 0 ? 0 : 0.05}>
-                <li className="group relative flex gap-5">
+              <li key={step.title} className="group relative">
+                <ScrollSlide from="right" innerClassName="flex gap-5">
                   <div className="relative shrink-0">
                     <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-4 ring-brand-beige/20">
                       <step.icon size={24} strokeWidth={1.5} />
@@ -108,8 +109,8 @@ export function AttendanceJourneySection() {
                       className="mt-3 aspect-[4/3] w-32 lg:hidden"
                     />
                   </div>
-                </li>
-              </FadeIn>
+                </ScrollSlide>
+              </li>
             ))}
           </ol>
         </div>

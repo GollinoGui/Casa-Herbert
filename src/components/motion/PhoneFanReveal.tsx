@@ -42,7 +42,7 @@ interface PhoneFanRevealProps {
 /**
  * Ao entrar na viewport, o celular central sobe até o lugar e só depois os dois
  * laterais abrem em leque de trás dele (ver pedido: "sobe... depois abre como um leque").
- * `viewport once: true` como no resto do site (FadeIn/StaggerChildren) — não replay ao rolar de novo.
+ * `viewport once: true` como no resto do site (FadeIn) — não replay ao rolar de novo.
  *
  * Recebe `frame` já renderizado (não o `PhoneCarouselItem` cru) porque este é um Client
  * Component: passar o `icon` (componente Lucide) como prop cruzando a fronteira servidor→cliente

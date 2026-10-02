@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { smoothScrollToElementId } from "@/lib/utils/scroll";
+import { getLenis } from "@/lib/utils/smooth-scroll";
 
 /**
  * Garante o padrão de scroll do site: toda troca de página começa no topo. Se
@@ -11,6 +12,8 @@ import { smoothScrollToElementId } from "@/lib/utils/scroll";
  * o navegador não faz o scroll-to-hash nativo sozinho, é preciso disparar aqui.
  * O reset para o topo é instantâneo (não suave): é o que o usuário espera de
  * uma troca de página, e uma animação aqui só faz a transição parecer lenta.
+ * Com a rolagem suave ligada o salto passa pelo Lenis — senão a posição interna
+ * dele continua a da página anterior e a próxima rolada "pula" de volta.
  */
 export function ScrollRestoration() {
   const pathname = usePathname();
@@ -24,7 +27,9 @@ export function ScrollRestoration() {
 
     const hash = window.location.hash.slice(1);
     if (!hash) {
-      window.scrollTo(0, 0);
+      const lenis = getLenis();
+      if (lenis) lenis.scrollTo(0, { immediate: true, force: true });
+      else window.scrollTo(0, 0);
       return;
     }
 

@@ -73,6 +73,77 @@ label,
   }
 }
 
+/* Botões do site público em forma de "pedrinha": cantos elípticos diferentes entre
+   si, e a forma muda no hover. Fica de fora do painel (classe no <body> do layout).
+   Raios verticais somando a altura do botão (~48px) de cada lado, senão o navegador
+   reduz todos na mesma proporção e a assimetria some. */
+.site-organic .btn-primary,
+.site-organic .btn-gold {
+  border-radius: 46px 22px 40px 18px / 30px 18px 30px 18px;
+}
+.site-organic .btn-secondary {
+  border-radius: 20px 44px 18px 40px / 18px 30px 18px 30px;
+}
+.site-organic .btn-primary:hover,
+.site-organic .btn-gold:hover {
+  border-radius: 22px 44px 18px 42px / 18px 30px 18px 30px;
+}
+.site-organic .btn-secondary:hover {
+  border-radius: 44px 20px 40px 18px / 30px 18px 30px 18px;
+}
+
+/* Foto com contorno de "pedra de rio", na mesma linha dos botões. Dentro de um
+   elemento com `data-active`, a forma se acomoda devagar em outra (só repinta a foto). */
+.organic-photo {
+  border-radius: 140px 56px 120px 72px / 110px 64px 140px 80px;
+  transition: border-radius 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-active="true"] .organic-photo {
+  border-radius: 72px 130px 64px 140px / 80px 130px 70px 120px;
+}
+
+/* Borda de cima ondulada: a seção sobe sobre o fim da anterior e uma máscara recorta
+   a onda, então nos vales aparece a cor de quem está atrás. A altura extra entra como
+   borda transparente (o fundo pinta por baixo dela), para não mexer no padding de
+   cada seção; `background-origin` estende o gradiente até lá, senão a faixa de cima
+   repetiria o fim dele. Sem custo por quadro: a máscara é estática. */
+/* O header sai de cena enquanto "Nossos cuidados" está presa (ServicesPreviewSection).
+   Volta se algo dentro dele recebe foco pelo teclado. */
+.site-header {
+  transition:
+    transform 600ms cubic-bezier(0.45, 0, 0.2, 1),
+    opacity 600ms cubic-bezier(0.45, 0, 0.2, 1);
+}
+html[data-hide-header] .site-header:not(:focus-within) {
+  transform: translateY(-130%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wave-top,
+.wave-top-alt {
+  --wave-h: 24px;
+  --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 40' preserveAspectRatio='none'%3E%3Cpath d='M0 22C120 14 260 32 400 24S640 4 780 13S1020 32 1160 22S1360 0 1440 9V40H0Z'/%3E%3C/svg%3E");
+  margin-top: calc(var(--wave-h) * -1);
+  border-top: var(--wave-h) solid transparent;
+  background-origin: border-box;
+  -webkit-mask:
+    var(--wave) top / 100% calc(var(--wave-h) + 1px) no-repeat,
+    linear-gradient(#000 0 0) bottom / 100% calc(100% - var(--wave-h)) no-repeat;
+  mask:
+    var(--wave) top / 100% calc(var(--wave-h) + 1px) no-repeat,
+    linear-gradient(#000 0 0) bottom / 100% calc(100% - var(--wave-h)) no-repeat;
+}
+.wave-top-alt {
+  --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 40' preserveAspectRatio='none'%3E%3Cpath d='M0 6C90 2 180 20 320 20S560 6 720 16S980 34 1120 24S1340 10 1440 26V40H0Z'/%3E%3C/svg%3E");
+}
+@media (min-width: 640px) {
+  .wave-top,
+  .wave-top-alt {
+    --wave-h: 52px;
+  }
+}
+
 /* FullCalendar (agenda do admin): botões na paleta da marca e cabeçalho que quebra
    em telas estreitas em vez de estourar a largura. */
 .fc {
@@ -133,4 +204,139 @@ label,
   background-color: #a3b89a;
   border-radius: 9999px;
   border: 2px solid #f7f3ea;
+}
+
+/* Cursor do TypewriterText. */
+@keyframes caret-blink {
+  0%, 45% { visibility: visible; }
+  50%, 100% { visibility: hidden; }
+}
+
+.type-caret {
+  animation: caret-blink 1s step-end infinite;
+}
+
+/* Marca-texto (componente Marker): traço na metade de baixo da linha. O tamanho do
+   fundo é animado pelo componente; o estado do CSS é o final, para quem não tem JS. */
+.marker {
+  --marker-color: rgba(163, 184, 154, 0.45);
+  background-image: linear-gradient(
+    transparent 58%,
+    var(--marker-color) 58%,
+    var(--marker-color) 92%,
+    transparent 92%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 0 0.08em;
+}
+
+.marker-gold {
+  --marker-color: rgba(203, 184, 154, 0.5);
+}
+
+/* Entradas do topo da página (FadeIn/WordsRise com trigger="load", CurtainReveal
+   mode="load"): em CSS, e não no JS, para tocarem desde a primeira pintura — com JS,
+   o Hero ficava vazio até a hidratação (quase 1s num celular médio). `backwards`
+   segura o estado inicial durante o atraso e devolve o estilo natural no fim (a
+   máscara da foto some e a sombra deixa de ficar cortada). Enquanto a cortina de
+   entrada da home toca (html[data-intro="play"]), ficam pausadas atrás dela. */
+.load-in {
+  animation-duration: 0.95s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: backwards;
+  animation-delay: var(--load-delay, 0s);
+}
+.load-fade {
+  animation-name: load-fade;
+}
+.load-rise {
+  animation-name: load-rise;
+  animation-duration: 0.85s;
+}
+/* 2s, igual ao zoom: a máscara abre em 1,4s (70%) e segura até o zoom terminar —
+   se saísse antes, a foto ainda ampliada vazaria das bordas. */
+.load-curtain-up,
+.load-curtain-right {
+  animation-duration: 2s;
+  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+}
+.load-curtain-up {
+  animation-name: load-curtain-up;
+}
+.load-curtain-right {
+  animation-name: load-curtain-right;
+}
+.load-zoom {
+  animation-name: load-zoom;
+  animation-duration: 2s;
+  animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+html[data-intro="play"] .load-in {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .load-in {
+    animation: none;
+  }
+}
+
+@keyframes load-fade {
+  from {
+    opacity: 0;
+    transform: translate(var(--load-x, 0px), var(--load-y, 0px));
+  }
+}
+@keyframes load-rise {
+  from {
+    transform: translateY(110%);
+  }
+}
+/* Mesmo raio do rounded-2xl das fotos, senão os cantos "pulam" no fim. */
+@keyframes load-curtain-up {
+  from {
+    clip-path: inset(100% 0% 0% 0% round 1rem);
+  }
+  70%,
+  to {
+    clip-path: inset(0% 0% 0% 0% round 1rem);
+  }
+}
+@keyframes load-curtain-right {
+  from {
+    clip-path: inset(0% 100% 0% 0% round 1rem);
+  }
+  70%,
+  to {
+    clip-path: inset(0% 0% 0% 0% round 1rem);
+  }
+}
+@keyframes load-zoom {
+  from {
+    transform: scale(1.3);
+  }
+}
+
+/* Cortina de entrada da home: o script do <head> decide antes da primeira pintura se
+   ela toca; até o IntroReveal montar, só aparece se for tocar. */
+html:not([data-intro="play"]) .intro-curtain[data-pending] {
+  display: none;
+}
+
+/* Estado inicial das "folhas empilhadas" (SectionStack) antes da hidratação: sem
+   isso, a seção logo abaixo do Hero aparecia reta e só arredondava quando o JS
+   carregava. O SectionStack assume com os valores exatos e marca data-stack-ready. */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-stack-ready]) main > div > section ~ section:not([data-no-stack]) {
+    transform: scale(0.94);
+    transform-origin: 50% 0%;
+    border-radius: 28px;
+    box-shadow: 0 -24px 60px -20px rgba(46, 46, 46, 0.18);
+  }
+}
+@media (min-width: 640px) and (prefers-reduced-motion: no-preference) {
+  html:not([data-stack-ready]) main > div > section ~ section:not([data-no-stack]) {
+    transform: scale(0.88);
+    border-radius: 56px;
+  }
 }

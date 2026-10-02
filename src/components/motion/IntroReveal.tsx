@@ -1,20 +1,22 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { ScissorCombIcon } from "@/components/icons/ScissorCombIcon";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { IntroGateProvider } from "@/components/motion/introGate";
+import { INTRO_SEEN_KEY } from "@/components/motion/introScript";
+import { getLenis } from "@/lib/utils/smooth-scroll";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-const SEEN_KEY = "casa-herbert:intro-seen";
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 // sessionStorage pode lançar (Safari em aba privada antiga, cookies bloqueados) —
 // nesse caso a cortina só volta a tocar a cada carregamento, como antes.
 function hasSeenIntro(): boolean {
   try {
-    return sessionStorage.getItem(SEEN_KEY) === "1";
+    return sessionStorage.getItem(INTRO_SEEN_KEY) === "1";
   } catch {
     return false;
   }
@@ -22,7 +24,7 @@ function hasSeenIntro(): boolean {
 
 function markIntroSeen() {
   try {
-    sessionStorage.setItem(SEEN_KEY, "1");
+    sessionStorage.setItem(INTRO_SEEN_KEY, "1");
   } catch {}
 }
 
@@ -45,9 +47,11 @@ const BADGE_TICKS = [
  * o selo do logo (círculo, marcas ao redor e monograma "CH"), a tesoura, o nome da
  * marca e o subtítulo — com folhas discretas nos cantos. Toca só na primeira visita à
  * home em cada sessão do navegador (sessionStorage); voltar à home ou recarregar depois
- * disso mostra a página direto. Renderiza vazio no SSR e na primeira pintura do cliente de propósito — só
- * decide se anima depois de montado, pra nunca disputar com o conteúdo real da Hero
- * nem gerar mismatch de hidratação.
+ * disso mostra a página direto. Na carga da página quem decide é o script do <head>,
+ * antes da primeira pintura (marca html[data-intro="play"]): a cortina vem no HTML do
+ * servidor e o CSS só a mostra se for tocar, e as entradas `load-*` do Hero ficam
+ * pausadas atrás dela. Esperar a hidratação para decidir deixava o Hero vazio até o
+ * JS carregar. Numa navegação pelo app até a home, a decisão é do layout effect.
  *
  * Também expõe `IntroGateContext` (via `useIntroGate`) pro resto da home: enquanto a
  * cortina está tocando, o restante da página já está montado por trás dela — sem esse
@@ -55,37 +59,43 @@ const BADGE_TICKS = [
  * que a cortina sai, em vez de animar depois dela.
  */
 export function IntroReveal({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [phase, setPhase] = useState<"pending" | "playing" | "done">("pending");
 
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion || hasSeenIntro()) {
-      setReady(true);
-      return;
-    }
-    setVisible(true);
+    setPhase(reduceMotion || hasSeenIntro() ? "done" : "playing");
   }, []);
 
-  // Efeito separado do de cima de propósito: em dev, o Strict Mode roda o efeito
-  // acima duas vezes (mount → cleanup → mount). Como o timer só depende de
-  // `visible`, o replay do Strict Mode sempre limpa e recria o timeout corretamente
-  // em vez de deixar dois timers concorrendo.
-  useEffect(() => {
-    if (!visible) return;
+  // Layout effect: numa navegação pelo app, o atributo precisa estar no <html> antes da
+  // pintura, senão o Hero aparece por um quadro antes da cortina. Em dev, o Strict Mode
+  // roda isto duas vezes (mount → cleanup → mount); o cleanup desfaz tudo e o replay
+  // recria, então nunca ficam dois timers concorrendo.
+  useIsoLayoutEffect(() => {
+    if (phase !== "playing") return;
+    const root = document.documentElement;
+    root.dataset.intro = "play";
+    // O overflow trava o toque (nativo); a roda do mouse passa pelo Lenis, que
+    // rola a janela por script e ignoraria o overflow — por isso o stop().
     document.body.style.overflow = "hidden";
+    getLenis()?.stop();
     // Marca como vista só no fim: se marcasse ao começar, o replay de efeitos do Strict
     // Mode (dev) já leria "vista" no segundo mount e liberaria a página por baixo da cortina.
     const timer = setTimeout(() => {
       markIntroSeen();
-      setVisible(false);
-      setReady(true);
+      setPhase("done");
     }, 2500);
     return () => {
       clearTimeout(timer);
+      // Também ao sair da home no meio da cortina: com o atributo preso, as entradas
+      // `load-*` da próxima página ficariam pausadas para sempre.
+      delete root.dataset.intro;
       document.body.style.overflow = "";
+      getLenis()?.start();
     };
-  }, [visible]);
+  }, [phase]);
+
+  const visible = phase !== "done";
+  const ready = phase === "done";
 
   return (
     <IntroGateProvider value={ready}>
@@ -93,7 +103,8 @@ export function IntroReveal({ children }: { children: ReactNode }) {
         {visible && (
         <motion.div
           aria-hidden="true"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-brand-cream"
+          data-pending={phase === "pending" ? "" : undefined}
+          className="intro-curtain fixed inset-0 z-[100] flex items-center justify-center bg-brand-cream"
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >

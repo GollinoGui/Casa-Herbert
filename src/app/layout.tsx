@@ -1,11 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import { headers } from "next/headers";
+import "lenis/dist/lenis.css";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFloatingButton } from "@/components/layout/WhatsAppFloatingButton";
 import { ScrollRestoration } from "@/components/layout/ScrollRestoration";
+import { SmoothScroll } from "@/components/motion/SmoothScroll";
+import { SectionStack } from "@/components/motion/SectionStack";
+import { INTRO_DECISION_SCRIPT } from "@/components/motion/introScript";
 import { getSettings } from "@/lib/data/settings";
 import { getSiteImageMap } from "@/lib/data/media";
 import { SiteImagesProvider } from "@/components/ui/SiteImage";
@@ -106,8 +110,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   };
 
   return (
-    <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`}>
-      <body className="font-sans antialiased">
+    // suppressHydrationWarning: o script do <head> põe data-intro no <html> antes da hidratação.
+    <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`} suppressHydrationWarning>
+      <head>
+        {!isAdminRoute && <script dangerouslySetInnerHTML={{ __html: INTRO_DECISION_SCRIPT }} />}
+      </head>
+      <body className={isAdminRoute ? "font-sans antialiased" : "site-organic font-sans antialiased"}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -117,8 +125,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           children
         ) : (
           <SiteImagesProvider images={siteImages}>
+            <SmoothScroll />
+            <SectionStack />
             <Header />
-            <main>{children}</main>
+            {/* clip, não hidden: segura as entradas laterais sem criar rolagem horizontal e sem quebrar o sticky. */}
+            <main className="overflow-x-clip">{children}</main>
             <Footer whatsappNumber={settings.whatsappNumber} address={settings.salonAddress} />
             <WhatsAppFloatingButton whatsappNumber={settings.whatsappNumber} />
           </SiteImagesProvider>

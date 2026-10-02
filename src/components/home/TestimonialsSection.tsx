@@ -2,6 +2,8 @@ import { Leaf, Star } from "lucide-react";
 import type { Testimonial } from "@/types";
 import { Marquee } from "@/components/ui/Marquee";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { TypewriterText } from "@/components/motion/TypewriterText";
+import { WordsRise } from "@/components/motion/WordsRise";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { EdgeBranchArt } from "@/components/motion/EdgeBranchArt";
 import { MarginThread } from "@/components/motion/MarginThread";
@@ -45,7 +47,7 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
   const secondRow = useTwoRows ? testimonials.slice(splitAt) : [];
 
   return (
-    <section className="section-padding relative overflow-hidden bg-brand-forest text-brand-cream">
+    <section className="wave-top section-padding relative overflow-hidden bg-brand-forest text-brand-cream">
       <GrainOverlay />
       <EdgeBranchArt tone="cream" className="top-0 h-40 opacity-[0.08]" />
       <ParallaxLeaf className="pointer-events-none absolute -left-4 top-8 opacity-50" size={60} tone="moss" speed="slow" />
@@ -57,11 +59,13 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
           <div className="text-center">
             <p className="eyebrow mb-3 inline-flex items-center gap-1.5 !text-brand-sage">
               <Leaf size={12} aria-hidden="true" />
-              Depoimentos
+              <TypewriterText text="Depoimentos" />
             </p>
-            <h2 className="font-serif text-3xl text-brand-cream sm:text-4xl">
-              Quem já vive a experiência Casa Herbert
-            </h2>
+            <WordsRise
+              text="Quem já vive a experiência Casa Herbert"
+              delay={0.15}
+              className="font-serif text-3xl text-brand-cream sm:text-4xl"
+            />
             <p className="mt-3 text-sm text-brand-cream/70">Avaliações reais de clientes no Google</p>
           </div>
         </FadeIn>
