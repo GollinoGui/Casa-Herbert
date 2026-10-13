@@ -7,7 +7,6 @@ import { ArrowRight, Clock } from "lucide-react";
 import type { Service } from "@/types";
 import { LinkButton } from "@/components/ui/Button";
 import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
-import { TypewriterText } from "@/components/motion/TypewriterText";
 import { WordsRise } from "@/components/motion/WordsRise";
 import { ServiceDetailModal } from "@/components/services/ServiceDetailModal";
 import { formatServiceDuration } from "@/lib/utils/service-format";
@@ -38,9 +37,13 @@ const panelTones = ["bg-brand-cream", "bg-brand-beige/50", "bg-brand-sage/15"] a
 // tela da direita para a esquerda cortando a faixa de baixo, e o papel vai cedendo pelo
 // lado já solto (CUT_SCREENS telas de rolagem); terminado o corte ele cai
 // (DROP_SCREENS) e a seção de trás vem para a frente (ZOOM_SCREENS).
-const CUT_SCREENS = 1.1;
-const DROP_SCREENS = 0.5;
-const ZOOM_SCREENS = 0.9;
+const CUT_SCREENS = 0.7;
+const DROP_SCREENS = 0.35;
+const ZOOM_SCREENS = 0.6;
+// Pixels de rolagem por pixel andado de lado. Em 1:1 a seção passava de 10 mil px
+// (mais da metade da home); com o encaixe por painel, andar mais rápido não perde
+// nenhum serviço de vista.
+const SCROLL_PER_PX = 0.5;
 // Como a seção de trás aparece antes de vir para a frente.
 const BEHIND_SCALE = 0.8;
 const BEHIND_OPACITY = 0.55;
@@ -86,8 +89,8 @@ interface ServicesPreviewSectionProps {
  * volta ao atual) conforme a direção em que a pessoa vinha.
  *
  * `sticky` nativo em vez de pin do ScrollTrigger, como no CircleTakeover: a altura da
- * seção é a da tela mais o quanto a trilha anda, e cada pixel rolado vira um pixel de
- * deslocamento lateral. Com "reduzir movimento" — e no HTML do servidor, antes da
+ * seção é a da tela mais o quanto a trilha anda (vezes SCROLL_PER_PX), e cada pixel
+ * rolado vira 1/SCROLL_PER_PX pixels de deslocamento lateral. Com "reduzir movimento" — e no HTML do servidor, antes da
  * hidratação — é um carrossel horizontal comum, com rolagem nativa e snap.
  */
 export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDays }: ServicesPreviewSectionProps) {
@@ -135,13 +138,14 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
     const shade = shadeRef.current;
     if (!pinned || !section || !track || !fill || !sheet || !nav || !dash || !scissors || !backBlade || !strip || !shade)
       return;
-    // A seção que fica atrás do papel (PersonalizedEvaluationSection) se marca com
+    // A seção que fica atrás do papel (FirstVisitSection) se marca com
     // data-cut-reveal. Sem ela, o papel só cai e a página segue.
     const next = section.nextElementSibling instanceof HTMLElement && section.nextElementSibling.matches("[data-cut-reveal]")
       ? section.nextElementSibling
       : null;
 
     let distance = 0;
+    let scrollDistance = 0;
     let screen = 0;
     let cutLength = 0;
     let dropLength = 0;
@@ -162,11 +166,12 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
       section.style.setProperty("--panel-w", `${width}px`);
       waveBorder = parseFloat(getComputedStyle(section).borderTopWidth) || 0;
       distance = width * (panelCount - 1);
+      scrollDistance = distance * SCROLL_PER_PX;
       screen = sheet.parentElement?.clientHeight || window.innerHeight;
       cutLength = screen * CUT_SCREENS;
       dropLength = screen * DROP_SCREENS;
       zoomLength = screen * ZOOM_SCREENS;
-      total = distance + cutLength + dropLength + zoomLength;
+      total = scrollDistance + cutLength + dropLength + zoomLength;
       section.style.height = `calc(100svh + ${total + waveBorder}px)`;
       // A seção de trás termina a cena exatamente no topo da tela: a última tela de
       // rolagem desta é a primeira dela. Antes disso ela é puxada para cima (ver paint).
@@ -245,8 +250,8 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
 
     const paint = (progress: number) => {
       const scrolled = total * progress;
-      const x = Math.min(scrolled, distance);
-      const past = scrolled - distance;
+      const x = Math.min(scrolled, scrollDistance) / SCROLL_PER_PX;
+      const past = scrolled - scrollDistance;
       paintCut(
         cutLength ? clamp(past / cutLength) : 0,
         dropLength ? clamp((past - cutLength) / dropLength) : 0,
@@ -272,10 +277,11 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
       const trigger = triggerRef.current;
       const width = panelWidthRef.current;
       if (!trigger?.isActive || !width) return;
-      const x = total * trigger.progress;
+      const scrolled = total * trigger.progress;
       // Já na cena da tesoura: a rolagem fica livre.
-      if (x > distance + 1) return;
-      const position = x / width;
+      if (scrolled > scrollDistance + 1) return;
+      const panelScroll = width * SCROLL_PER_PX;
+      const position = scrolled / panelScroll;
       const target =
         direction > 0
           ? Math.ceil(position - SNAP_THRESHOLD)
@@ -283,8 +289,8 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
             ? Math.floor(position + SNAP_THRESHOLD)
             : Math.round(position);
       const clamped = Math.min(panelCount - 1, Math.max(0, target));
-      if (Math.abs(clamped * width - x) < 1) return;
-      smoothScrollToY(trigger.start + clamped * width, SNAP_DURATION_MS);
+      if (Math.abs(clamped * panelScroll - scrolled) < 1) return;
+      smoothScrollToY(trigger.start + clamped * panelScroll, SNAP_DURATION_MS);
     };
 
     measure();
@@ -330,7 +336,7 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
   const goTo = (panel: number) => {
     const trigger = triggerRef.current;
     if (!trigger) return;
-    smoothScrollToY(trigger.start + panel * panelWidthRef.current, 900);
+    smoothScrollToY(trigger.start + panel * panelWidthRef.current * SCROLL_PER_PX, 900);
   };
 
   // Só foco por teclado: um painel fora da tela está deslocado pela trilha, e o
@@ -422,7 +428,7 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
                   {panelDecor(0)}
                   <div className="container-herbert relative flex h-full flex-col justify-center">
                     <p className="eyebrow mb-4 inline-flex items-center gap-1.5">
-                      <TypewriterText text="Nossos cuidados" />
+                      Nossos cuidados
                     </p>
                     <WordsRise
                       text="Cuidados pensados para você"
@@ -478,7 +484,7 @@ export function ServicesPreviewSection({ services, whatsappNumber, minAdvanceDay
 
                         <div className="shrink-0">
                           <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.2em] text-brand-moss">
-                            <span className="font-serif text-3xl normal-case tracking-normal text-brand-gold sm:text-5xl">
+                            <span aria-hidden="true" className="font-serif text-3xl normal-case tracking-normal text-brand-gold sm:text-5xl">
                               {String(i + 1).padStart(2, "0")}
                             </span>
                             <span className="h-px w-10 bg-brand-gold/60" aria-hidden="true" />

@@ -7,7 +7,6 @@ import { FadeIn } from "@/components/motion/FadeIn";
 import { CurtainReveal } from "@/components/motion/CurtainReveal";
 import { Marker } from "@/components/motion/Marker";
 import { ScrollSlide } from "@/components/motion/ScrollSlide";
-import { TypewriterText } from "@/components/motion/TypewriterText";
 import { WordsRise } from "@/components/motion/WordsRise";
 import { DominoCard } from "@/components/motion/DominoCard";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
@@ -61,7 +60,7 @@ export default function TerapiaCapilarPage() {
         <div className="container-herbert relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
             <p className="eyebrow mb-4">
-              <TypewriterText text="Terapia Capilar" />
+              Terapia Capilar
             </p>
             <WordsRise
               as="h1"
@@ -162,6 +161,11 @@ export default function TerapiaCapilarPage() {
             <p className="mt-4 text-brand-graphite/75">
               Vamos conversar sobre a saúde do seu couro cabeludo e desenhar um protocolo só seu.
             </p>
+            <div className="mt-8">
+              <LinkButton href="/agendar" variant="primary">
+                Agendar avaliação
+              </LinkButton>
+            </div>
           </FadeIn>
         </div>
       </section>

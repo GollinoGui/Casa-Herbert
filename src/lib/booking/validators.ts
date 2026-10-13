@@ -101,7 +101,27 @@ export const productFormSchema = z.object({
   priceCents: z.coerce.number().int().nonnegative("Preço inválido."),
   stockQuantity: z.coerce.number().int().nonnegative("Quantidade inválida."),
   isActive: z.boolean().default(true),
+  description: z.string().trim().max(400, "Use no máximo 400 caracteres."),
+  imageId: z.string().nullable(),
+  imagePosition: z.enum(["center", "top", "bottom"]).nullable(),
+  showOnSite: z.boolean(),
 });
+
+/** Vazio (o site esconde o link) ou o endereço completo do perfil naquela rede. */
+function socialUrl(domain: string) {
+  return z
+    .string()
+    .trim()
+    .refine((v) => {
+      if (v === "") return true;
+      try {
+        const url = new URL(v);
+        return url.protocol === "https:" && url.hostname.replace(/^www\./, "") === domain && url.pathname.length > 1;
+      } catch {
+        return false;
+      }
+    }, `Cole o endereço completo do perfil, começando com https://${domain}/`);
+}
 
 export const settingsFormSchema = z.object({
   minAdvanceDays: z.coerce.number().int().min(0),
@@ -111,4 +131,25 @@ export const settingsFormSchema = z.object({
   defaultDurationMinutes: z.coerce.number().int().positive(),
   whatsappNumber: z.string().trim().min(10),
   salonAddress: z.string().trim().min(5),
+  instagramUrl: socialUrl("instagram.com"),
+  facebookUrl: socialUrl("facebook.com"),
+});
+
+/** Link da faixa de aviso: caminho do próprio site ("/agendar") ou endereço https completo. */
+export function isSafeAnnouncementLink(value: string): boolean {
+  if (value.startsWith("/")) return !value.startsWith("//");
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export const announcementFormSchema = z.object({
+  announcementText: z.string().trim().max(140, "Use no máximo 140 caracteres — a faixa é de uma linha."),
+  announcementLink: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || isSafeAnnouncementLink(v), "Use um caminho do site (ex.: /agendar) ou um endereço https://"),
+  announcementUntil: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."), z.literal("")]),
 });

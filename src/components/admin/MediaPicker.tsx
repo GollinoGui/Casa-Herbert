@@ -153,7 +153,7 @@ export function MediaPickerModal({ open, onClose, onSelect, selectedId, title = 
                 >
                   <Image src={m.url} alt={m.alt ?? ""} fill sizes="200px" className="object-cover" />
                   {m.id === selectedId ? (
-                    <span className="absolute right-2 top-2 rounded-full bg-brand-forest p-1 text-white">
+                    <span className="absolute right-2 top-2 rounded-full bg-brand-forest p-1 text-brand-graphite">
                       <Check size={14} aria-hidden="true" />
                     </span>
                   ) : null}

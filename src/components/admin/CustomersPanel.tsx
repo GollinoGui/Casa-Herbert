@@ -109,7 +109,7 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
                     onClick={() => selectCustomer(c)}
                     className={cn(
                       "w-full rounded-xl px-3 py-2.5 text-left text-sm transition",
-                      selectedId === c.id ? "bg-brand-forest text-brand-cream" : "text-brand-graphite hover:bg-brand-cream"
+                      selectedId === c.id ? "bg-brand-forest text-brand-graphite" : "text-brand-graphite hover:bg-brand-cream"
                     )}
                   >
                     <p className="font-medium">{c.fullName}</p>

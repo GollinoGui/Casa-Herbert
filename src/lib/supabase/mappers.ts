@@ -25,6 +25,9 @@ export function hhmm(time: string | null): string | null {
 /** Select de services com a URL da foto. Sem o join (ex.: dentro de um agendamento), imageUrl vem null. */
 export const SERVICE_WITH_IMAGE = "*, image:media(url)";
 
+/** Mesmo esquema para products. */
+export const PRODUCT_WITH_IMAGE = "*, image:media(url)";
+
 export function toService(r: Row): Service {
   return {
     id: r.id,
@@ -138,6 +141,11 @@ export function toSettings(r: Row): Settings {
     whatsappNumber: r.whatsapp_number,
     salonAddress: r.salon_address ?? "",
     salonTimezone: r.salon_timezone,
+    instagramUrl: r.instagram_url ?? "",
+    facebookUrl: r.facebook_url ?? "",
+    announcementText: r.announcement_text ?? "",
+    announcementLink: r.announcement_link ?? "",
+    announcementUntil: r.announcement_until ?? "",
     messageTemplates: {
       confirmed: templates.confirmed ?? "",
       rejected: templates.rejected ?? "",
@@ -156,6 +164,11 @@ export function fromSettings(s: Partial<Settings>): Row {
   if (s.whatsappNumber !== undefined) row.whatsapp_number = s.whatsappNumber;
   if (s.salonAddress !== undefined) row.salon_address = s.salonAddress;
   if (s.salonTimezone !== undefined) row.salon_timezone = s.salonTimezone;
+  if (s.instagramUrl !== undefined) row.instagram_url = s.instagramUrl || null;
+  if (s.facebookUrl !== undefined) row.facebook_url = s.facebookUrl || null;
+  if (s.announcementText !== undefined) row.announcement_text = s.announcementText || null;
+  if (s.announcementLink !== undefined) row.announcement_link = s.announcementLink || null;
+  if (s.announcementUntil !== undefined) row.announcement_until = s.announcementUntil || null;
   if (s.messageTemplates !== undefined) row.message_templates = s.messageTemplates;
   return row;
 }
@@ -194,6 +207,11 @@ export function toProduct(r: Row): Product {
     priceCents: r.price_cents,
     stockQuantity: r.stock_quantity,
     isActive: r.is_active,
+    description: r.description ?? "",
+    imageId: r.image_id ?? null,
+    imageUrl: r.image?.url ?? null,
+    imagePosition: r.image_position ?? null,
+    showOnSite: r.show_on_site ?? false,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };

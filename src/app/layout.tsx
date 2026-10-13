@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Playfair_Display, Inter, Caveat } from "next/font/google";
 import { headers } from "next/headers";
 import "lenis/dist/lenis.css";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
+import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFloatingButton } from "@/components/layout/WhatsAppFloatingButton";
 import { ScrollRestoration } from "@/components/layout/ScrollRestoration";
@@ -12,6 +13,8 @@ import { SectionStack } from "@/components/motion/SectionStack";
 import { INTRO_DECISION_SCRIPT } from "@/components/motion/introScript";
 import { getSettings } from "@/lib/data/settings";
 import { getSiteImageMap } from "@/lib/data/media";
+import { getBusinessHours } from "@/lib/data/business-hours";
+import { groupByRanges, toOpeningHoursSpecification } from "@/lib/utils/business-hours-format";
 import { SiteImagesProvider } from "@/components/ui/SiteImage";
 
 const playfair = Playfair_Display({
@@ -23,6 +26,14 @@ const playfair = Playfair_Display({
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+// Só para as anotações à mão (HandNote) — o "caderno" de quem acompanha o cuidado.
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-hand",
   display: "swap",
 });
 
@@ -71,10 +82,12 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = headers().get("x-pathname") ?? "";
   const isAdminRoute = pathname.startsWith("/admin");
-  const [settings, siteImages] = await Promise.all([
+  const [settings, siteImages, businessHours] = await Promise.all([
     getSettings(),
     isAdminRoute ? Promise.resolve({}) : getSiteImageMap(),
+    isAdminRoute ? Promise.resolve([]) : getBusinessHours(),
   ]);
+  const sameAs = [settings.instagramUrl, settings.facebookUrl].filter(Boolean);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -93,25 +106,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       postalCode: "14620-000",
       addressCountry: "BR",
     },
-    openingHoursSpecification: [
-      {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        opens: "09:00",
-        closes: "11:00",
-      },
-      {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        opens: "14:00",
-        closes: "19:00",
-      },
-    ],
+    openingHoursSpecification: toOpeningHoursSpecification(groupByRanges(businessHours)),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 
   return (
     // suppressHydrationWarning: o script do <head> põe data-intro no <html> antes da hidratação.
-    <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="pt-BR" className={`${playfair.variable} ${inter.variable} ${caveat.variable}`} suppressHydrationWarning>
       <head>
         {!isAdminRoute && <script dangerouslySetInnerHTML={{ __html: INTRO_DECISION_SCRIPT }} />}
       </head>
@@ -127,10 +128,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <SiteImagesProvider images={siteImages}>
             <SmoothScroll />
             <SectionStack />
+            <AnnouncementBar settings={settings} />
             <Header />
             {/* clip, não hidden: segura as entradas laterais sem criar rolagem horizontal e sem quebrar o sticky. */}
             <main className="overflow-x-clip">{children}</main>
-            <Footer whatsappNumber={settings.whatsappNumber} address={settings.salonAddress} />
+            <Footer settings={settings} businessHours={businessHours} />
             <WhatsAppFloatingButton whatsappNumber={settings.whatsappNumber} />
           </SiteImagesProvider>
         )}

@@ -99,7 +99,8 @@ supabase/
 
 | Cor | Hex | Uso |
 |---|---|---|
-| Laranja (cor principal) | `#EF8523` | títulos de destaque, botões primários, rodapé, navegação ativa, ícones |
+| Laranja (cor principal) | `#EF8523` | botões primários, rodapé, superfícies, ícones — como **fundo**; texto sobre ele é sempre grafite |
+| Laranja tijolo (texto) | `#A4520E` | títulos e textos em laranja (`text-brand-forest`) — o `#EF8523` como texto fica em 2,4:1 sobre o creme e reprova o WCAG |
 | Laranja escuro | `#BA681B` | hover de botões, contraste sobre dourado |
 | Verde médio | `#53735A` | suporte secundário discreto — eyebrows, detalhes pontuais |
 | Verde sálvia | `#A3B89A` | suporte secundário — placeholders, ilustrações botânicas |
@@ -108,7 +109,7 @@ supabase/
 | Dourado suave | `#CBB89A` | divisores, detalhes |
 | Grafite | `#2E2E2E` | texto de corpo |
 
-O laranja é a cor dominante da marca (era verde escuro na primeira versão do protótipo). O verde foi rebaixado a suporte secundário — usado com moderação em eyebrows e detalhes, sem competir com o laranja. Os tokens ficam em `tailwind.config.ts` sob nomes semânticos (`brand.forest` = laranja principal, `brand.forestDark` = laranja escuro) — os nomes "forest/moss" são históricos da primeira versão verde e não foram renomeados para evitar reescrever dezenas de arquivos que já referenciam essas classes; o valor de cor é o que importa.
+O laranja é a cor dominante da marca (era verde escuro na primeira versão do protótipo). Em `tailwind.config.ts`, `textColor.brand.forest` sobrescreve só a cor de texto: `text-brand-forest` sai tijolo, enquanto `bg-`/`border-`/`ring-brand-forest` seguem com o laranja vivo. Sobre fundo laranja, o texto é grafite em 100% (creme/branco ficam em ~2,4:1, e grafite com opacidade também reprova). O verde foi rebaixado a suporte secundário — usado com moderação em eyebrows e detalhes, sem competir com o laranja. Os tokens ficam em `tailwind.config.ts` sob nomes semânticos (`brand.forest` = laranja principal, `brand.forestDark` = laranja escuro) — os nomes "forest/moss" são históricos da primeira versão verde e não foram renomeados para evitar reescrever dezenas de arquivos que já referenciam essas classes; o valor de cor é o que importa.
 
 Tipografia: **Playfair Display** (títulos, `font-serif`) + **Inter** (corpo, `font-sans`), via `next/font/google`. Tokens completos em `tailwind.config.ts`.
 
@@ -141,6 +142,8 @@ Localmente ficam em `.env` (fora do git). Na Vercel, em Project → Settings →
 - **Deploy:** `npx vercel deploy --prod` na pasta do projeto (CLI logada na conta da Casa Herbert). Região das funções fixada em `vercel.json` (`gru1`, São Paulo — perto do banco).
 - **Mudança de schema:** nunca editar migration já aplicada. Criar `supabase/migrations/000N_descricao.sql` e aplicar no banco (SQL Editor ou Supabase CLI).
 - **Dados iniciais:** o banco começou só com serviços, horários e configurações reais (`0004_seed.sql`). Depoimentos, galeria e produtos são cadastrados pelo painel; enquanto vazios, as seções correspondentes não aparecem no site.
+- **Conteúdo que vem do painel:** links de Instagram/Facebook (**/admin/configuracoes** — vazio esconde a rede no site), horário de funcionamento (rodapé, card de visita e JSON-LD), e a vitrine de produtos (**/admin/estoque** → "Mostrar este produto no site", com descrição e foto; alimenta `/produtos` e o chat simulado da home), e o aviso no topo do site (**/admin/configuracoes** → "Aviso no topo do site": texto, link opcional e data de término; vazio = sem faixa).
+- **Home personalizada:** o questionário "Como está o seu couro cabeludo?" manda as respostas como observação do pedido (`/agendar?notas=`); os horários livres do topo levam direto aos dados pessoais (`/agendar?service=&date=&time=`, revalidados antes de pular etapas); e quem já agendou por aquele navegador é reconhecido no topo (localStorage, `src/lib/utils/last-booking.ts`) — sem login, some se a pessoa limpar os dados do navegador.
 - **Domínio:** o site ainda responde em `casa-herbert.vercel.app`. `SITE_URL` em `src/app/layout.tsx` (usado em SEO/sitemap) já aponta para `casaherbert.com.br` — configurar esse domínio na Vercel quando for registrado.
 - **(Futuro)** integrar com a WhatsApp Business Cloud API para envio automático de mensagens, em vez dos links `wa.me` manuais.
 

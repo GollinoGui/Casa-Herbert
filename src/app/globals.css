@@ -169,7 +169,7 @@ html[data-hide-header] .site-header:not(:focus-within) {
 }
 .fc .fc-toolbar-title {
   font-family: var(--font-playfair), Georgia, serif;
-  color: #ef8523;
+  color: #a4520e;
 }
 .fc .fc-toolbar-title::first-letter {
   text-transform: uppercase;
@@ -338,5 +338,19 @@ html:not([data-intro="play"]) .intro-curtain[data-pending] {
   html:not([data-stack-ready]) main > div > section ~ section:not([data-no-stack]) {
     transform: scale(0.88);
     border-radius: 56px;
+  }
+}
+
+/* Papel pautado de caderno (seções com anotações do acompanhamento): linhas sálvia bem
+   claras e a margem vertical dourada à esquerda. Só fundo — não muda o fluxo. */
+.notebook-paper {
+  background-color: #fffdf8;
+  background-image:
+    linear-gradient(90deg, transparent calc(var(--margin-x, 2.5rem) - 1px), rgba(203, 184, 154, 0.55) calc(var(--margin-x, 2.5rem) - 1px), rgba(203, 184, 154, 0.55) var(--margin-x, 2.5rem), transparent var(--margin-x, 2.5rem)),
+    repeating-linear-gradient(transparent 0 31px, rgba(163, 184, 154, 0.2) 31px 32px);
+}
+@media (min-width: 1024px) {
+  .notebook-paper {
+    --margin-x: 6rem;
   }
 }

@@ -6,7 +6,6 @@ import { LinkButton } from "@/components/ui/Button";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { CurtainReveal } from "@/components/motion/CurtainReveal";
 import { Marker } from "@/components/motion/Marker";
-import { TypewriterText } from "@/components/motion/TypewriterText";
 import { WordsRise } from "@/components/motion/WordsRise";
 import { DominoCard } from "@/components/motion/DominoCard";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
@@ -46,7 +45,7 @@ export default function SobrePage() {
         <div className="container-herbert relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
             <p className="eyebrow mb-4">
-              <TypewriterText text="Sobre nós" />
+              Sobre nós
             </p>
             <WordsRise
               as="h1"

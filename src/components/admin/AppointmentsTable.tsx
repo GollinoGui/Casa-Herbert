@@ -55,7 +55,7 @@ export function AppointmentsTable() {
               className={cn(
                 "rounded-full border px-3.5 py-2 text-xs font-medium transition",
                 statusFilter.includes(status)
-                  ? "border-brand-forest bg-brand-forest text-brand-cream"
+                  ? "border-brand-forest bg-brand-forest text-brand-graphite"
                   : "border-brand-beige text-brand-graphite/70 hover:border-brand-moss"
               )}
             >

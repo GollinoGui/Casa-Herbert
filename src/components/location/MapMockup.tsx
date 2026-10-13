@@ -38,7 +38,7 @@ export function MapMockup({ className }: { className?: string }) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Traçar rota até a Casa Herbert"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-forest text-brand-cream transition-colors hover:bg-brand-moss"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-forest text-brand-graphite transition-colors hover:bg-brand-moss"
             >
               <Navigation size={14} />
             </a>

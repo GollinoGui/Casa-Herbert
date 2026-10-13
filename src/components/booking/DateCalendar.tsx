@@ -101,7 +101,7 @@ export function DateCalendar({ minAdvanceDays, selectedDate, onSelect }: DateCal
                 !inMonth && "invisible",
                 inMonth && disabled && "cursor-not-allowed text-brand-graphite/25",
                 inMonth && !disabled && !isSelected && "text-brand-graphite hover:bg-brand-sage/25",
-                isSelected && "bg-brand-forest text-brand-cream hover:bg-brand-forest"
+                isSelected && "bg-brand-forest text-brand-graphite hover:bg-brand-forest"
               )}
             >
               {day.getDate()}

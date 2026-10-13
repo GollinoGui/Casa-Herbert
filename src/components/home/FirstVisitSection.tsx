@@ -1,99 +1,81 @@
-import { MessageCircle, Search, Sparkles } from "lucide-react";
 import { LinkButton } from "@/components/ui/Button";
-import { SectionHeading } from "@/components/ui/Card";
+import { HandNote } from "@/components/ui/HandNote";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { Marker } from "@/components/motion/Marker";
-import { ScrollSlide } from "@/components/motion/ScrollSlide";
-import { StepConnector } from "@/components/motion/StepConnector";
-import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
-import { FloatingIcon } from "@/components/motion/FloatingIcon";
-import { MarginThread } from "@/components/motion/MarginThread";
+import { WordsRise } from "@/components/motion/WordsRise";
 
 const STEPS = [
   {
-    number: "01",
-    icon: MessageCircle,
-    title: "Conversa inicial",
-    description: "Ouvimos sua história, sua rotina e o que te trouxe até a Casa Herbert.",
+    title: "Você conta, o Herbert ouve",
+    description: "Sua rotina, o histórico do seu cabelo e o que te trouxe até aqui. É a parte mais importante da visita.",
+    note: "sem pressa",
   },
   {
-    number: "02",
-    icon: Search,
-    title: "Avaliação individual",
-    description: "Observamos o couro cabeludo e os fios com atenção, sem pressa e sem fórmulas prontas.",
+    title: "Olhar de perto",
+    description: "O couro cabeludo e os fios são observados com atenção — e, com a tricoscopia, bem de perto.",
+    note: "veja na lupa, logo abaixo",
   },
   {
-    number: "03",
-    icon: Sparkles,
-    title: "Protocolo personalizado",
-    description: "Definimos juntos um caminho de cuidado alinhado à sua necessidade específica.",
+    title: "Um protocolo só seu",
+    description: "O caminho de cuidado é definido junto com você, a partir do que a avaliação mostrou.",
+  },
+  {
+    title: "Acompanhamento",
+    description: "A cada retorno, a evolução é acompanhada e o protocolo, ajustado quando precisa.",
+    note: "sempre com o Herbert",
   },
 ];
 
-const SLIDE_FROM = ["left", "up", "right"] as const;
-
-export function PersonalizedEvaluationSection() {
+/**
+ * A primeira visita contada passo a passo, como uma página do caderno de quem acompanha.
+ * Fica atrás do papel cortado no fim da seção de cuidados e vem para a frente quando ele
+ * cai (data-cut-reveal); por isso não entra como "folha empilhada".
+ */
+export function FirstVisitSection() {
   return (
-    // Fica atrás do papel cortado no fim da seção de cuidados e vem para a frente
-    // quando ele cai (data-cut-reveal); por isso não entra como "folha empilhada".
-    <section
-      data-no-stack
-      data-cut-reveal
-      className="wave-top-alt section-padding relative overflow-hidden bg-brand-cream bg-gradient-to-b from-white via-brand-sage/10 to-white"
-    >
-      <ParallaxLeaf className="pointer-events-none absolute left-[6%] top-6 hidden sm:block" size={44} tone="moss" speed="slow" />
-      <ParallaxLeaf className="pointer-events-none absolute right-[8%] bottom-4 hidden sm:block" size={52} variant="leaf" />
-      <FloatingIcon icon={Sparkles} size={26} speed="slow" className="pointer-events-none absolute right-8 top-10 hidden text-brand-gold/40 lg:block" />
-      <MarginThread side="left" tone="sage" className="top-10 bottom-10" />
-      <MarginThread side="right" tone="sage" className="top-10 bottom-10" />
+    <section data-no-stack data-cut-reveal className="wave-top-alt notebook-paper section-padding relative overflow-hidden">
       <div className="container-herbert relative">
-        <FadeIn>
-          <SectionHeading
-            eyebrow="O diferencial Casa Herbert"
-            title="Nada de fórmula fixa: cada atendimento começa com você"
-            description={
-              <>
-                Antes de qualquer protocolo, dedicamos tempo a entender a sua saúde capilar. É essa{" "}
-                <Marker>avaliação individual</Marker> que orienta cada decisão de cuidado.
-              </>
-            }
+        <div className="max-w-2xl lg:ml-16">
+          <FadeIn>
+            <p className="eyebrow mb-3">Sua primeira visita</p>
+          </FadeIn>
+          <WordsRise
+            text="Nada de fórmula pronta: tudo começa por você"
+            className="text-balance font-serif text-3xl text-brand-forest sm:text-4xl"
           />
-        </FadeIn>
-
-        <StepConnector
-          icons={STEPS.map((step) => (
-            <step.icon key={step.title} size={26} strokeWidth={1.5} />
-          ))}
-          className="mt-14 hidden items-center justify-center sm:flex"
-        />
-
-        <div className="mt-12 grid gap-10 sm:mt-8 sm:grid-cols-3 sm:gap-8">
-          {STEPS.map((step, index) => (
-            <ScrollSlide key={step.title} from={SLIDE_FROM[index % SLIDE_FROM.length]}>
-              <div className="relative flex flex-col items-center text-center">
-                <span className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-moss/15 text-brand-moss ring-1 ring-brand-moss/25 sm:hidden">
-                  <step.icon size={22} strokeWidth={1.5} aria-hidden="true" />
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -top-3 left-1/2 hidden -translate-x-1/2 select-none font-serif text-6xl sm:block text-brand-forest/[0.06]"
-                >
-                  {step.number}
-                </span>
-                <p className="relative text-xs font-medium uppercase tracking-[0.2em] text-brand-gold">
-                  Passo {index + 1}
-                </p>
-                <h3 className="relative mt-2 font-serif text-lg text-brand-forest">{step.title}</h3>
-                <p className="relative mt-2 max-w-xs text-sm text-brand-graphite/75">{step.description}</p>
-              </div>
-            </ScrollSlide>
-          ))}
+          <FadeIn delay={0.1}>
+            <p className="mt-4 text-brand-graphite/80">
+              Antes de qualquer protocolo, o tempo da visita é dedicado a entender a sua saúde capilar. É essa{" "}
+              <Marker>avaliação individual</Marker> que orienta cada decisão de cuidado.
+            </p>
+          </FadeIn>
         </div>
 
+        <ol className="mt-12 grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:ml-16">
+          {STEPS.map((step, index) => (
+            <li key={step.title}>
+              <FadeIn delay={0.08 * index} className="flex gap-5">
+                <span aria-hidden="true" className="font-serif text-5xl leading-none text-brand-gold">
+                  {index + 1}
+                </span>
+                <div className="pt-1">
+                  <h3 className="font-serif text-xl text-brand-forest">{step.title}</h3>
+                  <p className="mt-2 max-w-sm text-brand-graphite/80">{step.description}</p>
+                  {step.note ? (
+                    <HandNote className="mt-2 -rotate-2" arrow={index === 1 ? "down-right" : undefined}>
+                      {step.note}
+                    </HandNote>
+                  ) : null}
+                </div>
+              </FadeIn>
+            </li>
+          ))}
+        </ol>
+
         <FadeIn delay={0.3}>
-          <div className="mt-12 text-center">
-            <LinkButton href="/sobre" variant="secondary">
-              Conhecer nossa jornada completa
+          <div className="mt-12 lg:ml-16">
+            <LinkButton href="/agendar" variant="primary">
+              Agendar minha avaliação
             </LinkButton>
           </div>
         </FadeIn>

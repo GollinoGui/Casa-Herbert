@@ -112,24 +112,42 @@ export async function getAvailableSlotsForService(
 const NEXT_AVAILABLE_SEARCH_DAYS = 60;
 
 /**
- * Procura, a partir de (e incluindo) `fromDateStr`, a primeira data com horário livre —
+ * Procura, a partir de (e incluindo) `fromDateStr`, o primeiro horário livre —
  * mesma regra do engine aplicada dia a dia sobre um único carregamento do período.
  * Só serve de sugestão de UX; a data escolhida ainda passa pela revalidação normal.
  */
-export async function findNextAvailableDate(
+export async function findNextOpening(
   fromDateStr: string,
   serviceId: string
-): Promise<string | null> {
+): Promise<{ date: string; startTime: string } | null> {
+  return (await findNextOpenings(fromDateStr, serviceId, 1))[0] ?? null;
+}
+
+/**
+ * Os primeiros horários livres de até `limit` dias diferentes (um por dia) — dá à pessoa
+ * opções espalhadas pela semana em vez de quatro horários colados na mesma manhã.
+ */
+export async function findNextOpenings(
+  fromDateStr: string,
+  serviceId: string,
+  limit: number
+): Promise<{ date: string; startTime: string }[]> {
   const lastDate = addDaysToDateStr(fromDateStr, NEXT_AVAILABLE_SEARCH_DAYS - 1);
   const [service, ctx] = await Promise.all([getActiveService(serviceId), loadBookingContext(fromDateStr, lastDate)]);
-  if (!service) return null;
+  if (!service) return [];
 
+  const openings: { date: string; startTime: string }[] = [];
   let candidate = fromDateStr;
-  for (let i = 0; i < NEXT_AVAILABLE_SEARCH_DAYS; i++) {
-    if (computeForDate(ctx, candidate, service.durationMinutes).bookable) return candidate;
+  for (let i = 0; i < NEXT_AVAILABLE_SEARCH_DAYS && openings.length < limit; i++) {
+    const result = computeForDate(ctx, candidate, service.durationMinutes);
+    if (result.bookable && result.slots.length > 0) openings.push({ date: candidate, startTime: result.slots[0].startTime });
     candidate = addDaysToDateStr(candidate, 1);
   }
-  return null;
+  return openings;
+}
+
+export async function findNextAvailableDate(fromDateStr: string, serviceId: string): Promise<string | null> {
+  return (await findNextOpening(fromDateStr, serviceId))?.date ?? null;
 }
 
 export type CreateAppointmentResult =

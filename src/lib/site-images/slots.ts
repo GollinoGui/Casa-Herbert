@@ -4,8 +4,8 @@
  * página e seção. Espaço sem foto escolhida mostra o PlaceholderImage.
  *
  * Fotos que não são "fixas" ficam fora daqui: a do card de cada serviço vai em
- * services.image_id e as da seção de resultados em gallery.media_id — as páginas
- * apontam para elas em `elsewhere`.
+ * services.image_id, a de cada produto em products.image_id e as da seção de
+ * resultados em gallery.media_id — as páginas apontam para elas em `elsewhere`.
  */
 
 export type SlotAspect = "16/9" | "4/3" | "4/5" | "1/1";
@@ -41,7 +41,6 @@ export const ASPECT_LABELS: Record<SlotAspect, string> = {
 };
 
 const JOURNEY_HINT = "Aparece ao passar o mouse sobre a etapa; no celular, fica sempre visível.";
-const PRODUCT_HINT = "No card da página Produtos e na conversa de WhatsApp simulada da página inicial.";
 
 export const SITE_IMAGE_PAGES: SiteImagePage[] = [
   {
@@ -52,28 +51,22 @@ export const SITE_IMAGE_PAGES: SiteImagePage[] = [
       {
         title: "Topo da página",
         slots: [
-          { key: "home.hero", label: "Foto principal", hint: "Grande, ao lado do título “Casa Herbert”.", aspect: "16/9" },
-          {
-            key: "home.hero-thumb",
-            label: "Miniatura",
-            hint: "Pequena, ao lado do selo “Sem fórmula fixa”, abaixo dos botões.",
-            aspect: "1/1",
-          },
+          { key: "home.hero", label: "Foto principal", hint: "Grande, ao lado do título, com a anotação “é aqui”.", aspect: "16/9" },
         ],
       },
       {
-        title: "Terapia Capilar & Fotobiomodulação",
+        title: "Quem cuida de você",
+        slots: [
+          { key: "home.herbert", label: "Retrato do Herbert", hint: "Ao lado do texto “Prazer, Herbert”.", aspect: "4/5" },
+        ],
+      },
+      {
+        title: "Tricoscopia",
         slots: [
           {
-            key: "home.terapia",
-            label: "Aba Terapia Capilar",
-            hint: "Ao lado do texto quando a aba “Terapia Capilar” está aberta.",
-            aspect: "4/3",
-          },
-          {
-            key: "home.fotobio",
-            label: "Aba Fotobiomodulação",
-            hint: "Ao lado do texto quando a aba “Fotobiomodulação” está aberta.",
+            key: "home.tricoscopia",
+            label: "Couro cabeludo de perto",
+            hint: "A lupa amplia esta foto onde a pessoa passa o dedo ou o mouse — prefira uma foto nítida do couro cabeludo.",
             aspect: "4/3",
           },
         ],
@@ -82,6 +75,7 @@ export const SITE_IMAGE_PAGES: SiteImagePage[] = [
     elsewhere: [
       { label: "Carrossel “Nossos cuidados”", href: "/admin/servicos", linkLabel: "Editar em Serviços" },
       { label: "Seção “Resultados”", href: "/admin/galeria", linkLabel: "Editar em Galeria" },
+      { label: "Produtos na conversa de WhatsApp", href: "/admin/estoque", linkLabel: "Editar em Estoque" },
     ],
   },
   {
@@ -131,24 +125,6 @@ export const SITE_IMAGE_PAGES: SiteImagePage[] = [
             hint: "Ao lado do texto “Luz de baixa intensidade como parte do seu cuidado”.",
             aspect: "4/3",
           },
-        ],
-      },
-    ],
-  },
-  {
-    id: "produtos",
-    page: "Produtos",
-    path: "/produtos",
-    sections: [
-      {
-        title: "Linhas de produtos",
-        slots: [
-          { key: "produto.shampoo", label: "Shampoo de Limpeza Suave", hint: PRODUCT_HINT, aspect: "4/3" },
-          { key: "produto.tonico", label: "Tônico Fortalecedor", hint: PRODUCT_HINT, aspect: "4/3" },
-          { key: "produto.serum", label: "Sérum Pós-Terapia", hint: PRODUCT_HINT, aspect: "4/3" },
-          { key: "produto.mascara", label: "Máscara de Nutrição", hint: PRODUCT_HINT, aspect: "4/3" },
-          { key: "produto.condicionador", label: "Condicionador de Manutenção", hint: PRODUCT_HINT, aspect: "4/3" },
-          { key: "produto.oleo", label: "Óleo de Finalização", hint: PRODUCT_HINT, aspect: "4/3" },
         ],
       },
     ],

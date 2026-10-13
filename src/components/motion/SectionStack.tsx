@@ -13,6 +13,8 @@ function clear(section: HTMLElement) {
   section.style.transformOrigin = "";
   section.style.borderRadius = "";
   section.style.boxShadow = "";
+  section.style.willChange = "";
+  delete section.dataset.stackShadow;
 }
 
 /**
@@ -51,11 +53,20 @@ export function SectionStack() {
             return;
           }
           const e = easeInOut(progress);
+          // Camada própria enquanto anima: o scale vira só composição na GPU.
+          section.style.willChange = "transform";
           section.style.transformOrigin = "50% 0%";
           section.style.transform = `scale(${minScale + (1 - minScale) * e})`;
-          section.style.borderRadius = `${maxRadius * (1 - e)}px`;
+          // Cantos e sombra obrigam a repintar a seção inteira; arredondados em degraus
+          // só mudam algumas dezenas de vezes no trajeto, não a cada quadro de rolagem.
+          const radius = `${Math.round(maxRadius * (1 - e))}px`;
+          if (section.style.borderRadius !== radius) section.style.borderRadius = radius;
           // Sombra para cima: a seção parece uma folha passando por cima da anterior.
-          section.style.boxShadow = `0 -24px 60px -20px rgba(46, 46, 46, ${0.18 * (1 - e)})`;
+          const shadow = `0 -24px 60px -20px rgba(46, 46, 46, ${(Math.round(18 * (1 - e)) / 100).toFixed(2)})`;
+          if (section.dataset.stackShadow !== shadow) {
+            section.dataset.stackShadow = shadow;
+            section.style.boxShadow = shadow;
+          }
         };
 
         targets.forEach((section) => {

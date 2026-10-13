@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 interface AgendarPageProps {
-  searchParams: { service?: string };
+  searchParams: { service?: string; date?: string; time?: string; notas?: string };
 }
 
 export default async function AgendarPage({ searchParams }: AgendarPageProps) {
@@ -32,6 +32,9 @@ export default async function AgendarPage({ searchParams }: AgendarPageProps) {
           services={services}
           minAdvanceDays={settings.minAdvanceDays}
           preselectedServiceId={searchParams.service}
+          preselectedDate={searchParams.date}
+          preselectedTime={searchParams.time}
+          preselectedNotes={searchParams.notas}
         />
       </div>
     </section>

@@ -5,44 +5,9 @@ import { OpenStatusBadge } from "@/components/ui/OpenStatusBadge";
 import { DIRECTIONS_URL } from "@/components/location/map-links";
 import { todayDateStr, weekdayOf } from "@/lib/utils/date-format";
 import { cn } from "@/lib/utils/cn";
+import { closedDaysOf, daysLabel, groupByRanges, rangeLabel } from "@/lib/utils/business-hours-format";
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const DAY_LONG = ["domingo", "segunda-feira", "terça", "quarta", "quinta", "sexta", "sábado"];
-
-interface HoursGroup {
-  days: number[];
-  ranges: string[];
-}
-
-/** Junta os dias com exatamente as mesmas janelas ("Terça a sábado: 09:00–11:00 · 14:00–19:00"). */
-function groupByRanges(rules: BusinessHourRule[]): HoursGroup[] {
-  const byDay = new Map<number, string[]>();
-  for (const r of rules) {
-    if (!r.isActive) continue;
-    byDay.set(r.weekday, [...(byDay.get(r.weekday) ?? []), `${r.startTime}–${r.endTime}`]);
-  }
-  const groups: HoursGroup[] = [];
-  for (let day = 0; day < 7; day++) {
-    const ranges = byDay.get(day);
-    if (!ranges) continue;
-    const key = ranges.join("|");
-    const group = groups.find((g) => g.ranges.join("|") === key);
-    if (group) group.days.push(day);
-    else groups.push({ days: [day], ranges });
-  }
-  return groups;
-}
-
-function daysLabel(days: number[]): string {
-  const isRun = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
-  const label =
-    isRun && days.length >= 3
-      ? `${DAY_LONG[days[0]]} a ${DAY_LONG[days[days.length - 1]]}`
-      : days.length === 1
-        ? DAY_LONG[days[0]]
-        : `${days.slice(0, -1).map((d) => DAY_LONG[d]).join(", ")} e ${DAY_LONG[days[days.length - 1]]}`;
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
 
 interface VisitInfoCardProps {
   address: string;
@@ -57,13 +22,13 @@ export function VisitInfoCard({ address, isOpen, businessHours, showCta = true, 
   const today = weekdayOf(todayDateStr());
   const groups = groupByRanges(businessHours);
   const openDays = new Set(groups.flatMap((g) => g.days));
-  const closedDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => !openDays.has(d));
+  const closedDays = closedDaysOf(groups);
 
   return (
     <div className={cn("flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-brand-beige", className)}>
-      <div className="relative overflow-hidden bg-brand-forest px-7 py-7 text-brand-cream">
-        <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-brand-gold/25 blur-2xl" />
-        <p className="relative flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.22em] text-brand-gold">
+      <div className="relative overflow-hidden bg-brand-forest px-7 py-7 text-brand-graphite">
+        <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
+        <p className="relative flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.22em]">
           <MapPin size={12} /> Endereço
         </p>
         <p className="relative mt-2 font-serif text-xl leading-snug">{address}</p>
@@ -71,7 +36,7 @@ export function VisitInfoCard({ address, isOpen, businessHours, showCta = true, 
           href={DIRECTIONS_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="relative mt-4 inline-flex items-center gap-1 text-sm text-brand-cream/85 underline decoration-brand-gold/60 underline-offset-4 transition-colors hover:text-white"
+          className="relative mt-4 inline-flex items-center gap-1 text-sm font-medium underline decoration-brand-graphite/40 underline-offset-4 transition-colors hover:decoration-brand-graphite"
         >
           Como chegar <ArrowUpRight size={14} />
         </a>
@@ -109,8 +74,8 @@ export function VisitInfoCard({ address, isOpen, businessHours, showCta = true, 
               <span className="font-medium text-brand-forest">{daysLabel(g.days)}</span>
               <span className="flex flex-wrap gap-1.5">
                 {g.ranges.map((range) => (
-                  <span key={range} className="rounded-full bg-brand-cream px-2.5 py-1 text-xs tabular-nums text-brand-graphite/85 ring-1 ring-brand-beige">
-                    {range}
+                  <span key={range.startTime} className="rounded-full bg-brand-cream px-2.5 py-1 text-xs tabular-nums text-brand-graphite/85 ring-1 ring-brand-beige">
+                    {rangeLabel(range)}
                   </span>
                 ))}
               </span>

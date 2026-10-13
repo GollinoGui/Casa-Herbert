@@ -271,7 +271,7 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
                     <button
                       type="button"
                       onClick={item.onCtaClick}
-                      className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand-forest px-5 py-2 text-xs font-semibold text-white shadow-soft transition-transform duration-200 hover:scale-105"
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand-forest px-5 py-2 text-xs font-semibold text-brand-graphite shadow-soft transition-transform duration-200 hover:scale-105"
                     >
                       {item.ctaText}
                       <ArrowRight size={13} />
@@ -279,7 +279,7 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
                   ) : item.ctaText && item.ctaUrl ? (
                     <Link
                       href={item.ctaUrl}
-                      className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand-forest px-5 py-2 text-xs font-semibold text-white shadow-soft transition-transform duration-200 hover:scale-105"
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-brand-forest px-5 py-2 text-xs font-semibold text-brand-graphite shadow-soft transition-transform duration-200 hover:scale-105"
                     >
                       {item.ctaText}
                       <ArrowRight size={13} />
@@ -296,14 +296,14 @@ export function CoverflowCarousel({ items, autoplay = true, autoplayDelay = 6000
             <button
               onClick={prevSlide}
               aria-label="Cuidado anterior"
-              className="absolute left-0 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-brand-beige bg-white/90 text-brand-forest shadow-soft transition-colors duration-200 hover:bg-brand-forest hover:text-white"
+              className="absolute left-0 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-brand-beige bg-white/90 text-brand-forest shadow-soft transition-colors duration-200 hover:bg-brand-forest hover:text-brand-graphite"
             >
               <ChevronLeft size={20} />
             </button>
             <button
               onClick={nextSlide}
               aria-label="Próximo cuidado"
-              className="absolute right-0 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-brand-beige bg-white/90 text-brand-forest shadow-soft transition-colors duration-200 hover:bg-brand-forest hover:text-white"
+              className="absolute right-0 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-brand-beige bg-white/90 text-brand-forest shadow-soft transition-colors duration-200 hover:bg-brand-forest hover:text-brand-graphite"
             >
               <ChevronRight size={20} />
             </button>

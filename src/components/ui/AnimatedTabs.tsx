@@ -43,7 +43,7 @@ export function AnimatedTabs({ tabs, defaultTab, ariaLabel, className }: Animate
                 onClick={() => setActive(tab.id)}
                 className={cn(
                   "relative rounded-full px-5 py-2.5 text-sm font-medium outline-none transition-colors duration-300",
-                  isActive ? "text-brand-cream" : "text-brand-graphite/70 hover:bg-brand-forest/5"
+                  isActive ? "text-brand-graphite" : "text-brand-graphite/70 hover:bg-brand-forest/5"
                 )}
               >
                 {isActive && (

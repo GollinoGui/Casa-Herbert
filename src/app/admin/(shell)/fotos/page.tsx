@@ -2,17 +2,19 @@ import type { Metadata } from "next";
 import { getSlotAssignments, listMedia } from "@/lib/data/media";
 import { getAllServices } from "@/lib/data/services";
 import { getAllGallery } from "@/lib/data/gallery";
+import { getAllProducts } from "@/lib/data/products";
 import { LIBRARY_TAB, SITE_IMAGE_PAGES, SITE_IMAGE_SLOTS } from "@/lib/site-images/slots";
 import { SiteImagesManager } from "@/components/admin/SiteImagesManager";
 
 export const metadata: Metadata = { title: "Fotos do site" };
 
 export default async function FotosPage({ searchParams }: { searchParams: { aba?: string } }) {
-  const [assignments, media, services, gallery] = await Promise.all([
+  const [assignments, media, services, gallery, products] = await Promise.all([
     getSlotAssignments(),
     listMedia(),
     getAllServices(),
     getAllGallery(),
+    getAllProducts(),
   ]);
 
   // Onde cada foto da biblioteca aparece — para ninguém apagar uma foto em uso sem saber.
@@ -26,6 +28,7 @@ export default async function FotosPage({ searchParams }: { searchParams: { aba?
     if (slot) addUsage(a.mediaId, `${slot.page} · ${slot.label}`);
   }
   for (const s of services) addUsage(s.imageId, `Serviço · ${s.name}`);
+  for (const p of products) addUsage(p.imageId, `Produto · ${p.name}`);
   for (const g of gallery) addUsage(g.mediaId, `Galeria · ${g.caption || g.category}`);
 
   const validTabs = [...SITE_IMAGE_PAGES.map((p) => p.id), LIBRARY_TAB];

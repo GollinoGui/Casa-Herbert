@@ -13,7 +13,8 @@ import { ScrollProgressScissors } from "@/components/layout/ScrollProgressScisso
 const NAV_LINKS = [
   { href: "/", label: "Início" },
   { href: "/sobre", label: "Sobre" },
-  { href: "/#nossos-cuidados", label: "Serviços" },
+  { href: "/terapia-capilar", label: "Terapia Capilar" },
+  { href: "/servicos", label: "Serviços" },
   { href: "/produtos", label: "Produtos" },
   { href: "/contato", label: "Contato" },
 ];
@@ -124,10 +125,10 @@ export function Header() {
         // ia para a esquerda antes de vir para perto da nav.
         style={scrolled && pillWidth ? { width: `min(95vw, ${pillWidth}px)` } : undefined}
         className={cn(
-          "mx-auto flex items-center justify-between gap-8 overflow-hidden transition-[background-color,border-color,border-radius,box-shadow,backdrop-filter,width,height,margin,padding] duration-[800ms] ease-[cubic-bezier(0.45,0,0.2,1)]",
+          "mx-auto flex items-center justify-between gap-8 overflow-hidden transition-[background-color,border-color,border-radius,box-shadow,width,height,margin,padding] duration-[800ms] ease-[cubic-bezier(0.45,0,0.2,1)]",
           scrolled
             ? cn(
-                "mt-4 h-[4.5rem] max-w-6xl 2xl:max-w-7xl rounded-full border border-brand-beige/70 bg-brand-cream/95 px-8 shadow-soft backdrop-blur-md sm:px-10",
+                "mt-4 h-[4.5rem] max-w-6xl 2xl:max-w-7xl rounded-full border border-brand-beige/70 bg-brand-cream/95 px-8 shadow-soft sm:px-10",
                 !pillWidth && "w-fit"
               )
             : "mt-0 h-20 w-full max-w-6xl rounded-none 2xl:max-w-7xl border border-transparent bg-transparent px-5 sm:px-8"

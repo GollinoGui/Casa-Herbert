@@ -26,6 +26,7 @@ export default async function ServicosPage() {
           <FadeIn>
             <SectionHeading
               eyebrow="Nossos cuidados"
+              as="h1"
               title="Serviços Casa Herbert"
               description="Cada serviço abaixo é conduzido a partir de uma avaliação individual — nada aqui segue fórmula fixa. Escolha um cuidado e solicite seu agendamento."
             />

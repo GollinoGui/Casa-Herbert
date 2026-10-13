@@ -80,7 +80,7 @@ function TabLink({ href, active, children }: { href: string; active: boolean; ch
         "flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors",
         focusRing,
         active
-          ? "border-brand-forest bg-brand-forest text-brand-cream"
+          ? "border-brand-forest bg-brand-forest text-brand-graphite"
           : "border-brand-beige bg-white text-brand-graphite hover:border-brand-moss hover:bg-brand-cream"
       )}
     >

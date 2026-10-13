@@ -4,79 +4,76 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MoreVertical, Smile, Paperclip, Mic, CheckCheck, MessageCircle } from "lucide-react";
-import { SiteImage } from "@/components/ui/SiteImage";
+import { PlaceholderImage } from "@/components/ui/PlaceholderImage";
 import { LinkButton } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 import { useIntroGate } from "@/components/motion/introGate";
+
+interface ChatProduct {
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  imagePosition: string | null;
+}
 
 interface ChatMessage {
   id: number;
   fromBusiness: boolean;
   text: string;
-  product?: { name: string; slot: string; tone: "sage" | "cream" | "gold" };
+  product?: ChatProduct;
   cta?: boolean;
   time: string;
 }
 
-const CONVERSATION: ChatMessage[] = [
-  { id: 1, fromBusiness: false, text: "Oi! Quais produtos vocês indicam pro meu couro cabeludo?", time: "14:02" },
-  {
-    id: 2,
-    fromBusiness: true,
-    text: "Higienização delicada, preserva o equilíbrio do couro cabeludo.",
-    product: { name: "Shampoo de Limpeza Suave", slot: "produto.shampoo", tone: "sage" },
-    time: "14:03",
-  },
-  {
-    id: 3,
-    fromBusiness: true,
-    text: "Apoia a saúde dos fios entre as sessões.",
-    product: { name: "Tônico Fortalecedor", slot: "produto.tonico", tone: "gold" },
-    time: "14:03",
-  },
-  {
-    id: 4,
-    fromBusiness: true,
-    text: "Finalização recomendada após a terapia capilar.",
-    product: { name: "Sérum Pós-Terapia", slot: "produto.serum", tone: "cream" },
-    time: "14:04",
-  },
-  {
-    id: 5,
-    fromBusiness: true,
-    text: "Cuidado intensivo, conforme sua avaliação.",
-    product: { name: "Máscara de Nutrição", slot: "produto.mascara", tone: "sage" },
-    time: "14:04",
-  },
-  {
-    id: 6,
-    fromBusiness: true,
-    text: "Uso contínuo, alinhado ao seu protocolo.",
-    product: { name: "Condicionador de Manutenção", slot: "produto.condicionador", tone: "gold" },
-    time: "14:05",
-  },
-  {
-    id: 7,
-    fromBusiness: true,
-    text: "Toque final para fios e comprimentos.",
-    product: { name: "Óleo de Finalização", slot: "produto.oleo", tone: "cream" },
-    time: "14:05",
-  },
-  { id: 8, fromBusiness: false, text: "Onde posso encontrar mais detalhes?", time: "14:06" },
-  { id: 9, fromBusiness: true, cta: true, text: "Você pode:", time: "14:06" },
-];
+const placeholderTones = ["sage", "gold", "cream"] as const;
+// Mais que isso a conversa demora demais para chegar ao convite final.
+const MAX_CHAT_PRODUCTS = 4;
+
+/** Uma mensagem por minuto, a partir das 14:02. */
+function clock(index: number) {
+  return `14:${String(2 + index).padStart(2, "0")}`;
+}
+
+function buildConversation(products: ChatProduct[]): ChatMessage[] {
+  const shown = products.slice(0, MAX_CHAT_PRODUCTS);
+  const replies: Omit<ChatMessage, "id" | "time">[] =
+    shown.length > 0
+      ? shown.map((product) => ({ fromBusiness: true, text: product.description, product }))
+      : [
+          {
+            fromBusiness: true,
+            text: "Depende do que a gente observar na sua avaliação — cada indicação faz parte do seu protocolo.",
+          },
+        ];
+  const messages: Omit<ChatMessage, "id" | "time">[] = [
+    { fromBusiness: false, text: "Oi! Quais produtos vocês indicam pro meu couro cabeludo?" },
+    ...replies,
+    { fromBusiness: false, text: "Onde posso encontrar mais detalhes?" },
+    { fromBusiness: true, cta: true, text: "Você pode:" },
+  ];
+  return messages.map((m, i) => ({ ...m, id: i + 1, time: clock(i) }));
+}
 
 const TYPING_MS = 900;
 const HOLD_MS = 2100;
 
 /**
  * Laptop com um chat estilo WhatsApp simulando uma conversa com a Casa Herbert,
- * revelando os produtos um a um. Abre em 3D (rotateX) e só começa a "digitar"
+ * revelando os produtos da vitrine (/admin/estoque) um a um. Abre em 3D (rotateX) e só começa a "digitar"
  * quando entra na viewport (mesmo gatilho do onViewportEnter), tocando a
  * sequência uma única vez.
  */
-export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber: string; className?: string }) {
+export function LaptopChatMockup({
+  whatsappNumber,
+  products,
+  className,
+}: {
+  whatsappNumber: string;
+  products: ChatProduct[];
+  className?: string;
+}) {
   const introReady = useIntroGate();
+  const [conversation] = useState(() => buildConversation(products));
   const [hasEntered, setHasEntered] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
@@ -96,7 +93,7 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
     };
 
     let elapsed = 500;
-    CONVERSATION.forEach((_, index) => {
+    conversation.forEach((_, index) => {
       schedule(() => setIsTyping(true), elapsed);
       elapsed += TYPING_MS;
       schedule(() => {
@@ -110,7 +107,7 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
       isMounted = false;
       timeouts.forEach(clearTimeout);
     };
-  }, [hasEntered]);
+  }, [hasEntered, conversation]);
 
   useEffect(() => {
     const el = scrollAreaRef.current;
@@ -118,7 +115,7 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [visibleCount, isTyping]);
 
-  const visibleMessages = CONVERSATION.slice(0, visibleCount);
+  const visibleMessages = conversation.slice(0, visibleCount);
 
   return (
     <div className={cn("relative mx-auto w-full max-w-[560px] select-none [perspective:1200px]", className)}>
@@ -132,17 +129,17 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
         className="relative z-10 rounded-t-2xl bg-gradient-to-br from-neutral-600 via-brand-graphite to-neutral-900 p-2 shadow-soft sm:p-2.5"
       >
         <div className="flex h-[360px] flex-col overflow-hidden rounded-t-[10px] bg-brand-cream sm:h-[400px]">
-          <div className="flex shrink-0 items-center justify-between bg-brand-forest px-3.5 py-2.5 text-brand-cream">
+          <div className="flex shrink-0 items-center justify-between bg-brand-forest px-3.5 py-2.5 text-brand-graphite">
             <div className="flex items-center gap-2.5">
               <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-brand-cream/25">
                 <Image src="/logo.jpg" alt="Casa Herbert" fill sizes="32px" className="object-cover" />
               </span>
               <div className="flex flex-col leading-tight">
                 <span className="text-xs font-semibold">Casa Herbert</span>
-                <span className="text-[10px] text-brand-cream/80">online</span>
+                <span className="text-[10px] text-brand-graphite/80">online</span>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-brand-cream/70">
+            <div className="flex items-center gap-3 text-brand-graphite/70">
               <Search size={15} />
               <MoreVertical size={15} />
             </div>
@@ -172,13 +169,23 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
                     )}
                   >
                     {msg.product && (
-                      <SiteImage
-                        slot={msg.product.slot}
-                        alt={msg.product.name}
-                        placeholderTone={msg.product.tone}
-                        sizes="160px"
-                        className="mb-1.5 aspect-[4/3] w-40"
-                      />
+                      <div className="relative mb-1.5 aspect-[4/3] w-40 overflow-hidden rounded-lg">
+                        {msg.product.imageUrl ? (
+                          <Image
+                            src={msg.product.imageUrl}
+                            alt={msg.product.name}
+                            fill
+                            sizes="160px"
+                            className="object-cover"
+                            style={{ objectPosition: msg.product.imagePosition ?? "center" }}
+                          />
+                        ) : (
+                          <PlaceholderImage
+                            tone={placeholderTones[msg.id % placeholderTones.length]}
+                            className="h-full w-full rounded-lg"
+                          />
+                        )}
+                      </div>
                     )}
                     {msg.product && <p className="font-serif text-[12px] text-brand-forest">{msg.product.name}</p>}
                     <p className={cn(msg.product && "mt-0.5 text-brand-graphite/70")}>{msg.text}</p>
@@ -241,7 +248,7 @@ export function LaptopChatMockup({ whatsappNumber, className }: { whatsappNumber
             <div className="flex-1 rounded-full bg-brand-beige/50 px-3 py-1.5 text-[11px] text-brand-graphite/40">
               Digite uma mensagem
             </div>
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-forest text-brand-cream">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-forest text-brand-graphite">
               <Mic size={13} />
             </span>
           </div>

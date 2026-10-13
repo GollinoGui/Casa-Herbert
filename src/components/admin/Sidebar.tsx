@@ -56,8 +56,8 @@ export function Sidebar() {
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col overflow-y-auto bg-brand-forest lg:flex">
         <div className="px-6 py-6">
-          <p className="font-serif text-xl text-brand-cream">Casa Herbert</p>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-brand-sage">Painel Admin</p>
+          <p className="font-serif text-xl text-brand-graphite">Casa Herbert</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-brand-graphite">Painel Admin</p>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 pb-4">
@@ -73,7 +73,7 @@ export function Sidebar() {
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                   active
                     ? "bg-brand-cream text-brand-forest"
-                    : "text-brand-cream/80 hover:bg-white/10 hover:text-brand-cream"
+                    : "text-brand-graphite hover:bg-white/25"
                 )}
               >
                 <Icon size={18} strokeWidth={1.75} />
@@ -83,11 +83,11 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="border-t border-white/10 px-3 py-4">
+        <div className="border-t border-brand-forestDark/30 px-3 py-4">
           <form action={adminLogoutAction}>
             <button
               type="submit"
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-brand-cream/80 transition-colors hover:bg-white/10 hover:text-brand-cream"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-brand-graphite transition-colors hover:bg-white/25"
             >
               <LogOut size={18} strokeWidth={1.75} />
               Sair
@@ -132,7 +132,7 @@ function MobileNav({ pathname }: { pathname: string | null }) {
       <div className="relative z-10 flex h-14 items-center justify-between gap-3 border-b border-brand-forestDark/40 bg-brand-forest px-4 shadow-softer">
         <Link href="/admin" className="min-w-0 leading-tight">
           <span className="block truncate font-serif text-base text-brand-graphite">Casa Herbert</span>
-          <span className="block text-[10px] uppercase tracking-[0.2em] text-brand-graphite/70">Painel Admin</span>
+          <span className="block text-[10px] font-medium uppercase tracking-[0.2em] text-brand-graphite">Painel Admin</span>
         </Link>
 
         <button

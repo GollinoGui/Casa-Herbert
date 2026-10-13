@@ -35,7 +35,10 @@ export interface PhoneFanRevealItem {
 }
 
 interface PhoneFanRevealProps {
-  items: [PhoneFanRevealItem, PhoneFanRevealItem, PhoneFanRevealItem];
+  center: PhoneFanRevealItem;
+  /** Opcionais: rede sem link cadastrado não entra no leque. */
+  left?: PhoneFanRevealItem;
+  right?: PhoneFanRevealItem;
   className?: string;
 }
 
@@ -48,9 +51,8 @@ interface PhoneFanRevealProps {
  * Component: passar o `icon` (componente Lucide) como prop cruzando a fronteira servidor→cliente
  * quebra o RSC ("Functions cannot be passed directly to Client Components").
  */
-export function PhoneFanReveal({ items, className }: PhoneFanRevealProps) {
+export function PhoneFanReveal({ center, left, right, className }: PhoneFanRevealProps) {
   const introReady = useIntroGate();
-  const [left, center, right] = items;
   const [spread, setSpread] = useState(118);
 
   useEffect(() => {
@@ -69,29 +71,33 @@ export function PhoneFanReveal({ items, className }: PhoneFanRevealProps) {
       className={className}
     >
       <div className="relative mx-auto h-[290px] w-full max-w-[380px] sm:h-[400px] sm:max-w-[580px]">
-        <motion.a
-          href={left.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Abrir ${left.label}`}
-          variants={sideVariants(-1, 0.65, spread)}
-          whileHover={{ scale: 1.05, rotate: 0, zIndex: 30, transition: { duration: 0.25 } }}
-          className="group absolute inset-0 z-10 m-auto h-fit w-[106px] sm:w-[170px]"
-        >
-          {left.frame}
-        </motion.a>
+        {left ? (
+          <motion.a
+            href={left.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Abrir ${left.label}`}
+            variants={sideVariants(-1, 0.65, spread)}
+            whileHover={{ scale: 1.05, rotate: 0, zIndex: 30, transition: { duration: 0.25 } }}
+            className="group absolute inset-0 z-10 m-auto h-fit w-[106px] sm:w-[170px]"
+          >
+            {left.frame}
+          </motion.a>
+        ) : null}
 
-        <motion.a
-          href={right.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Abrir ${right.label}`}
-          variants={sideVariants(1, 0.75, spread)}
-          whileHover={{ scale: 1.05, rotate: 0, zIndex: 30, transition: { duration: 0.25 } }}
-          className="group absolute inset-0 z-10 m-auto h-fit w-[106px] sm:w-[170px]"
-        >
-          {right.frame}
-        </motion.a>
+        {right ? (
+          <motion.a
+            href={right.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Abrir ${right.label}`}
+            variants={sideVariants(1, 0.75, spread)}
+            whileHover={{ scale: 1.05, rotate: 0, zIndex: 30, transition: { duration: 0.25 } }}
+            className="group absolute inset-0 z-10 m-auto h-fit w-[106px] sm:w-[170px]"
+          >
+            {right.frame}
+          </motion.a>
+        ) : null}
 
         <motion.a
           href={center.href}

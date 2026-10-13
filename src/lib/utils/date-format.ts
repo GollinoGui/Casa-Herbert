@@ -68,6 +68,13 @@ export function formatShortDatePtBR(dateStr: string): string {
   return format(parseDateOnly(dateStr), "dd/MM/yyyy");
 }
 
+const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+/** "Qui 16/10" — cabe num botão pequeno. */
+export function formatChipDatePtBR(dateStr: string): string {
+  return `${WEEKDAY_SHORT[weekdayOf(dateStr)]} ${format(parseDateOnly(dateStr), "dd/MM")}`;
+}
+
 export function formatWeekdayPtBR(dateStr: string): string {
   const label = format(parseDateOnly(dateStr), "EEEE", { locale: ptBR });
   return label.charAt(0).toUpperCase() + label.slice(1);

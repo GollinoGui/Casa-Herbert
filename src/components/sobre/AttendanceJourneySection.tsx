@@ -98,7 +98,7 @@ export function AttendanceJourneySection() {
                   </div>
 
                   <div className="flex-1 pt-1.5">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-brand-gold">{step.label}</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-brand-moss">{step.label}</p>
                     <h3 className="mt-1 font-serif text-lg text-brand-forest">{step.title}</h3>
                     <p className="mt-1.5 text-sm text-brand-graphite/75">{step.description}</p>
                     <SiteImage

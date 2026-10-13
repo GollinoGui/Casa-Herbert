@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,6 +15,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { DateCalendar } from "@/components/booking/DateCalendar";
 import { cn } from "@/lib/utils/cn";
+import { firstNameOf, saveLastBooking } from "@/lib/utils/last-booking";
 
 type Step = "service" | "date" | "time" | "details" | "review" | "confirmation";
 
@@ -31,23 +32,36 @@ interface BookingWizardProps {
   services: Service[];
   minAdvanceDays: number;
   preselectedServiceId?: string;
+  /** Vindos de um horário clicado na home: se ainda estiver livre, o assistente já começa nos dados pessoais. */
+  preselectedDate?: string;
+  preselectedTime?: string;
+  /** Observação já preenchida — ex.: as respostas do questionário da home. */
+  preselectedNotes?: string;
   /** Quando presente (uso dentro de um modal), a confirmação fecha o modal em vez de navegar para "/". */
   onClose?: () => void;
 }
 
-export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, onClose }: BookingWizardProps) {
-  const [step, setStep] = useState<Step>("service");
+export function BookingWizard({
+  services,
+  minAdvanceDays,
+  preselectedServiceId,
+  preselectedDate,
+  preselectedTime,
+  preselectedNotes,
+  onClose,
+}: BookingWizardProps) {
+  const initialServiceId = useMemo(
+    () => (preselectedServiceId && services.some((s) => s.id === preselectedServiceId) ? preselectedServiceId : ""),
+    [preselectedServiceId, services]
+  );
+  const [step, setStep] = useState<Step>(initialServiceId && preselectedDate ? "time" : "service");
   const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(!!(initialServiceId && preselectedDate));
   const [nextAvailableDate, setNextAvailableDate] = useState<string | null>(null);
   const [isLoadingNextDate, setIsLoadingNextDate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const initialServiceId = useMemo(
-    () => (preselectedServiceId && services.some((s) => s.id === preselectedServiceId) ? preselectedServiceId : ""),
-    [preselectedServiceId, services]
-  );
 
   const {
     register,
@@ -66,7 +80,7 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
       customerName: "",
       customerPhone: "",
       customerEmail: "",
-      notes: "",
+      notes: preselectedNotes?.slice(0, 500) ?? "",
     },
   });
 
@@ -76,7 +90,7 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
 
   const selectedService = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [services, serviceId]);
 
-  async function fetchSlots(dateStr: string, svcId: string) {
+  async function fetchSlots(dateStr: string, svcId: string): Promise<AvailabilityResult> {
     setIsLoadingSlots(true);
     setNextAvailableDate(null);
     setStep("time");
@@ -90,7 +104,28 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
       setNextAvailableDate(next);
       setIsLoadingNextDate(false);
     }
+    return result;
   }
+
+  // O horário do link é só uma sugestão: confere de novo antes de pular etapas — se
+  // alguém pegou nesse meio-tempo, a pessoa cai na lista de horários daquele dia.
+  const appliedPreselection = useRef(false);
+  useEffect(() => {
+    if (appliedPreselection.current || !initialServiceId || !preselectedDate) return;
+    appliedPreselection.current = true;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(preselectedDate)) {
+      setIsLoadingSlots(false);
+      setStep("service");
+      return;
+    }
+    setValue("date", preselectedDate);
+    void fetchSlots(preselectedDate, initialServiceId).then((result) => {
+      if (preselectedTime && result.slots.some((slot) => slot.startTime === preselectedTime)) {
+        handleSelectSlot(preselectedTime);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roda uma vez, com o que veio na URL
+  }, []);
 
   function handleSelectDate(dateStr: string) {
     setValue("date", dateStr, { shouldValidate: true });
@@ -115,6 +150,13 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
     setIsSubmitting(false);
 
     if (result.ok) {
+      saveLastBooking({
+        firstName: firstNameOf(values.customerName),
+        serviceId: values.serviceId,
+        serviceName: selectedService?.name ?? "",
+        date: values.date,
+        startTime: values.startTime,
+      });
       setStep("confirmation");
       return;
     }
@@ -250,7 +292,7 @@ export function BookingWizard({ services, minAdvanceDays, preselectedServiceId, 
                       onClick={() => handleSelectSlot(slot.startTime)}
                       className={cn(
                         "rounded-xl border border-brand-beige bg-white py-3.5 text-sm font-medium text-brand-graphite transition hover:border-brand-forest hover:bg-brand-forest/5",
-                        startTime === slot.startTime && "border-brand-forest bg-brand-forest text-brand-cream hover:bg-brand-forest"
+                        startTime === slot.startTime && "border-brand-forest bg-brand-forest text-brand-graphite hover:bg-brand-forest"
                       )}
                     >
                       {slot.startTime}

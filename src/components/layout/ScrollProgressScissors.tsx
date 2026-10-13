@@ -21,14 +21,14 @@ export function ScrollProgressScissors() {
         className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t-2 border-brand-forest"
       />
       {/* tesoura acompanhando o progresso da leitura */}
-      <motion.div style={{ left: leftPercent }} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <motion.div
-          animate={{ rotate: [0, -14, 0] }}
-          transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.5, ease: "easeInOut" }}
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-cream shadow-softer"
-        >
-          <ScissorCombIcon className="h-[18px] w-[18px] rotate-[70deg] text-brand-forest" />
-        </motion.div>
+      {/* translateX numa camada da largura da trilha (o % é da própria largura) em vez de
+          animar `left`, que recalcularia o layout a cada quadro de rolagem. */}
+      <motion.div style={{ x: leftPercent }} className="absolute inset-0">
+        <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="flex h-6 w-6 animate-snip items-center justify-center rounded-full bg-brand-cream shadow-softer">
+            <ScissorCombIcon className="h-[18px] w-[18px] rotate-[70deg] text-brand-forest" />
+          </div>
+        </div>
       </motion.div>
     </div>
   );

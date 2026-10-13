@@ -94,6 +94,12 @@ export interface Product {
   priceCents: number; // diferente de Service.priceCents: aqui não é nullable
   stockQuantity: number;
   isActive: boolean;
+  description: string;
+  imageId: string | null;
+  imageUrl: string | null;
+  imagePosition: ImagePosition | null;
+  /** Aparece na página /produtos e no chat simulado da home. */
+  showOnSite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -164,6 +170,15 @@ export interface Settings {
   whatsappNumber: string; // digits only, with country code, e.g. 5516991479968
   salonAddress: string;
   salonTimezone: string;
+  /** URL completa; vazio = o site não mostra o link. */
+  instagramUrl: string;
+  facebookUrl: string;
+  /** Faixa acima do menu; vazio = sem faixa. */
+  announcementText: string;
+  /** Caminho interno ("/agendar") ou URL completa; vazio = faixa sem link. */
+  announcementLink: string;
+  /** "YYYY-MM-DD", último dia em que a faixa aparece; vazio = sem prazo. */
+  announcementUntil: string;
   messageTemplates: {
     confirmed: string;
     rejected: string;

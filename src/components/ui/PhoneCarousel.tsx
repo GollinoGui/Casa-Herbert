@@ -72,7 +72,7 @@ export function PhoneFrame({ item, compact = false }: { item: PhoneCarouselItem;
             </div>
             <span
               className={cn(
-                "mt-1 whitespace-nowrap rounded-full bg-brand-forest font-medium text-brand-cream shadow-softer transition-transform duration-300 group-hover:scale-105",
+                "mt-1 whitespace-nowrap rounded-full bg-brand-forest font-medium text-brand-graphite shadow-softer transition-transform duration-300 group-hover:scale-105",
                 compact ? "px-3 py-1 text-[10px] sm:px-4 sm:py-1.5 sm:text-[11px]" : "px-4 py-1.5 text-[11px]"
               )}
             >
@@ -128,7 +128,7 @@ export function PhoneCarousel({ items, className }: PhoneCarouselProps) {
         className
       )}
     >
-      {items.slice(0, 3).map((item, idx) => (
+      {items.slice(0, 3).map((item, idx, shown) => (
         <a
           key={item.id}
           href={item.href}
@@ -137,7 +137,8 @@ export function PhoneCarousel({ items, className }: PhoneCarouselProps) {
           aria-label={`Abrir ${item.label}`}
           className={cn(
             "group relative w-[210px] shrink-0 transition-transform duration-500 ease-out sm:hover:-translate-y-3 sm:hover:z-20 sm:hover:rotate-0 sm:hover:scale-110",
-            fanClass[idx] ?? ""
+            // Com dois celulares, os dois abrem para os lados (sem o do meio).
+            (shown.length === 2 ? fanClass[idx * 2] : shown.length === 1 ? "" : fanClass[idx]) ?? ""
           )}
         >
           <PhoneFrame item={item} />

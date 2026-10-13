@@ -9,6 +9,7 @@ import { MapMockup } from "@/components/location/MapMockup";
 import { VisitInfoCard } from "@/components/location/VisitInfoCard";
 import { ParallaxLeaf } from "@/components/motion/ParallaxLeaf";
 import { formatPhoneDisplay, toWhatsAppDigits } from "@/lib/utils/phone";
+import { socialHandle } from "@/lib/utils/social";
 
 export const metadata: Metadata = {
   title: "Contato",
@@ -20,31 +21,38 @@ export default async function ContatoPage() {
   const [settings, isOpen, businessHours] = await Promise.all([getSettings(), isOpenNow(), getBusinessHours()]);
 
   const socialChannels: PhoneCarouselItem[] = [
-    {
-      id: "instagram",
-      label: "Instagram",
-      handle: "@casaherbert",
-      href: "https://instagram.com",
-      icon: Instagram,
-      tone: "gold",
-    },
+    settings.instagramUrl
+      ? {
+          id: "instagram",
+          label: "Instagram",
+          handle: socialHandle(settings.instagramUrl),
+          href: settings.instagramUrl,
+          icon: Instagram,
+          tone: "gold" as const,
+        }
+      : null,
     {
       id: "whatsapp",
       label: "WhatsApp",
       handle: formatPhoneDisplay(settings.whatsappNumber),
       href: `https://wa.me/${toWhatsAppDigits(settings.whatsappNumber)}`,
       icon: MessageCircle,
-      tone: "sage",
+      tone: "sage" as const,
     },
-    {
-      id: "facebook",
-      label: "Facebook",
-      handle: "/casaherbert",
-      href: "https://facebook.com",
-      icon: Facebook,
-      tone: "cream",
-    },
-  ];
+    settings.facebookUrl
+      ? {
+          id: "facebook",
+          label: "Facebook",
+          handle: socialHandle(settings.facebookUrl, "/"),
+          href: settings.facebookUrl,
+          icon: Facebook,
+          tone: "cream" as const,
+        }
+      : null,
+  ].filter((item) => item !== null);
+  const channelNames = socialChannels.map((c) => c.label);
+  const channelList =
+    channelNames.length > 1 ? `${channelNames.slice(0, -1).join(", ")} ou o ${channelNames.at(-1)}` : channelNames[0];
 
   return (
     <section className="section-padding relative overflow-hidden bg-gradient-to-b from-brand-cream via-brand-cream to-brand-sage/10">
@@ -53,6 +61,7 @@ export default async function ContatoPage() {
       <div className="container-herbert relative">
         <SectionHeading
           eyebrow="Contato"
+          as="h1"
           title="Fale com a Casa Herbert"
           description="Estamos em Orlândia/SP, atendendo somente com hora marcada. Escolha o canal que preferir."
         />
@@ -90,7 +99,7 @@ export default async function ContatoPage() {
           <p className="eyebrow mb-3">Nos siga</p>
           <h2 className="font-serif text-2xl text-brand-forest sm:text-3xl">Fale por onde preferir</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-brand-graphite/80">
-            Toque em um celular para abrir o Instagram, o WhatsApp ou o Facebook da Casa Herbert.
+            Toque {socialChannels.length > 1 ? "em um celular" : "no celular"} para abrir o {channelList} da Casa Herbert.
           </p>
           <PhoneCarousel items={socialChannels} className="mt-12" />
         </div>

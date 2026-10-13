@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil } from "lucide-react";
+import { Globe, Plus, Pencil } from "lucide-react";
 import type { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { ActiveBadge } from "@/components/ui/Badge";
-import { Input, FieldLabel, FieldError } from "@/components/ui/Field";
+import { Input, Textarea, FieldLabel, FieldError } from "@/components/ui/Field";
+import { ImageField } from "@/components/admin/MediaPicker";
 import { productFormSchema } from "@/lib/booking/validators";
 import { createProductAction, updateProductAction, setProductActiveAction } from "@/lib/actions/admin/products";
 import { formatServicePrice } from "@/lib/utils/service-format";
@@ -61,6 +62,7 @@ export function ProductsManager({ products }: { products: Product[] }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-brand-graphite">{p.name}</p>
+                  {p.showOnSite ? <OnSiteTag /> : null}
                   <p className="mt-0.5 text-xs text-brand-graphite/60">
                     {formatServicePrice(p.priceCents)} ·{" "}
                     <span className={cn(p.stockQuantity <= LOW_STOCK_THRESHOLD && "font-medium text-red-600")}>
@@ -105,7 +107,10 @@ export function ProductsManager({ products }: { products: Product[] }) {
             ) : (
               products.map((p) => (
                 <tr key={p.id} className={cn("border-b border-brand-beige/60", !p.isActive && "opacity-60")}>
-                  <td className="px-4 py-3 font-medium text-brand-graphite">{p.name}</td>
+                  <td className="px-4 py-3 font-medium text-brand-graphite">
+                    {p.name}
+                    {p.showOnSite ? <OnSiteTag /> : null}
+                  </td>
                   <td className="px-4 py-3">{formatServicePrice(p.priceCents)}</td>
                   <td className="px-4 py-3">
                     <span className={cn(p.stockQuantity <= LOW_STOCK_THRESHOLD && "font-medium text-red-600")}>
@@ -150,6 +155,25 @@ export function ProductsManager({ products }: { products: Product[] }) {
   );
 }
 
+function OnSiteTag() {
+  return (
+    <span className="mt-1 flex w-fit items-center gap-1 text-xs font-normal text-brand-moss">
+      <Globe size={12} aria-hidden="true" /> No site
+    </span>
+  );
+}
+
+const EMPTY_PRODUCT: ProductFormValues = {
+  name: "",
+  priceCents: 0,
+  stockQuantity: 0,
+  isActive: true,
+  description: "",
+  imageId: null,
+  imagePosition: null,
+  showOnSite: false,
+};
+
 function ProductFormModal({
   open,
   onClose,
@@ -161,10 +185,13 @@ function ProductFormModal({
   product: Product | null;
   onSaved: () => void;
 }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -174,9 +201,17 @@ function ProductFormModal({
           priceCents: product.priceCents,
           stockQuantity: product.stockQuantity,
           isActive: product.isActive,
+          description: product.description,
+          imageId: product.imageId,
+          imagePosition: product.imagePosition,
+          showOnSite: product.showOnSite,
         }
-      : { name: "", priceCents: 0, stockQuantity: 0, isActive: true },
+      : EMPTY_PRODUCT,
   });
+
+  useEffect(() => {
+    if (open) setImageUrl(product?.imageUrl ?? null);
+  }, [open, product]);
 
   async function onSubmit(values: ProductFormValues) {
     if (product) {
@@ -208,6 +243,40 @@ function ProductFormModal({
             <FieldError>{errors.stockQuantity?.message}</FieldError>
           </div>
         </div>
+        <fieldset className="space-y-4 rounded-xl border border-brand-beige p-4">
+          <legend className="px-1 text-sm font-medium text-brand-graphite">Página Produtos do site</legend>
+          <label className="flex items-center gap-2 text-sm text-brand-graphite">
+            <input type="checkbox" {...register("showOnSite")} className="h-4 w-4 rounded border-brand-beige" />
+            Mostrar este produto no site
+          </label>
+          <div>
+            <FieldLabel htmlFor="description">Descrição para o site</FieldLabel>
+            <Textarea
+              id="description"
+              rows={3}
+              placeholder="Para que serve e quando costuma ser indicado."
+              {...register("description")}
+            />
+            <FieldError>{errors.description?.message}</FieldError>
+          </div>
+          <div>
+            <FieldLabel>Foto</FieldLabel>
+            <div className="max-w-xs">
+              <ImageField
+                label={watch("name") || "Produto"}
+                imageUrl={imageUrl}
+                mediaId={watch("imageId")}
+                position={watch("imagePosition")}
+                onChange={(media) => {
+                  setImageUrl(media?.url ?? null);
+                  setValue("imageId", media?.id ?? null, { shouldDirty: true });
+                  if (!media) setValue("imagePosition", null, { shouldDirty: true });
+                }}
+                onPositionChange={(position) => setValue("imagePosition", position, { shouldDirty: true })}
+              />
+            </div>
+          </div>
+        </fieldset>
         <label className="flex items-center gap-2 text-sm text-brand-graphite">
           <input type="checkbox" {...register("isActive")} className="h-4 w-4 rounded border-brand-beige" />
           Produto ativo (disponível para venda)
