@@ -8,6 +8,9 @@ const nextConfig = {
   experimental: {
     // Upload de foto do painel passa por Server Action (padrão do Next é 1 MB).
     serverActions: { bodySizeLimit: "4.5mb" },
+    // Volta a uma seção recém-aberta sem ir ao servidor. As actions chamam
+    // revalidatePath, que limpa esse cache, então nada fica desatualizado após salvar.
+    staleTimes: { dynamic: 30 },
   },
 };
 

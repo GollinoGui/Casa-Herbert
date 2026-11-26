@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/Button";
 import { STATUS_LABELS } from "@/lib/booking/constants";
 import { formatDateOnly, formatTimeOnly } from "@/lib/utils/date-format";
 import type { AppointmentStatus, AppointmentWithRelations } from "@/types";
+import type { AgendaGrid } from "@/lib/panel/preferences";
+import { useDevicePrefs, useDevicePrefsReady } from "@/lib/panel/device";
 
 const EDITABLE_STATUSES: AppointmentStatus[] = ["PENDING", "CONFIRMED"];
 
@@ -23,12 +25,21 @@ const STATUS_BG: Record<AppointmentStatus, string> = {
   CONFIRMED: "#EF8523",
   REJECTED: "#DC2626",
   CANCELLED: "#8A8A8A",
-  COMPLETED: "#A3B89A",
+  COMPLETED: "#7FA383",
 };
 
 const MOBILE_QUERY = "(max-width: 640px)";
 
-export function CalendarView() {
+const DEFAULT_GRID: AgendaGrid = { slotMinutes: 30, slotMinTime: "07:00:00", slotMaxTime: "21:00:00" };
+
+function slotDuration(minutes: number) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}:00`;
+}
+
+/** `grid` vem das Configurações do salão; a visão inicial (dia/semana/mês) é escolha deste aparelho. */
+export function CalendarView({ grid = DEFAULT_GRID }: { grid?: AgendaGrid }) {
+  const { agendaView } = useDevicePrefs();
+  const prefsReady = useDevicePrefsReady();
   const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -36,6 +47,8 @@ export function CalendarView() {
   const [newPrefill, setNewPrefill] = useState<{ date?: string; startTime?: string }>({});
   const [dragError, setDragError] = useState<string | null>(null);
   const calendarRef = useRef<FullCalendar | null>(null);
+  const swipeStart = useRef<{ x: number; y: number; t: number } | null>(null);
+  const [slide, setSlide] = useState<{ dir: "prox" | "ant"; key: number } | null>(null);
 
   const load = useCallback(() => {
     listAppointmentsAction().then(setAppointments);
@@ -46,15 +59,19 @@ export function CalendarView() {
   }, [load]);
 
   useEffect(() => {
+    if (!prefsReady) return;
+    const api = () => calendarRef.current?.getApi();
+    if (agendaView !== "auto") {
+      api()?.changeView(agendaView);
+      return;
+    }
     const mql = window.matchMedia(MOBILE_QUERY);
-    const applyView = (isMobile: boolean) => {
-      calendarRef.current?.getApi().changeView(isMobile ? "timeGridDay" : "timeGridWeek");
-    };
+    const applyView = (isMobile: boolean) => api()?.changeView(isMobile ? "timeGridDay" : "timeGridWeek");
     applyView(mql.matches);
     const onChange = (e: MediaQueryListEvent) => applyView(e.matches);
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
-  }, []);
+  }, [agendaView, prefsReady]);
 
   const events = appointments.map((a) => ({
     id: a.id,
@@ -65,6 +82,28 @@ export function CalendarView() {
     borderColor: STATUS_BG[a.status],
     startEditable: EDITABLE_STATUSES.includes(a.status),
   }));
+
+  // Arrastar para o lado troca de dia/semana. Gesto curto e mais horizontal que vertical,
+  // para não confundir com a rolagem nem com o arrastar de um evento (toque longo no FullCalendar).
+  function onTouchStart(e: ReactTouchEvent) {
+    const t = e.touches[0];
+    swipeStart.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, t: Date.now() } : null;
+  }
+
+  function onTouchEnd(e: ReactTouchEvent) {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start || (e.target as Element).closest(".fc-event-dragging, .fc-event-resizing")) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6 || Date.now() - start.t > 650) return;
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    if (dx < 0) api.next();
+    else api.prev();
+    setSlide({ dir: dx < 0 ? "prox" : "ant", key: Date.now() });
+  }
 
   function openNewAppointment(date?: string, startTime?: string) {
     setNewPrefill({ date, startTime });
@@ -89,7 +128,14 @@ export function CalendarView() {
   }
 
   return (
-    <div className="rounded-2xl border border-brand-beige bg-white p-4 shadow-softer sm:p-6">
+    <div
+      className={`rounded-[22px] border border-brand-beige bg-white p-4 shadow-softer sm:p-6 ${slide ? `agenda-vai-${slide.dir}` : ""}`}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onAnimationEnd={(e) => {
+        if (e.animationName.startsWith("agenda-entra")) setSlide(null);
+      }}
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-brand-graphite/70">
           {(Object.keys(STATUS_BG) as AppointmentStatus[]).map((status) => (
@@ -104,6 +150,7 @@ export function CalendarView() {
         </Button>
       </div>
       {dragError ? <p className="mb-3 text-sm text-red-600">{dragError}</p> : null}
+      <p className="mb-2 text-xs text-brand-graphite/50 sm:hidden">Arraste para o lado para ver o dia anterior ou o próximo.</p>
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -115,11 +162,14 @@ export function CalendarView() {
         }}
         locale={ptBrLocale}
         height="auto"
-        slotMinTime="07:00:00"
-        slotMaxTime="21:00:00"
+        slotMinTime={grid.slotMinTime}
+        slotMaxTime={grid.slotMaxTime}
+        slotDuration={slotDuration(grid.slotMinutes)}
+        snapDuration={slotDuration(Math.min(grid.slotMinutes, 30))}
         allDaySlot={false}
         events={events}
         eventStartEditable
+        eventTextColor="#19241D"
         eventDurationEditable={false}
         eventDrop={handleEventDrop}
         dateClick={(info: DateClickArg) => {

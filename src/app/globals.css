@@ -2,6 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Paleta em RGB (ver tailwind.config.ts). :root = site público, sem mudança. */
+:root {
+  --c-white: 255 255 255;
+  --c-forest: 239 133 35;
+  --c-forest-dark: 186 104 27;
+  --c-forest-text: 164 82 14;
+  --c-moss: 83 115 90;
+  --c-sage: 163 184 154;
+  --c-cream: 247 243 234;
+  --c-beige: 231 227 216;
+  --c-gold: 203 184 154;
+  --c-graphite: 46 46 46;
+  --c-ink: 46 46 46;
+  --c-pine: 29 58 42;
+  --c-pine-soft: 43 80 57;
+  --c-on-pine: 238 242 230;
+  --c-shadow: 46 75 62;
+}
+
+/* Painel: o verde domina (lateral, títulos, bordas, sombras) e o laranja da logo
+   fica como acento quente (item ativo, botão principal). Contrastes AA conferidos:
+   graphite/branco 13:1, forest-text/creme 7:1, moss/branco 5.9:1, ink/laranja 6.3:1. */
+body.painel {
+  --c-white: 255 255 252;
+  --c-forest-text: 47 93 63;
+  --c-moss: 70 105 79;
+  --c-sage: 158 184 150;
+  --c-cream: 242 241 230;
+  --c-beige: 219 227 208;
+  --c-graphite: 31 43 35;
+  --c-shadow: 29 58 42;
+  --c-ink: 25 36 29;
+  --painel-grao: 0.05;
+  --chart-in: #2f855a;
+  --chart-out: #e0761c;
+  color-scheme: light;
+}
+
+/* "Floresta à noite". Mesmos papéis, valores claros/escuros trocados; o laranja
+   sobe um pouco para manter o brilho sobre o verde escuro. */
+html[data-tema="escuro"] body.painel {
+  --c-white: 22 36 28;
+  --c-forest: 241 146 58;
+  --c-forest-dark: 214 120 35;
+  --c-forest-text: 160 206 160;
+  --c-moss: 141 184 150;
+  --c-sage: 92 128 101;
+  --c-cream: 13 24 18;
+  --c-beige: 40 59 47;
+  --c-gold: 190 168 128;
+  --c-graphite: 226 234 224;
+  --c-pine: 14 31 21;
+  --c-pine-soft: 36 66 47;
+  --c-shadow: 0 0 0;
+  --painel-grao: 0.07;
+  --chart-in: #5fc48b;
+  --chart-out: #f2994a;
+  color-scheme: dark;
+}
+
 /* framer-motion's useScroll() sem `container` explícito mede offsets contra
    document.documentElement — precisa de position não-static, senão avisa no
    console (ver ScrollProgressScissors). Não afeta fixed/sticky (relative puro
@@ -11,8 +71,8 @@ html {
 }
 
 body {
-  background-color: #f7f3ea;
-  color: #2e2e2e;
+  background-color: rgb(var(--c-cream));
+  color: rgb(var(--c-graphite));
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -30,8 +90,8 @@ label,
 }
 
 ::selection {
-  background-color: #cbb89a;
-  color: #2e2e2e;
+  background-color: rgb(var(--c-gold));
+  color: rgb(var(--c-ink));
 }
 
 .text-balance {
@@ -57,7 +117,7 @@ label,
      primary clareia (brightness) em vez de escurecer para forestDark: escurecer
      aproximaria o fundo do grafite do texto e derrubaria o contraste de novo. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-forest px-7 py-3.5 text-sm font-medium text-brand-graphite shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-md active:translate-y-0 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-forest px-7 py-3.5 text-sm font-medium text-brand-ink shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .btn-secondary {
@@ -65,7 +125,7 @@ label,
   }
 
   .btn-gold {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-gold px-7 py-3.5 text-sm font-medium text-brand-graphite shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-95 hover:shadow-md active:translate-y-0 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-gold px-7 py-3.5 text-sm font-medium text-brand-ink shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:brightness-95 hover:shadow-md active:translate-y-0 active:scale-[0.98];
   }
 
   .gold-divider {
@@ -147,15 +207,23 @@ html[data-hide-header] .site-header:not(:focus-within) {
 /* FullCalendar (agenda do admin): botões na paleta da marca e cabeçalho que quebra
    em telas estreitas em vez de estourar a largura. */
 .fc {
-  --fc-button-bg-color: #ffffff;
-  --fc-button-border-color: #e7e3d8;
-  --fc-button-text-color: #2e2e2e;
-  --fc-button-hover-bg-color: #f7f3ea;
-  --fc-button-hover-border-color: #a3b89a;
-  --fc-button-active-bg-color: #ef8523;
-  --fc-button-active-border-color: #ef8523;
-  --fc-today-bg-color: rgba(239, 133, 35, 0.07);
-  --fc-border-color: #efebe2;
+  --fc-button-bg-color: rgb(var(--c-white));
+  --fc-button-border-color: rgb(var(--c-beige));
+  --fc-button-text-color: rgb(var(--c-graphite));
+  --fc-button-hover-bg-color: rgb(var(--c-cream));
+  --fc-button-hover-border-color: rgb(var(--c-sage));
+  --fc-button-active-bg-color: rgb(var(--c-forest));
+  --fc-button-active-border-color: rgb(var(--c-forest));
+  --fc-today-bg-color: rgb(var(--c-sage) / 0.14);
+  --fc-border-color: rgb(var(--c-beige) / 0.8);
+  --fc-page-bg-color: rgb(var(--c-white));
+  --fc-neutral-bg-color: rgb(var(--c-cream));
+  --fc-list-event-hover-bg-color: rgb(var(--c-cream));
+  --fc-now-indicator-color: rgb(var(--c-forest));
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  color: rgb(var(--c-ink));
 }
 .fc .fc-button {
   font-size: 0.8125rem;
@@ -169,7 +237,7 @@ html[data-hide-header] .site-header:not(:focus-within) {
 }
 .fc .fc-toolbar-title {
   font-family: var(--font-playfair), Georgia, serif;
-  color: #a4520e;
+  color: rgb(var(--c-forest-text));
 }
 .fc .fc-toolbar-title::first-letter {
   text-transform: uppercase;
@@ -198,12 +266,12 @@ html[data-hide-header] .site-header:not(:focus-within) {
   width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #f7f3ea;
+  background: rgb(var(--c-cream));
 }
 ::-webkit-scrollbar-thumb {
-  background-color: #a3b89a;
+  background-color: rgb(var(--c-sage));
   border-radius: 9999px;
-  border: 2px solid #f7f3ea;
+  border: 2px solid rgb(var(--c-cream));
 }
 
 /* Cursor do TypewriterText. */
@@ -354,3 +422,220 @@ html:not([data-intro="play"]) .intro-curtain[data-pending] {
     --margin-x: 6rem;
   }
 }
+
+/* ===================== Painel ===================== */
+
+/* Troca de tema claro/escuro: revelação em círculo a partir do botão (View
+   Transitions). Sem suporte ou com movimento reduzido, as cores esmaecem. */
+html.trocando-tema-vt::view-transition-old(root),
+html.trocando-tema-vt::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.trocando-tema-vt::view-transition-new(root) {
+  animation: tema-revela 520ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+@keyframes tema-revela {
+  from {
+    clip-path: circle(0 at var(--tema-x) var(--tema-y));
+  }
+  to {
+    clip-path: circle(var(--tema-raio) at var(--tema-x) var(--tema-y));
+  }
+}
+html.trocando-tema *,
+html.trocando-tema *::before,
+html.trocando-tema *::after {
+  transition: background-color 320ms ease, border-color 320ms ease, color 320ms ease, fill 320ms ease !important;
+}
+
+/* O ícone do botão de tema segue o atributo do <html>: assim o quadro "novo" da
+   View Transition já sai com o ícone certo, sem esperar o React. */
+html[data-tema="escuro"] .tema-icone-claro,
+html:not([data-tema="escuro"]) .tema-icone-escuro {
+  display: none;
+}
+
+/* Fundo do painel: papel com grão leve e duas manchas de luz verde, fixas. */
+body.painel {
+  background-image:
+    radial-gradient(60rem 40rem at 105% -10%, rgb(var(--c-sage) / 0.22), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 110%, rgb(var(--c-moss) / 0.12), transparent 60%);
+  background-attachment: fixed;
+}
+body.painel::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--painel-grao);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.painel .btn-secondary {
+  border-color: rgb(var(--c-moss) / 0.35);
+}
+.painel .btn-secondary:hover {
+  border-color: rgb(var(--c-moss));
+  background-color: rgb(var(--c-moss) / 0.08);
+}
+
+/* Entrada de página e cascata. A página inteira sobe com fade; os blocos dela
+   (filhos do container da página) e os itens marcados com data-cascata entram em
+   sequência. `backwards`: depois de animar, o elemento volta ao estilo natural, sem
+   deixar transform preso (que mudaria o contexto de position: fixed/sticky). */
+@media (prefers-reduced-motion: no-preference) {
+  .pagina-entra {
+    animation: pagina-entra 200ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .pagina-entra > * > *,
+  [data-cascata] > * {
+    animation: cascata 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(var(--i, 12) * 25ms);
+  }
+}
+.pagina-entra > * > *:nth-child(1), [data-cascata] > *:nth-child(1) { --i: 0; }
+.pagina-entra > * > *:nth-child(2), [data-cascata] > *:nth-child(2) { --i: 1; }
+.pagina-entra > * > *:nth-child(3), [data-cascata] > *:nth-child(3) { --i: 2; }
+.pagina-entra > * > *:nth-child(4), [data-cascata] > *:nth-child(4) { --i: 3; }
+.pagina-entra > * > *:nth-child(5), [data-cascata] > *:nth-child(5) { --i: 4; }
+.pagina-entra > * > *:nth-child(6), [data-cascata] > *:nth-child(6) { --i: 5; }
+.pagina-entra > * > *:nth-child(7), [data-cascata] > *:nth-child(7) { --i: 6; }
+.pagina-entra > * > *:nth-child(8), [data-cascata] > *:nth-child(8) { --i: 7; }
+.pagina-entra > * > *:nth-child(9), [data-cascata] > *:nth-child(9) { --i: 8; }
+.pagina-entra > * > *:nth-child(10), [data-cascata] > *:nth-child(10) { --i: 9; }
+.pagina-entra > * > *:nth-child(11), [data-cascata] > *:nth-child(11) { --i: 10; }
+@keyframes pagina-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes cascata {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Cartão que reage ao passar o mouse: sobe um pouco e a sombra verde cresce. */
+.cartao-vivo {
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms ease,
+    border-color 260ms ease;
+}
+@media (hover: hover) {
+  .cartao-vivo:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px -18px rgb(var(--c-shadow) / 0.3);
+    border-color: rgb(var(--c-sage));
+  }
+}
+.cartao-vivo:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Ramo que se desenha (estados vazios, carregamento). */
+.ramo-desenha path {
+  stroke-dasharray: var(--len, 220);
+  stroke-dashoffset: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ramo-desenha path {
+    animation: ramo-traco 1.6s cubic-bezier(0.65, 0, 0.35, 1) backwards;
+    animation-delay: calc(var(--d, 0) * 1ms);
+  }
+  .ramo-loop path {
+    animation: ramo-loop 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+    animation-delay: calc(var(--d, 0) * 1ms);
+  }
+}
+@keyframes ramo-traco {
+  from {
+    stroke-dashoffset: var(--len, 220);
+  }
+}
+@keyframes ramo-loop {
+  0% {
+    stroke-dashoffset: var(--len, 220);
+  }
+  55%,
+  75% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: calc(var(--len, 220) * -1);
+  }
+}
+
+/* Agenda: ao arrastar para o lado no celular, a grade entra pelo lado certo. */
+@media (prefers-reduced-motion: no-preference) {
+  .agenda-vai-prox .fc-view-harness {
+    animation: agenda-entra-dir 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .agenda-vai-ant .fc-view-harness {
+    animation: agenda-entra-esq 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes agenda-entra-dir {
+  from {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+}
+@keyframes agenda-entra-esq {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+}
+
+/* Tema escuro: as cores de status do Tailwind (fixas) viram tons claros sobre
+   fundos translúcidos, para os selos e avisos seguirem legíveis. */
+html[data-tema="escuro"] .painel .bg-red-50 { background-color: rgb(248 113 113 / 0.14); }
+html[data-tema="escuro"] .painel .bg-red-100 { background-color: rgb(248 113 113 / 0.2); }
+html[data-tema="escuro"] .painel .bg-amber-50 { background-color: rgb(251 191 36 / 0.13); }
+html[data-tema="escuro"] .painel .bg-amber-100 { background-color: rgb(251 191 36 / 0.16); }
+html[data-tema="escuro"] .painel .bg-emerald-50 { background-color: rgb(52 211 153 / 0.13); }
+html[data-tema="escuro"] .painel .border-amber-200,
+html[data-tema="escuro"] .painel .border-amber-300 { border-color: rgb(251 191 36 / 0.35); }
+html[data-tema="escuro"] .painel .text-red-600,
+html[data-tema="escuro"] .painel .text-red-700,
+html[data-tema="escuro"] .painel .text-red-900 { color: rgb(252 165 165); }
+html[data-tema="escuro"] .painel .text-amber-600,
+html[data-tema="escuro"] .painel .text-amber-800,
+html[data-tema="escuro"] .painel .text-amber-900 { color: rgb(252 211 77); }
+html[data-tema="escuro"] .painel .text-emerald-800 { color: rgb(110 231 183); }
+html[data-tema="escuro"] .painel input[type="date"]::-webkit-calendar-picker-indicator,
+html[data-tema="escuro"] .painel input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+}
+
+/* Preferências deste aparelho (src/lib/panel/device.ts). Os atributos vêm do
+   script do <head>, então tudo já pinta certo na primeira vez. */
+
+/* Tamanho do texto: o painel é todo em rem, então escalar a raiz aumenta texto,
+   espaçamentos e alvos de toque juntos. */
+html[data-texto="confortavel"]:has(body.painel) { font-size: 106.25%; }
+html[data-texto="grande"]:has(body.painel) { font-size: 118.75%; }
+
+/* Esconder valores: para quando a tela fica virada para a cliente no balcão. */
+.valor-sensivel { transition: filter 220ms ease; }
+html[data-valores="ocultos"] .valor-sensivel {
+  filter: blur(0.42em);
+  user-select: none;
+}
+html[data-valores="ocultos"] .icone-valores-visiveis,
+html:not([data-valores="ocultos"]) .icone-valores-ocultos {
+  display: none;
+}
+
+/* Barra de atalhos do celular: reserva o espaço dela embaixo do conteúdo e acima
+   das barras fixas (ex.: "Salvar preferências"). */
+body.painel { --barra-atalhos: 0px; }
+@media (max-width: 1023.98px) {
+  html[data-barra="sim"] body.painel { --barra-atalhos: calc(4.25rem + env(safe-area-inset-bottom)); }
+}
+html:not([data-barra="sim"]) .barra-atalhos { display: none; }

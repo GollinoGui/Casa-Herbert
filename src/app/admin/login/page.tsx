@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/ui/Card";
 import { LoginForm } from "@/components/admin/LoginForm";
+import { BotanicalBranch } from "@/components/admin/BotanicalBranch";
+import { Leaf } from "lucide-react";
+import { DEMO_LOGIN, isDemoMode } from "@/lib/demo/mode";
 
 export const metadata: Metadata = {
   title: "Entrar",
@@ -13,15 +16,25 @@ export default function AdminLoginPage({
   searchParams: { next?: string };
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-forest px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <p className="font-serif text-3xl text-brand-graphite">Casa Herbert</p>
-          <p className="mt-1 text-xs font-medium uppercase tracking-[0.25em] text-brand-graphite">Painel Administrativo</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-pine via-brand-pineSoft to-brand-pine px-4 py-12">
+      <BotanicalBranch draw className="pointer-events-none absolute -left-16 bottom-[-4rem] h-[26rem] w-80 rotate-[20deg] text-brand-onPine/10" strokeWidth={1} />
+      <BotanicalBranch draw className="pointer-events-none absolute -right-12 -top-10 h-80 w-64 rotate-[200deg] text-brand-onPine/[0.07]" strokeWidth={1} />
+      <div className="pagina-entra relative w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-forest text-brand-ink shadow-[0_12px_28px_-10px_rgb(var(--c-forest)/0.8)]">
+            <Leaf size={22} strokeWidth={1.8} aria-hidden="true" />
+          </span>
+          <p className="font-serif text-3xl text-brand-onPine">Casa Herbert</p>
+          <p className="mt-1 text-xs font-medium uppercase tracking-[0.25em] text-brand-onPine/65">Painel Administrativo</p>
         </div>
-        <Card className="bg-white/95 p-6 sm:p-8">
+        <Card className="border-transparent bg-white/95 p-6 shadow-lift sm:p-8">
           <LoginForm next={searchParams?.next} />
         </Card>
+        {isDemoMode() ? (
+          <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-center text-sm text-brand-graphite">
+            Modo demonstração: entre com <strong>{DEMO_LOGIN.email}</strong> e a senha <strong>{DEMO_LOGIN.password}</strong>.
+          </p>
+        ) : null}
       </div>
     </div>
   );

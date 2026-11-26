@@ -29,7 +29,7 @@ export function Footer({ settings, businessHours }: { settings: Settings; busine
   const closedDays = closedDaysOf(hoursGroups);
 
   return (
-    <footer className="relative overflow-hidden bg-brand-forest text-brand-graphite">
+    <footer className="relative overflow-hidden bg-brand-forest text-brand-ink">
       <GrainOverlay />
       <div className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 bottom-0 h-64 w-64 rounded-full bg-brand-gold/10 blur-3xl" />

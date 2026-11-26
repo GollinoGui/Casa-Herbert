@@ -57,6 +57,7 @@ export const serviceFormSchema = z.object({
   imageId: z.string().nullable(),
   imagePosition: z.enum(["center", "top", "bottom"]).nullable(),
   showOnHome: z.boolean(),
+  barcode: z.string().trim().max(64, "Código muito longo."),
 });
 
 export const customerFormSchema = z.object({
@@ -67,6 +68,16 @@ export const customerFormSchema = z.object({
     .refine((v) => v.replace(/\D/g, "").length >= 10, "Informe um WhatsApp válido com DDD.")
     .refine((v) => v.replace(/\D/g, "").length <= 13, "Telefone inválido."),
   email: z.union([z.string().trim().email("E-mail inválido."), z.literal("")]),
+  /** "" = sem aniversário. Ano 1900 = só dia e mês. */
+  birthDate: z
+    .union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data de aniversário inválida.")])
+    .refine((v) => {
+      if (!v) return true;
+      const [y, m, d] = v.split("-").map(Number);
+      const date = new Date(Date.UTC(y, m - 1, d));
+      return date.getUTCMonth() === m - 1 && date.getUTCDate() === d && y >= 1900 && y <= new Date().getUTCFullYear();
+    }, "Data de aniversário inválida.")
+    .default(""),
 });
 
 export const adminAppointmentFormSchema = z

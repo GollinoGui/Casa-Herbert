@@ -248,7 +248,7 @@ export function LaptopChatMockup({
             <div className="flex-1 rounded-full bg-brand-beige/50 px-3 py-1.5 text-[11px] text-brand-graphite/40">
               Digite uma mensagem
             </div>
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-forest text-brand-graphite">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-forest text-brand-ink">
               <Mic size={13} />
             </span>
           </div>

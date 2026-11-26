@@ -16,7 +16,7 @@ export function WhatsAppFloatingButton({ whatsappNumber }: { whatsappNumber: str
       className="fixed bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.75rem))] right-5 z-40 h-14 w-14 transition-transform hover:scale-105 sm:bottom-8 sm:right-8"
     >
       <span aria-hidden="true" className="absolute inset-0 animate-pulseSoft rounded-full bg-brand-moss" />
-      <span className="relative flex h-full w-full items-center justify-center rounded-full border-2 border-brand-cream bg-brand-forest text-brand-graphite shadow-lg">
+      <span className="relative flex h-full w-full items-center justify-center rounded-full border-2 border-brand-cream bg-brand-forest text-brand-ink shadow-lg">
         <MessageCircle size={26} strokeWidth={1.75} />
       </span>
     </a>

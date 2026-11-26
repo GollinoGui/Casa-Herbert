@@ -292,7 +292,7 @@ export function BookingWizard({
                       onClick={() => handleSelectSlot(slot.startTime)}
                       className={cn(
                         "rounded-xl border border-brand-beige bg-white py-3.5 text-sm font-medium text-brand-graphite transition hover:border-brand-forest hover:bg-brand-forest/5",
-                        startTime === slot.startTime && "border-brand-forest bg-brand-forest text-brand-graphite hover:bg-brand-forest"
+                        startTime === slot.startTime && "border-brand-forest bg-brand-forest text-brand-ink hover:bg-brand-forest"
                       )}
                     >
                       {slot.startTime}

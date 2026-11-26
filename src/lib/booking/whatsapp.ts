@@ -10,7 +10,7 @@ function fillTemplate(template: string, vars: Record<string, string>) {
 }
 
 export function buildAppointmentMessage(
-  kind: "confirmed" | "rejected" | "cancelled",
+  kind: "confirmed" | "rejected" | "cancelled" | "reminder",
   appointment: Appointment,
   customer: Customer,
   service: Service,
@@ -22,6 +22,11 @@ export function buildAppointmentMessage(
     data: formatLongDatePtBR(appointment.date),
     horario: appointment.startTime,
   });
+}
+
+/** Mensagens fora de um agendamento (aniversário, convite para voltar): só o primeiro nome. */
+export function buildCustomerMessage(template: string, customer: Pick<Customer, "fullName">) {
+  return fillTemplate(template, { nome: customer.fullName.split(" ")[0] });
 }
 
 /** Link wa.me com mensagem pré-preenchida, endereçado ao WhatsApp do cliente. */

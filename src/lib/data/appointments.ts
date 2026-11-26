@@ -138,3 +138,28 @@ export async function getDashboardStats() {
     todayAppointments,
   };
 }
+
+export async function updateAppointmentDiscount(
+  id: string,
+  discountCents: number
+): Promise<AppointmentWithRelations | null> {
+  return updateFields(id, { discount_cents: Math.max(0, Math.round(discountCents)) });
+}
+
+/** Atendimentos ativos de amanhã, para o bloco "Lembretes de amanhã" do Início. */
+export async function getTomorrowAppointments(): Promise<AppointmentWithRelations[]> {
+  const tomorrow = addDaysToDateStr(todayDateStr(), 1);
+  const rows = unwrap(
+    await getSupabase()
+      .from("appointments")
+      .select(APPOINTMENT_WITH_RELATIONS)
+      .eq("appointment_date", tomorrow)
+      .in("status", ACTIVE_STATUSES)
+  );
+  return rows.map(toAppointmentWithRelations).sort(byDateTime);
+}
+
+/** Marca (ou desmarca) que o lembrete de véspera foi aberto no WhatsApp. */
+export async function setReminderSent(id: string, sent: boolean): Promise<AppointmentWithRelations | null> {
+  return updateFields(id, { reminder_sent_at: sent ? new Date().toISOString() : null });
+}

@@ -15,17 +15,10 @@ import type { BusinessHourRule, Settings } from "@/types";
 
 type GeneralFormValues = z.infer<typeof settingsFormSchema>;
 
-export function SettingsManager({
-  settings,
-  businessHours,
-}: {
-  settings: Settings;
-  businessHours: BusinessHourRule[];
-}) {
+/** Aba "Salão e agenda": contato, redes, regras de agendamento e horário semanal. */
+export function SalonSettings({ settings, businessHours }: { settings: Settings; businessHours: BusinessHourRule[] }) {
   return (
     <div className="space-y-8">
-      <AnnouncementForm settings={settings} />
-
       <GeneralSettingsForm settings={settings} />
 
       <Card className="p-5 sm:p-6">
@@ -36,7 +29,15 @@ export function SettingsManager({
         </p>
         <BusinessHoursEditor businessHours={businessHours} />
       </Card>
+    </div>
+  );
+}
 
+/** Aba "Site e mensagens": faixa de aviso do site e modelos do WhatsApp. */
+export function SiteSettings({ settings, siteEnabled }: { settings: Settings; siteEnabled: boolean }) {
+  return (
+    <div className="space-y-8">
+      {siteEnabled ? <AnnouncementForm settings={settings} /> : null}
       <MessageTemplatesForm settings={settings} />
     </div>
   );
@@ -254,12 +255,15 @@ function MessageTemplatesForm({ settings }: { settings: Settings }) {
   const [confirmed, setConfirmed] = useState(settings.messageTemplates.confirmed);
   const [rejected, setRejected] = useState(settings.messageTemplates.rejected);
   const [cancelled, setCancelled] = useState(settings.messageTemplates.cancelled);
+  const [birthday, setBirthday] = useState(settings.messageTemplates.birthday);
+  const [comeback, setComeback] = useState(settings.messageTemplates.comeback);
+  const [reminder, setReminder] = useState(settings.messageTemplates.reminder);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   async function handleSave() {
     setSaving(true);
-    await updateSettingsAction({ messageTemplates: { confirmed, rejected, cancelled } });
+    await updateSettingsAction({ messageTemplates: { confirmed, rejected, cancelled, birthday, comeback, reminder } });
     setSaving(false);
     setSaved(true);
     router.refresh();
@@ -288,6 +292,23 @@ function MessageTemplatesForm({ settings }: { settings: Settings }) {
         <div>
           <FieldLabel htmlFor="tpl-cancelled">Cancelamento</FieldLabel>
           <Textarea id="tpl-cancelled" rows={5} value={cancelled} onChange={(e) => setCancelled(e.target.value)} />
+        </div>
+        <div>
+          <FieldLabel htmlFor="tpl-reminder">Lembrete de véspera</FieldLabel>
+          <p className="mb-1.5 text-xs text-brand-graphite/50">Bloco “Lembretes de amanhã” do Início.</p>
+          <Textarea id="tpl-reminder" rows={4} value={reminder} onChange={(e) => setReminder(e.target.value)} />
+        </div>
+        <div>
+          <FieldLabel htmlFor="tpl-birthday">Aniversário</FieldLabel>
+          <p className="mb-1.5 text-xs text-brand-graphite/50">Botão “Dar parabéns” do Início. Só usa {"{nome}"}.</p>
+          <Textarea id="tpl-birthday" rows={4} value={birthday} onChange={(e) => setBirthday(e.target.value)} />
+        </div>
+        <div>
+          <FieldLabel htmlFor="tpl-comeback">Convite para voltar</FieldLabel>
+          <p className="mb-1.5 text-xs text-brand-graphite/50">
+            Para quem não vem há um tempo (bloco do Início). Só usa {"{nome}"}.
+          </p>
+          <Textarea id="tpl-comeback" rows={4} value={comeback} onChange={(e) => setComeback(e.target.value)} />
         </div>
       </div>
       <div className="mt-4 flex items-center gap-3">

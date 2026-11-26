@@ -20,25 +20,78 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  ShoppingBag,
+  Truck,
+  HandCoins,
+  Receipt,
+  BarChart3,
+  Leaf,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { adminLogoutAction } from "@/lib/actions/admin/auth";
+import { BotanicalBranch } from "@/components/admin/BotanicalBranch";
+import { ThemeToggle } from "@/components/admin/ThemeToggle";
+import { HideMoneyToggle } from "@/components/admin/HideMoneyToggle";
 
-const NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/agenda", label: "Agenda", icon: CalendarDays },
-  { href: "/admin/agendamentos", label: "Agendamentos", icon: ClipboardList },
-  { href: "/admin/clientes", label: "Clientes", icon: Users },
-  { href: "/admin/servicos", label: "Serviços", icon: Sparkles },
-  { href: "/admin/estoque", label: "Estoque", icon: Package },
-  { href: "/admin/financeiro", label: "Financeiro", icon: Wallet },
-  { href: "/admin/bloqueios", label: "Bloqueios", icon: Ban },
-  { href: "/admin/horarios-especiais", label: "Horários Especiais", icon: CalendarClock },
-  { href: "/admin/depoimentos", label: "Depoimentos", icon: MessageSquareQuote },
-  { href: "/admin/fotos", label: "Fotos do site", icon: ImageIcon },
-  { href: "/admin/galeria", label: "Galeria", icon: Images },
-  { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
-] as const;
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface NavGroup {
+  title: string | null;
+  items: NavItem[];
+  siteOnly?: boolean;
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  { title: null, items: [{ href: "/admin", label: "Início", icon: LayoutDashboard }] },
+  {
+    title: "Atendimento",
+    items: [
+      { href: "/admin/agenda", label: "Agenda", icon: CalendarDays },
+      { href: "/admin/agendamentos", label: "Agendamentos", icon: ClipboardList },
+      { href: "/admin/clientes", label: "Clientes", icon: Users },
+    ],
+  },
+  {
+    title: "Vendas e estoque",
+    items: [
+      { href: "/admin/vendas", label: "Vendas", icon: ShoppingBag },
+      { href: "/admin/compras", label: "Compras", icon: Truck },
+      { href: "/admin/estoque", label: "Estoque", icon: Package },
+      { href: "/admin/servicos", label: "Serviços", icon: Sparkles },
+    ],
+  },
+  {
+    title: "Financeiro",
+    items: [
+      { href: "/admin/financeiro", label: "Saldo e extrato", icon: Wallet },
+      { href: "/admin/contas-a-receber", label: "Contas a receber", icon: HandCoins },
+      { href: "/admin/contas-a-pagar", label: "Contas a pagar", icon: Receipt },
+      { href: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Ajustes",
+    items: [
+      { href: "/admin/bloqueios", label: "Bloqueios", icon: Ban },
+      { href: "/admin/horarios-especiais", label: "Horários especiais", icon: CalendarClock },
+      { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
+    ],
+  },
+  {
+    title: "Site",
+    siteOnly: true,
+    items: [
+      { href: "/admin/depoimentos", label: "Depoimentos", icon: MessageSquareQuote },
+      { href: "/admin/fotos", label: "Fotos do site", icon: ImageIcon },
+      { href: "/admin/galeria", label: "Galeria", icon: Images },
+    ],
+  },
+];
 
 // Compara por segmento: "/admin/agendamentos".startsWith("/admin/agenda") é true.
 function isActive(href: string, pathname: string | null) {
@@ -47,47 +100,77 @@ function isActive(href: string, pathname: string | null) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar() {
+export function Sidebar({ siteEnabled }: { siteEnabled: boolean }) {
   const pathname = usePathname();
+  const groups = siteEnabled ? NAV_GROUPS : NAV_GROUPS.filter((g) => !g.siteOnly);
 
   return (
     <>
-      <MobileNav pathname={pathname} />
+      <MobileNav pathname={pathname} groups={groups} />
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col overflow-y-auto bg-brand-forest lg:flex">
-        <div className="px-6 py-6">
-          <p className="font-serif text-xl text-brand-graphite">Casa Herbert</p>
-          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-brand-graphite">Painel Admin</p>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col overflow-hidden bg-gradient-to-b from-brand-pine to-brand-pineSoft text-brand-onPine lg:flex">
+        <BotanicalBranch
+          draw
+          className="pointer-events-none absolute -bottom-6 -right-10 h-80 w-60 rotate-[-14deg] text-brand-onPine/[0.09]"
+          strokeWidth={1.1}
+        />
+        <div className="relative flex items-center gap-3 px-6 pb-5 pt-7">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-brand-forest text-brand-ink shadow-[0_8px_20px_-8px_rgb(var(--c-forest)/0.7)]">
+            <Leaf size={19} strokeWidth={1.8} aria-hidden="true" />
+          </span>
+          <div className="leading-tight">
+            <p className="font-serif text-xl">Casa Herbert</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-brand-onPine/60">Painel</p>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 pb-4">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.href, pathname);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-brand-cream text-brand-forest"
-                    : "text-brand-graphite hover:bg-white/25"
-                )}
-              >
-                <Icon size={18} strokeWidth={1.75} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="relative flex-1 space-y-5 overflow-y-auto px-3 pb-4 [scrollbar-color:rgb(var(--c-on-pine)/0.25)_transparent] [scrollbar-width:thin]" aria-label="Seções do painel">
+          {groups.map((group) => (
+            <div key={group.title ?? "inicio"} className="space-y-0.5">
+              {group.title ? (
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-onPine/50">{group.title}</p>
+              ) : null}
+              {group.items.map((item) => {
+                const active = isActive(item.href, pathname);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-forest/70",
+                      active ? "text-brand-ink" : "text-brand-onPine/80 hover:bg-brand-onPine/[0.07] hover:text-brand-onPine"
+                    )}
+                  >
+                    {/* A pílula laranja desliza de um item para o outro (layoutId). */}
+                    {active ? (
+                      <motion.span
+                        layoutId="nav-ativo"
+                        className="absolute inset-0 rounded-xl bg-brand-forest shadow-[0_10px_24px_-12px_rgb(var(--c-forest)/0.8)]"
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      />
+                    ) : null}
+                    <Icon
+                      size={18}
+                      strokeWidth={1.75}
+                      className="relative shrink-0 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110"
+                    />
+                    <span className="relative">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        <div className="border-t border-brand-forestDark/30 px-3 py-4">
+        <div className="relative space-y-0.5 border-t border-brand-onPine/10 px-3 py-4">
+          <HideMoneyToggle withLabel className="w-full px-3 py-2.5 text-brand-onPine/80 hover:bg-brand-onPine/[0.07] hover:text-brand-onPine" />
+          <ThemeToggle withLabel className="w-full px-3 py-2.5 text-brand-onPine/80 hover:bg-brand-onPine/[0.07] hover:text-brand-onPine" />
           <form action={adminLogoutAction}>
             <button
               type="submit"
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-brand-graphite transition-colors hover:bg-white/25"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-brand-onPine/80 transition-colors hover:bg-brand-onPine/[0.07] hover:text-brand-onPine"
             >
               <LogOut size={18} strokeWidth={1.75} />
               Sair
@@ -104,9 +187,10 @@ export function Sidebar() {
  * menu suspenso com todas as seções em grade (cabe sem rolar na maioria dos
  * celulares e fica ao alcance do polegar mais cedo que uma gaveta lateral).
  */
-function MobileNav({ pathname }: { pathname: string | null }) {
+function MobileNav({ pathname, groups }: { pathname: string | null; groups: NavGroup[] }) {
   const [open, setOpen] = useState(false);
-  const current = NAV_ITEMS.find((item) => isActive(item.href, pathname)) ?? NAV_ITEMS[0];
+  const items = groups.flatMap((g) => g.items);
+  const current = items.find((item) => isActive(item.href, pathname)) ?? items[0];
   const CurrentIcon = current.icon;
 
   useEffect(() => {
@@ -127,29 +211,34 @@ function MobileNav({ pathname }: { pathname: string | null }) {
     };
   }, [open]);
 
+  const order = new Map(items.map((item, i) => [item.href, i]));
+
   return (
     <div className="sticky top-0 z-40 lg:hidden">
-      <div className="relative z-10 flex h-14 items-center justify-between gap-3 border-b border-brand-forestDark/40 bg-brand-forest px-4 shadow-softer">
-        <Link href="/admin" className="min-w-0 leading-tight">
-          <span className="block truncate font-serif text-base text-brand-graphite">Casa Herbert</span>
-          <span className="block text-[10px] font-medium uppercase tracking-[0.2em] text-brand-graphite">Painel Admin</span>
+      <div className="relative z-10 flex h-14 items-center justify-between gap-2 bg-gradient-to-r from-brand-pine to-brand-pineSoft px-4 text-brand-onPine shadow-[0_8px_24px_-14px_rgb(var(--c-shadow)/0.6)]">
+        <Link href="/admin" className="flex min-w-0 items-center gap-2.5 leading-tight">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] bg-brand-forest text-brand-ink">
+            <Leaf size={16} strokeWidth={1.8} aria-hidden="true" />
+          </span>
+          <span className="hidden truncate font-serif text-base min-[400px]:block">Casa Herbert</span>
         </Link>
 
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="admin-mobile-menu"
-          className="flex min-w-0 items-center gap-2 rounded-full bg-white/25 py-2 pl-3 pr-2.5 text-sm font-medium text-brand-graphite transition hover:bg-white/35 active:scale-[0.98]"
-        >
-          <CurrentIcon size={16} strokeWidth={1.75} className="shrink-0" />
-          <span className="truncate">{current.label}</span>
-          <ChevronDown
-            size={16}
-            className={cn("shrink-0 transition-transform duration-200", open && "rotate-180")}
-          />
-          <span className="sr-only">{open ? "Fechar menu de seções" : "Abrir menu de seções"}</span>
-        </button>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <HideMoneyToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
+          <ThemeToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="admin-mobile-menu"
+            className="flex min-w-0 items-center gap-2 rounded-full bg-brand-onPine/[0.12] py-2 pl-3 pr-2.5 text-sm font-medium transition hover:bg-brand-onPine/20 active:scale-[0.97]"
+          >
+            <CurrentIcon size={16} strokeWidth={1.75} className="shrink-0" />
+            <span className="truncate">{current.label}</span>
+            <ChevronDown size={16} className={cn("shrink-0 transition-transform duration-300", open && "rotate-180")} />
+            <span className="sr-only">{open ? "Fechar menu de seções" : "Abrir menu de seções"}</span>
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -157,7 +246,7 @@ function MobileNav({ pathname }: { pathname: string | null }) {
           <>
             <motion.div
               key="overlay"
-              className="fixed inset-0 top-14 bg-brand-graphite/40 backdrop-blur-[2px]"
+              className="fixed inset-0 top-14 bg-brand-ink/45 backdrop-blur-[2px]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -168,36 +257,46 @@ function MobileNav({ pathname }: { pathname: string | null }) {
               key="menu"
               id="admin-mobile-menu"
               aria-label="Seções do painel"
-              className="absolute inset-x-0 top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain rounded-b-2xl bg-white px-3 pb-3 pt-3 shadow-xl"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-x-0 top-14 max-h-[calc(100dvh-3.5rem)] origin-top overflow-y-auto overscroll-contain rounded-b-3xl bg-white px-3 pb-3 pt-3 shadow-lift"
+              initial={{ opacity: 0, y: -12, scaleY: 0.96 }}
+              animate={{ opacity: 1, y: 0, scaleY: 1 }}
+              exit={{ opacity: 0, y: -10, scaleY: 0.97 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             >
-              <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                {NAV_ITEMS.map((item) => {
-                  const active = isActive(item.href, pathname);
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                          active
-                            ? "bg-brand-forest/15 text-brand-forestDark"
-                            : "text-brand-graphite hover:bg-brand-cream active:bg-brand-beige"
-                        )}
-                      >
-                        <Icon size={18} strokeWidth={1.75} className={cn("shrink-0", !active && "text-brand-moss")} />
-                        <span className="leading-tight">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              {groups.map((group) => (
+                <div key={group.title ?? "inicio"} className="mb-2">
+                  {group.title ? (
+                    <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-graphite/50">{group.title}</p>
+                  ) : null}
+                  <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                    {group.items.map((item) => {
+                      const active = isActive(item.href, pathname);
+                      const Icon = item.icon;
+                      return (
+                        <motion.li
+                          key={item.href}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.05 + (order.get(item.href) ?? 0) * 0.022, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        >
+                          <Link
+                            href={item.href}
+                            onClick={() => setOpen(false)}
+                            aria-current={active ? "page" : undefined}
+                            className={cn(
+                              "flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.98]",
+                              active ? "bg-brand-forest text-brand-ink" : "text-brand-graphite hover:bg-brand-cream active:bg-brand-beige"
+                            )}
+                          >
+                            <Icon size={18} strokeWidth={1.75} className={cn("shrink-0", !active && "text-brand-moss")} />
+                            <span className="leading-tight">{item.label}</span>
+                          </Link>
+                        </motion.li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
 
               <form action={adminLogoutAction} className="mt-2 border-t border-brand-beige pt-2">
                 <button

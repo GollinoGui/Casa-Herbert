@@ -1,4 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { isDemoMode } from "@/lib/demo/mode";
+import { createDemoClient } from "@/lib/demo/client";
 
 /**
  * Cliente com a chave secreta (service role) — ignora RLS, então só pode ser
@@ -10,6 +12,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
+  // Modo demonstração (src/lib/demo): dados de exemplo em memória, sem banco.
+  if (isDemoMode()) return createDemoClient() as unknown as SupabaseClient;
   if (client) return client;
 
   const url = process.env.SUPABASE_URL;
@@ -37,3 +41,23 @@ export function unwrap<R extends { data: unknown; error: { message: string } | n
 
 export const PG_EXCLUSION_VIOLATION = "23P01";
 export const PG_UNIQUE_VIOLATION = "23505";
+
+/**
+ * Busca todas as linhas de uma consulta, página por página. O PostgREST corta a
+ * resposta no limite de linhas do projeto (1000 por padrão) sem avisar, então
+ * qualquer leitura que pode crescer sem teto (livro-caixa, vendas de um ano)
+ * passa por aqui. A consulta precisa ter ordem estável (ex.: `.order("id")`),
+ * senão as páginas podem repetir ou pular linhas.
+ */
+export async function fetchAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const pageSize = 1000;
+  const rows: T[] = [];
+  for (;;) {
+    const { data, error } = await page(rows.length, rows.length + pageSize - 1);
+    if (error) throw new Error(error.message);
+    if (!data?.length) return rows;
+    rows.push(...data);
+  }
+}

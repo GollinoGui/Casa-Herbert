@@ -2,15 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { MessageCircle, Phone } from "lucide-react";
+import { AlertCircle, MessageCircle, Phone, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
-import { Input, Textarea, FieldLabel } from "@/components/ui/Field";
+import { Textarea, FieldLabel } from "@/components/ui/Field";
+import { MoneyInput } from "@/components/ui/MoneyInput";
+import { SaleModal, ProductSearch } from "@/components/admin/SaleModal";
+import { SaleStatusBadge } from "@/components/admin/FinanceBadges";
 import { formatShortDatePtBR, formatWeekdayPtBR } from "@/lib/utils/date-format";
 import { formatPhoneDisplay, toWhatsAppDigits } from "@/lib/utils/phone";
 import { formatServicePrice } from "@/lib/utils/service-format";
+import { formatBRL } from "@/lib/utils/money";
 import { buildAppointmentMessage, buildWhatsAppLink } from "@/lib/booking/whatsapp";
+import { buildChargeLink, openAmount } from "@/lib/finance/charge";
 import {
   getAppointmentAction,
   confirmAppointmentAction,
@@ -19,26 +24,25 @@ import {
   completeAppointmentAction,
   updateAdminNotesAction,
   updateAppointmentPriceAction,
+  updateAppointmentDiscountAction,
+  getAppointmentProductsAction,
+  setAppointmentProductsAction,
 } from "@/lib/actions/admin/appointments";
 import { getCustomerAppointmentsAction } from "@/lib/actions/admin/customers";
-import { CheckoutModal } from "@/components/admin/CheckoutModal";
+import { listOpenSalesAction, listSalesAction } from "@/lib/actions/admin/sales";
+import { listActiveProductsAction } from "@/lib/actions/admin/products";
 import { getSettingsAction } from "@/lib/actions/admin/settings";
-import type { AppointmentWithRelations, Settings } from "@/types";
+import type { AppointmentProduct, AppointmentWithRelations, Product, Sale, Settings } from "@/types";
 
 interface AppointmentDetailModalProps {
   appointmentId: string | null;
   open: boolean;
   onClose: () => void;
-  /** Chamado após qualquer mutação bem-sucedida (mudança de status ou observações). */
+  /** Chamado após qualquer mutação bem-sucedida (mudança de status, valores, venda). */
   onMutated?: () => void;
 }
 
-export function AppointmentDetailModal({
-  appointmentId,
-  open,
-  onClose,
-  onMutated,
-}: AppointmentDetailModalProps) {
+export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated }: AppointmentDetailModalProps) {
   const [appointment, setAppointment] = useState<AppointmentWithRelations | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,11 +52,33 @@ export function AppointmentDetailModal({
   const [rejectReason, setRejectReason] = useState("");
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
-  const [priceDraft, setPriceDraft] = useState("");
-  const [priceDirty, setPriceDirty] = useState(false);
+  const [priceDraft, setPriceDraft] = useState<number | null>(null);
+  const [discountDraft, setDiscountDraft] = useState(0);
+  const [valuesDirty, setValuesDirty] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [pendingOpen, setPendingOpen] = useState(false);
   const [otherVisits, setOtherVisits] = useState<number | null>(null);
+  const [apptProducts, setApptProducts] = useState<AppointmentProduct[]>([]);
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [addingProduct, setAddingProduct] = useState(false);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [openSales, setOpenSales] = useState<Sale[]>([]);
   const [isPending, startTransition] = useTransition();
+
+  function loadRelated(appt: AppointmentWithRelations) {
+    getAppointmentProductsAction(appt.id).then(setApptProducts);
+    listSalesAction({ appointmentId: appt.id }).then(setSales);
+    listOpenSalesAction(appt.customerId).then(setOpenSales);
+  }
+
+  function applyAppointment(appt: AppointmentWithRelations | null) {
+    setAppointment(appt);
+    setNotesDraft(appt?.adminNotes ?? "");
+    setNotesDirty(false);
+    setPriceDraft(appt?.priceCents ?? null);
+    setDiscountDraft(appt?.discountCents ?? 0);
+    setValuesDirty(false);
+  }
 
   useEffect(() => {
     if (!open || !appointmentId) return;
@@ -63,19 +89,20 @@ export function AppointmentDetailModal({
     setRejectReason("");
     setCancelReason("");
     setOtherVisits(null);
+    setAddingProduct(false);
+    setApptProducts([]);
+    setSales([]);
+    setOpenSales([]);
     Promise.all([getAppointmentAction(appointmentId), getSettingsAction()]).then(([appt, sett]) => {
       if (cancelled) return;
-      setAppointment(appt);
+      applyAppointment(appt);
       setSettings(sett);
       if (appt) {
+        loadRelated(appt);
         getCustomerAppointmentsAction(appt.customerId).then((history) => {
           if (!cancelled) setOtherVisits(history.filter((a) => a.id !== appt.id).length);
         });
       }
-      setNotesDraft(appt?.adminNotes ?? "");
-      setNotesDirty(false);
-      setPriceDraft(appt?.priceCents != null ? String(appt.priceCents) : "");
-      setPriceDirty(false);
       setLoading(false);
     });
     return () => {
@@ -86,11 +113,8 @@ export function AppointmentDetailModal({
   function refresh() {
     if (!appointmentId) return;
     getAppointmentAction(appointmentId).then((appt) => {
-      setAppointment(appt);
-      setNotesDraft(appt?.adminNotes ?? "");
-      setNotesDirty(false);
-      setPriceDraft(appt?.priceCents != null ? String(appt.priceCents) : "");
-      setPriceDirty(false);
+      applyAppointment(appt);
+      if (appt) loadRelated(appt);
     });
     onMutated?.();
   }
@@ -138,28 +162,41 @@ export function AppointmentDetailModal({
     });
   }
 
-  function handleSavePrice() {
+  function handleSaveValues() {
     if (!appointment) return;
-    const trimmed = priceDraft.trim();
-    const priceCents = trimmed === "" ? null : Number(trimmed);
     startTransition(async () => {
-      await updateAppointmentPriceAction(appointment.id, priceCents);
-      setPriceDirty(false);
-      onMutated?.();
+      await updateAppointmentPriceAction(appointment.id, priceDraft);
+      await updateAppointmentDiscountAction(appointment.id, discountDraft);
+      setValuesDirty(false);
+      refresh();
     });
+  }
+
+  function saveProducts(next: AppointmentProduct[]) {
+    if (!appointment) return;
+    setApptProducts(next);
+    startTransition(async () => {
+      await setAppointmentProductsAction(
+        appointment.id,
+        next.map((p) => ({ productId: p.productId, quantity: p.quantity }))
+      );
+    });
+  }
+
+  function openProductPicker() {
+    setAddingProduct(true);
+    if (catalog.length === 0) listActiveProductsAction().then(setCatalog);
   }
 
   function templatedWhatsAppHref(kind: "confirmed" | "rejected" | "cancelled") {
     if (!appointment || !settings) return "#";
-    const message = buildAppointmentMessage(
-      kind,
-      appointment,
-      appointment.customer,
-      appointment.service,
-      settings.messageTemplates
-    );
+    const message = buildAppointmentMessage(kind, appointment, appointment.customer, appointment.service, settings.messageTemplates);
     return buildWhatsAppLink(appointment.customer.phone, message);
   }
+
+  const editable = appointment?.status === "PENDING" || appointment?.status === "CONFIRMED";
+  const productsTotal = apptProducts.reduce((s, p) => s + p.priceCents * p.quantity, 0);
+  const totalOpen = openSales.reduce((s, sale) => s + openAmount(sale), 0);
 
   return (
     <Modal open={open} onClose={onClose} title="Detalhes do agendamento" widthClassName="max-w-xl">
@@ -173,18 +210,13 @@ export function AppointmentDetailModal({
               <p className="text-sm text-brand-graphite/70">{formatPhoneDisplay(appointment.customer.phone)}</p>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-brand-graphite/60">
                 {otherVisits === null ? null : otherVisits === 0 ? (
-                  <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 font-medium text-brand-graphite/80">
-                    Primeiro agendamento
-                  </span>
+                  <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 font-medium text-brand-graphite/80">Primeiro agendamento</span>
                 ) : (
                   <span>
                     Cliente cadastrado · {otherVisits} {otherVisits === 1 ? "outro agendamento" : "outros agendamentos"}
                   </span>
                 )}
-                <Link
-                  href={`/admin/clientes?cliente=${appointment.customerId}`}
-                  className="font-medium text-brand-moss hover:underline"
-                >
+                <Link href={`/admin/clientes?cliente=${appointment.customerId}`} className="font-medium text-brand-moss hover:underline">
                   Ver ficha
                 </Link>
               </p>
@@ -209,6 +241,23 @@ export function AppointmentDetailModal({
             </a>
           </div>
 
+          {totalOpen > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                Este cliente tem <strong>{formatBRL(totalOpen)}</strong> em aberto.
+              </p>
+              <a
+                href={buildChargeLink(appointment.customer.phone, appointment.customer.fullName, openSales)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-brand-graphite"
+              >
+                <MessageCircle size={14} /> Cobrar no WhatsApp
+              </a>
+            </div>
+          ) : null}
+
           <div className="grid gap-3 rounded-xl border border-brand-beige bg-brand-cream/40 p-4 text-sm sm:grid-cols-2">
             <div>
               <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Serviço</p>
@@ -217,47 +266,135 @@ export function AppointmentDetailModal({
             <div>
               <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Data e horário</p>
               <p className="font-medium text-brand-graphite">
-                {formatWeekdayPtBR(appointment.date)}, {formatShortDatePtBR(appointment.date)} ·{" "}
-                {appointment.startTime}–{appointment.endTime}
+                {formatWeekdayPtBR(appointment.date)}, {formatShortDatePtBR(appointment.date)} · {appointment.startTime}–{appointment.endTime}
               </p>
             </div>
-            <div className="sm:col-span-2">
-              <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Valor combinado</p>
-              {appointment.status === "PENDING" || appointment.status === "CONFIRMED" ? (
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    className="w-36 !py-2"
-                    placeholder="Sob consulta"
+            {editable ? (
+              <div className="grid gap-3 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <div>
+                  <FieldLabel htmlFor="appt-price" className="!text-xs !font-normal uppercase tracking-wide text-brand-graphite/50">
+                    Valor do serviço
+                  </FieldLabel>
+                  <MoneyInput
+                    id="appt-price"
+                    className="!py-2"
                     value={priceDraft}
-                    onChange={(e) => {
-                      setPriceDraft(e.target.value);
-                      setPriceDirty(true);
+                    allowEmpty
+                    placeholder="Sob consulta"
+                    onChange={(v) => {
+                      setPriceDraft(v);
+                      setValuesDirty(true);
                     }}
                   />
-                  <span className="text-xs text-brand-graphite/50">centavos</span>
-                  <Button
-                    variant="secondary"
-                    className="!px-3 !py-1.5 text-xs"
-                    onClick={handleSavePrice}
-                    disabled={!priceDirty || isPending}
-                  >
-                    Salvar
-                  </Button>
                 </div>
-              ) : (
-                <p className="font-medium text-brand-graphite">{formatServicePrice(appointment.priceCents)}</p>
-              )}
-            </div>
+                <div>
+                  <FieldLabel htmlFor="appt-discount" className="!text-xs !font-normal uppercase tracking-wide text-brand-graphite/50">
+                    Desconto
+                  </FieldLabel>
+                  <MoneyInput
+                    id="appt-discount"
+                    className="!py-2"
+                    value={discountDraft}
+                    onChange={(v) => {
+                      setDiscountDraft(v ?? 0);
+                      setValuesDirty(true);
+                    }}
+                  />
+                </div>
+                <Button variant="secondary" className="!px-4 !py-2 text-xs" onClick={handleSaveValues} disabled={!valuesDirty || isPending}>
+                  Salvar
+                </Button>
+              </div>
+            ) : (
+              <div className="sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Valor</p>
+                <p className="font-medium text-brand-graphite">
+                  {formatServicePrice(appointment.priceCents)}
+                  {appointment.discountCents > 0 ? ` (desconto ${formatBRL(appointment.discountCents)})` : ""}
+                </p>
+              </div>
+            )}
           </div>
+
+          {editable || apptProducts.length > 0 ? (
+            <div>
+              <FieldLabel>Produtos que o cliente vai levar</FieldLabel>
+              {apptProducts.length > 0 ? (
+                <ul className="mb-2 space-y-1.5">
+                  {apptProducts.map((p) => (
+                    <li key={p.productId} className="flex items-center gap-3 rounded-xl border border-brand-beige px-3 py-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate">
+                        {p.quantity}× {p.name}
+                      </span>
+                      <span className="tabular-nums">{formatBRL(p.priceCents * p.quantity)}</span>
+                      {editable ? (
+                        <button
+                          type="button"
+                          aria-label={`Remover ${p.name}`}
+                          className="p-1 text-brand-graphite/50 hover:text-red-600"
+                          onClick={() => saveProducts(apptProducts.filter((x) => x.productId !== p.productId))}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {editable ? (
+                addingProduct ? (
+                  <ProductSearch
+                    products={catalog}
+                    stockLeft={(id) =>
+                      (catalog.find((c) => c.id === id)?.stockQuantity ?? 0) - (apptProducts.find((x) => x.productId === id)?.quantity ?? 0)
+                    }
+                    onPick={(product) => {
+                      setAddingProduct(false);
+                      const existing = apptProducts.find((x) => x.productId === product.id);
+                      saveProducts(
+                        existing
+                          ? apptProducts.map((x) => (x === existing ? { ...x, quantity: x.quantity + 1 } : x))
+                          : [...apptProducts, { productId: product.id, quantity: 1, name: product.name, priceCents: product.priceCents }]
+                      );
+                    }}
+                    onCancel={() => setAddingProduct(false)}
+                  />
+                ) : (
+                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={openProductPicker}>
+                    <Plus size={14} /> Adicionar produto
+                  </Button>
+                )
+              ) : null}
+              {editable && (appointment.priceCents != null || productsTotal > 0) ? (
+                <p className="mt-2 text-sm text-brand-graphite/70">
+                  Total previsto:{" "}
+                  <strong className="tabular-nums text-brand-graphite">
+                    {formatBRL(Math.max(0, (appointment.priceCents ?? 0) + productsTotal - appointment.discountCents))}
+                  </strong>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {sales.length > 0 ? (
+            <div>
+              <FieldLabel>Vendas deste atendimento</FieldLabel>
+              <ul className="space-y-1.5">
+                {sales.map((sale) => (
+                  <li key={sale.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-beige px-3 py-2 text-sm">
+                    <span className="min-w-0 flex-1">{sale.items.map((i) => i.description).join(", ")}</span>
+                    <SaleStatusBadge status={sale.status} partial={sale.paidCents > 0} />
+                    <span className="tabular-nums font-medium">{formatBRL(sale.totalCents)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {appointment.customerNotes ? (
             <div>
               <p className="mb-1 text-xs uppercase tracking-wide text-brand-graphite/50">Observações do cliente</p>
-              <p className="rounded-xl bg-brand-cream/60 p-3 text-sm italic text-brand-graphite/80">
-                {appointment.customerNotes}
-              </p>
+              <p className="rounded-xl bg-brand-cream/60 p-3 text-sm italic text-brand-graphite/80">{appointment.customerNotes}</p>
             </div>
           ) : null}
 
@@ -273,12 +410,7 @@ export function AppointmentDetailModal({
               }}
             />
             <div className="mt-2">
-              <Button
-                variant="secondary"
-                className="!px-4 !py-2 text-xs"
-                onClick={handleSaveNotes}
-                disabled={!notesDirty || isPending}
-              >
+              <Button variant="secondary" className="!px-4 !py-2 text-xs" onClick={handleSaveNotes} disabled={!notesDirty || isPending}>
                 Salvar observações
               </Button>
             </div>
@@ -299,12 +431,7 @@ export function AppointmentDetailModal({
                 ) : (
                   <div className="space-y-2 rounded-xl border border-brand-beige p-3">
                     <FieldLabel htmlFor="reject-reason">Motivo da recusa (opcional)</FieldLabel>
-                    <Textarea
-                      id="reject-reason"
-                      rows={2}
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                    />
+                    <Textarea id="reject-reason" rows={2} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
                     <div className="flex gap-2">
                       <Button variant="ghost" onClick={() => setShowRejectForm(false)} disabled={isPending}>
                         Voltar
@@ -321,12 +448,12 @@ export function AppointmentDetailModal({
             {appointment.status === "CONFIRMED" ? (
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-3">
-                  <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
-                    Enviar confirmação pelo WhatsApp
-                  </LinkButton>
-                  <Button onClick={() => setCheckoutOpen(true)} disabled={isPending}>
-                    Finalizar atendimento
+                  <Button onClick={() => setCheckoutOpen(true)} disabled={isPending || valuesDirty}>
+                    Finalizar e receber
                   </Button>
+                  <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
+                    Enviar confirmação
+                  </LinkButton>
                   <Button variant="secondary" onClick={handleComplete} disabled={isPending}>
                     Concluir sem venda
                   </Button>
@@ -336,15 +463,11 @@ export function AppointmentDetailModal({
                     </Button>
                   ) : null}
                 </div>
+                {valuesDirty ? <p className="text-xs text-amber-800">Salve o valor/desconto antes de finalizar.</p> : null}
                 {showCancelForm ? (
                   <div className="space-y-2 rounded-xl border border-brand-beige p-3">
                     <FieldLabel htmlFor="cancel-reason">Motivo do cancelamento (opcional)</FieldLabel>
-                    <Textarea
-                      id="cancel-reason"
-                      rows={2}
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                    />
+                    <Textarea id="cancel-reason" rows={2} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
                     <div className="flex gap-2">
                       <Button variant="ghost" onClick={() => setShowCancelForm(false)} disabled={isPending}>
                         Voltar
@@ -371,17 +494,35 @@ export function AppointmentDetailModal({
             ) : null}
 
             {appointment.status === "COMPLETED" ? (
-              <p className="text-sm text-brand-graphite/50">Agendamento concluído.</p>
+              <div className="space-y-2">
+                <p className="text-sm text-brand-graphite/60">Atendimento concluído.</p>
+                <Button variant="secondary" onClick={() => setPendingOpen(true)}>
+                  <Plus size={16} /> Lançar algo que ficou sem pagar
+                </Button>
+                <p className="text-xs text-brand-graphite/50">
+                  Ex.: o cliente levou um produto e não foi cobrado. Fica em Contas a receber e dá para cobrar pelo WhatsApp.
+                </p>
+              </div>
             ) : null}
           </div>
         </div>
       )}
-      <CheckoutModal
+      <SaleModal
         open={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         appointment={appointment}
         onCompleted={() => {
           setCheckoutOpen(false);
+          refresh();
+        }}
+      />
+      <SaleModal
+        open={pendingOpen}
+        mode="pending"
+        onClose={() => setPendingOpen(false)}
+        appointment={appointment}
+        onCompleted={() => {
+          setPendingOpen(false);
           refresh();
         }}
       />

@@ -1,38 +1,68 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Globe, Plus, Pencil } from "lucide-react";
-import type { z } from "zod";
+import { EmptyState } from "@/components/admin/EmptyState";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, Globe, Pencil, Plus, ScanBarcode } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { ActiveBadge } from "@/components/ui/Badge";
-import { Input, Textarea, FieldLabel, FieldError } from "@/components/ui/Field";
+import { Input, Textarea, FieldLabel } from "@/components/ui/Field";
+import { MoneyInput } from "@/components/ui/MoneyInput";
 import { ImageField } from "@/components/admin/MediaPicker";
-import { productFormSchema } from "@/lib/booking/validators";
+import { BarcodeScanner } from "@/components/admin/BarcodeScanner";
+import { FilterBar } from "@/components/admin/FilterBar";
+import { StatTile } from "@/components/admin/FinanceBadges";
 import { createProductAction, updateProductAction, setProductActiveAction } from "@/lib/actions/admin/products";
-import { formatServicePrice } from "@/lib/utils/service-format";
+import { matchesText, matchesValue, parseListFilters } from "@/lib/utils/list-filters";
+import { formatBRL } from "@/lib/utils/money";
 import { cn } from "@/lib/utils/cn";
-import type { Product } from "@/types";
+import type { ImagePosition, Product } from "@/types";
 
-type ProductFormValues = z.infer<typeof productFormSchema>;
-
+/** Sem mínimo definido no produto, "estoque baixo" é até 3. Com mínimo, ele manda (e entra no aviso do Início). */
 const LOW_STOCK_THRESHOLD = 3;
+const lowLimit = (p: Product) => p.minStock ?? LOW_STOCK_THRESHOLD;
+const NO_DATES = { dateFrom: "", dateTo: "" };
 
 export function ProductsManager({ products }: { products: Product[] }) {
   const router = useRouter();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Product | null>(null);
+  const searchParams = useSearchParams();
+  const [editing, setEditing] = useState<Product | "new" | null>(null);
+  const [newBarcode, setNewBarcode] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  function openCreate() {
-    setEditing(null);
-    setModalOpen(true);
-  }
-  function openEdit(product: Product) {
-    setEditing(product);
-    setModalOpen(true);
+  const filters = useMemo(() => parseListFilters(searchParams, NO_DATES), [searchParams]);
+  const visible = useMemo(
+    () =>
+      products.filter(
+        (p) =>
+          matchesText(filters.customer, p.name, p.barcode) &&
+          matchesValue(p.priceCents, filters) &&
+          (!filters.status ||
+            (filters.status === "low" && p.isActive && p.stockQuantity > 0 && p.stockQuantity <= lowLimit(p)) ||
+            (filters.status === "out" && p.isActive && p.stockQuantity === 0) ||
+            (filters.status === "active" && p.isActive) ||
+            (filters.status === "inactive" && !p.isActive))
+      ),
+    [products, filters]
+  );
+
+  const active = products.filter((p) => p.isActive);
+  const stockValue = active.reduce((s, p) => s + (p.costCents ?? 0) * p.stockQuantity, 0);
+  const low = active.filter((p) => p.stockQuantity <= lowLimit(p)).length;
+
+  function handleScan(code: string) {
+    setScannerOpen(false);
+    const product = products.find((p) => p.barcode === code);
+    if (product) {
+      setNotice(null);
+      setEditing(product);
+    } else {
+      setNotice(`Código ${code} ainda não cadastrado — preencha o novo produto.`);
+      setNewBarcode(code);
+      setEditing("new");
+    }
   }
 
   async function handleToggleActive(product: Product) {
@@ -41,255 +71,290 @@ export function ProductsManager({ products }: { products: Product[] }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={openCreate}>
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          onClick={() => {
+            setNewBarcode(null);
+            setNotice(null);
+            setEditing("new");
+          }}
+        >
           <Plus size={16} /> Novo produto
+        </Button>
+        <Button variant="secondary" onClick={() => setScannerOpen(true)}>
+          <ScanBarcode size={16} /> Ler código de barras
         </Button>
       </div>
 
-      <ul className="space-y-2 md:hidden">
-        {products.length === 0 ? (
-          <li className="rounded-2xl border border-brand-beige bg-white px-4 py-8 text-center text-sm text-brand-graphite/50">
-            Nenhum produto cadastrado.
-          </li>
-        ) : (
-          products.map((p) => (
-            <li
-              key={p.id}
-              className={cn("rounded-2xl border border-brand-beige bg-white p-4", !p.isActive && "opacity-60")}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-brand-graphite">{p.name}</p>
-                  {p.showOnSite ? <OnSiteTag /> : null}
-                  <p className="mt-0.5 text-xs text-brand-graphite/60">
-                    {formatServicePrice(p.priceCents)} ·{" "}
-                    <span className={cn(p.stockQuantity <= LOW_STOCK_THRESHOLD && "font-medium text-red-600")}>
-                      {p.stockQuantity} em estoque
-                      {p.stockQuantity <= LOW_STOCK_THRESHOLD ? " (baixo)" : ""}
-                    </span>
-                  </p>
-                </div>
-                <ActiveBadge active={p.isActive} />
-              </div>
-              <div className="mt-3 flex gap-2 border-t border-brand-beige/70 pt-3">
-                <Button variant="secondary" className="flex-1 !px-3 !py-2 text-xs" onClick={() => openEdit(p)}>
-                  <Pencil size={14} /> Editar
-                </Button>
-                <Button variant="ghost" className="flex-1 !px-3 !py-2 text-xs" onClick={() => handleToggleActive(p)}>
-                  {p.isActive ? "Desativar" : "Reativar"}
-                </Button>
-              </div>
-            </li>
-          ))
-        )}
-      </ul>
+      <FilterBar
+        fields={["customer", "value", "status"]}
+        defaults={NO_DATES}
+        customerPlaceholder="Nome ou código de barras"
+        statuses={[
+          { value: "low", label: "Estoque baixo" },
+          { value: "out", label: "Sem estoque" },
+          { value: "active", label: "Ativos" },
+          { value: "inactive", label: "Inativos" },
+        ]}
+      />
 
-      <div className="hidden overflow-x-auto rounded-2xl border border-brand-beige bg-white md:block">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-brand-beige bg-brand-cream/50 text-xs uppercase tracking-wide text-brand-graphite/60">
-            <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Preço</th>
-              <th className="px-4 py-3">Estoque</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-brand-graphite/50">
-                  Nenhum produto cadastrado.
-                </td>
-              </tr>
-            ) : (
-              products.map((p) => (
-                <tr key={p.id} className={cn("border-b border-brand-beige/60", !p.isActive && "opacity-60")}>
-                  <td className="px-4 py-3 font-medium text-brand-graphite">
-                    {p.name}
-                    {p.showOnSite ? <OnSiteTag /> : null}
-                  </td>
-                  <td className="px-4 py-3">{formatServicePrice(p.priceCents)}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn(p.stockQuantity <= LOW_STOCK_THRESHOLD && "font-medium text-red-600")}>
-                      {p.stockQuantity}
-                      {p.stockQuantity <= LOW_STOCK_THRESHOLD ? " · estoque baixo" : ""}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <ActiveBadge active={p.isActive} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => openEdit(p)}
-                        className="rounded-lg p-1.5 text-brand-graphite/60 hover:bg-brand-cream hover:text-brand-forest"
-                        aria-label="Editar"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => handleToggleActive(p)}>
-                        {p.isActive ? "Desativar" : "Reativar"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <StatTile label="Produtos ativos" value={String(active.length)} />
+        <StatTile label="Estoque baixo ou zerado" value={String(low)} tone={low ? "warn" : undefined} />
+        <StatTile label="Valor em estoque (custo)" value={formatBRL(stockValue)} hint="só produtos com custo informado" />
       </div>
 
+      {visible.length === 0 ? (
+        <div className="rounded-2xl border border-brand-beige bg-white">
+          <EmptyState title="Nenhum produto encontrado" hint="Mude a busca ou cadastre um produto." />
+        </div>
+      ) : (
+        <ul className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+          {visible.map((p) => {
+            const isLow = p.isActive && p.stockQuantity <= lowLimit(p);
+            return (
+              <li key={p.id} className={cn("rounded-2xl border border-brand-beige bg-white p-4", !p.isActive && "opacity-60")}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-brand-graphite">{p.name}</p>
+                    <p className="mt-0.5 text-xs text-brand-graphite/60">
+                      Venda {formatBRL(p.priceCents)}
+                      {p.costCents != null ? ` · custo ${formatBRL(p.costCents)}` : ""}
+                    </p>
+                    {p.barcode ? <p className="text-xs tabular-nums text-brand-graphite/50">Código {p.barcode}</p> : null}
+                    {p.showOnSite ? (
+                      <span className="mt-1 flex w-fit items-center gap-1 text-xs text-brand-moss">
+                        <Globe size={12} aria-hidden="true" /> No site
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-right">
+                    <p className={cn("text-2xl font-semibold tabular-nums", isLow ? "text-red-700" : "text-brand-graphite")}>
+                      {p.stockQuantity}
+                    </p>
+                    <p className={cn("text-xs", isLow ? "font-medium text-red-700" : "text-brand-graphite/50")}>
+                      {p.stockQuantity === 0 ? "sem estoque" : isLow ? "estoque baixo" : "em estoque"}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2 border-t border-brand-beige/70 pt-3">
+                  <Button variant="secondary" className="flex-1 !px-3 !py-1.5 text-xs" onClick={() => setEditing(p)}>
+                    <Pencil size={14} /> Editar
+                  </Button>
+                  <Button variant="ghost" className="flex-1 !px-3 !py-1.5 text-xs" onClick={() => handleToggleActive(p)}>
+                    {p.isActive ? "Desativar" : "Reativar"}
+                  </Button>
+                  {!p.isActive ? <ActiveBadge active={false} /> : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       <ProductFormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
         product={editing}
+        initialBarcode={newBarcode}
+        notice={notice}
+        onClose={() => setEditing(null)}
         onSaved={() => {
-          setModalOpen(false);
+          setEditing(null);
           router.refresh();
         }}
       />
+      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={handleScan} />
     </div>
   );
 }
 
-function OnSiteTag() {
-  return (
-    <span className="mt-1 flex w-fit items-center gap-1 text-xs font-normal text-brand-moss">
-      <Globe size={12} aria-hidden="true" /> No site
-    </span>
-  );
-}
-
-const EMPTY_PRODUCT: ProductFormValues = {
-  name: "",
-  priceCents: 0,
-  stockQuantity: 0,
-  isActive: true,
-  description: "",
-  imageId: null,
-  imagePosition: null,
-  showOnSite: false,
-};
-
 function ProductFormModal({
-  open,
-  onClose,
   product,
+  initialBarcode,
+  notice,
+  onClose,
   onSaved,
 }: {
-  open: boolean;
+  product: Product | "new" | null;
+  initialBarcode: string | null;
+  notice: string | null;
   onClose: () => void;
-  product: Product | null;
   onSaved: () => void;
 }) {
+  const editing = product && product !== "new" ? product : null;
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState<number | null>(null);
+  const [cost, setCost] = useState<number | null>(null);
+  const [stock, setStock] = useState("0");
+  const [minStock, setMinStock] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [siteOpen, setSiteOpen] = useState(false);
+  const [showOnSite, setShowOnSite] = useState(false);
+  const [description, setDescription] = useState("");
+  const [imageId, setImageId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<ProductFormValues>({
-    resolver: zodResolver(productFormSchema),
-    values: product
-      ? {
-          name: product.name,
-          priceCents: product.priceCents,
-          stockQuantity: product.stockQuantity,
-          isActive: product.isActive,
-          description: product.description,
-          imageId: product.imageId,
-          imagePosition: product.imagePosition,
-          showOnSite: product.showOnSite,
-        }
-      : EMPTY_PRODUCT,
-  });
+  const [imagePosition, setImagePosition] = useState<ImagePosition | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (open) setImageUrl(product?.imageUrl ?? null);
-  }, [open, product]);
+    if (!product) return;
+    setName(editing?.name ?? "");
+    setPrice(editing?.priceCents ?? null);
+    setCost(editing?.costCents ?? null);
+    setStock(String(editing?.stockQuantity ?? 0));
+    setMinStock(editing?.minStock != null ? String(editing.minStock) : "");
+    setBarcode(editing?.barcode ?? initialBarcode ?? "");
+    setIsActive(editing?.isActive ?? true);
+    setShowOnSite(editing?.showOnSite ?? false);
+    setDescription(editing?.description ?? "");
+    setImageId(editing?.imageId ?? null);
+    setImageUrl(editing?.imageUrl ?? null);
+    setImagePosition(editing?.imagePosition ?? null);
+    setSiteOpen(false);
+    setError(null);
+  }, [product, editing, initialBarcode]);
 
-  async function onSubmit(values: ProductFormValues) {
-    if (product) {
-      await updateProductAction(product.id, values);
-    } else {
-      await createProductAction(values);
-    }
-    reset();
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (name.trim().length < 2) return setError("Informe o nome do produto.");
+    if (price == null) return setError("Informe o preço de venda.");
+    const stockQuantity = Number(stock);
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) return setError("Quantidade em estoque inválida.");
+    const min = minStock.trim() === "" ? null : Number(minStock);
+    if (min !== null && (!Number.isInteger(min) || min < 0)) return setError("Estoque mínimo inválido.");
+    const input = {
+      name: name.trim(),
+      priceCents: price,
+      costCents: cost,
+      stockQuantity,
+      minStock: min,
+      barcode: barcode.trim() || null,
+      isActive,
+      showOnSite,
+      description: description.trim(),
+      imageId,
+      imagePosition,
+    };
+    setBusy(true);
+    const result = editing ? await updateProductAction(editing.id, input) : await createProductAction(input);
+    setBusy(false);
+    if (!result.ok) return setError(result.error);
     onSaved();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={product ? "Editar produto" : "Novo produto"}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <Modal open={!!product} onClose={onClose} title={editing ? "Editar produto" : "Novo produto"}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {notice && !editing ? <p className="rounded-xl bg-brand-gold/15 p-3 text-sm text-brand-graphite">{notice}</p> : null}
         <div>
-          <FieldLabel htmlFor="name">Nome</FieldLabel>
-          <Input id="name" {...register("name")} />
-          <FieldError>{errors.name?.message}</FieldError>
+          <FieldLabel htmlFor="p-name">Nome</FieldLabel>
+          <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FieldLabel htmlFor="priceCents">Preço (centavos)</FieldLabel>
-            <Input id="priceCents" type="number" {...register("priceCents")} />
-            <FieldError>{errors.priceCents?.message}</FieldError>
-          </div>
-          <div>
-            <FieldLabel htmlFor="stockQuantity">Quantidade em estoque</FieldLabel>
-            <Input id="stockQuantity" type="number" {...register("stockQuantity")} />
-            <FieldError>{errors.stockQuantity?.message}</FieldError>
+        <div>
+          <FieldLabel htmlFor="p-barcode">Código de barras</FieldLabel>
+          <div className="flex gap-2">
+            <Input id="p-barcode" inputMode="numeric" value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Opcional" />
+            <Button type="button" variant="secondary" className="!px-3" onClick={() => setScannerOpen(true)} aria-label="Ler código de barras">
+              <ScanBarcode size={18} />
+            </Button>
           </div>
         </div>
-        <fieldset className="space-y-4 rounded-xl border border-brand-beige p-4">
-          <legend className="px-1 text-sm font-medium text-brand-graphite">Página Produtos do site</legend>
-          <label className="flex items-center gap-2 text-sm text-brand-graphite">
-            <input type="checkbox" {...register("showOnSite")} className="h-4 w-4 rounded border-brand-beige" />
-            Mostrar este produto no site
-          </label>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
-            <FieldLabel htmlFor="description">Descrição para o site</FieldLabel>
-            <Textarea
-              id="description"
-              rows={3}
-              placeholder="Para que serve e quando costuma ser indicado."
-              {...register("description")}
+            <FieldLabel htmlFor="p-price">Preço de venda</FieldLabel>
+            <MoneyInput id="p-price" value={price} allowEmpty onChange={setPrice} />
+          </div>
+          <div>
+            <FieldLabel htmlFor="p-cost">Custo</FieldLabel>
+            <MoneyInput id="p-cost" value={cost} allowEmpty onChange={setCost} placeholder="Opcional" />
+          </div>
+          <div>
+            <FieldLabel htmlFor="p-stock">Em estoque</FieldLabel>
+            <Input id="p-stock" type="number" min={0} inputMode="numeric" value={stock} onChange={(e) => setStock(e.target.value)} />
+          </div>
+          <div className="sm:col-span-3">
+            <FieldLabel htmlFor="p-min">Avisar quando tiver</FieldLabel>
+            <Input
+              id="p-min"
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={minStock}
+              onChange={(e) => setMinStock(e.target.value)}
+              placeholder="Sem aviso"
             />
-            <FieldError>{errors.description?.message}</FieldError>
+            <p className="mt-1 text-xs text-brand-graphite/50">Com essa quantidade ou menos, o produto aparece em “Estoque baixo” no Início.</p>
           </div>
-          <div>
-            <FieldLabel>Foto</FieldLabel>
-            <div className="max-w-xs">
-              <ImageField
-                label={watch("name") || "Produto"}
-                imageUrl={imageUrl}
-                mediaId={watch("imageId")}
-                position={watch("imagePosition")}
-                onChange={(media) => {
-                  setImageUrl(media?.url ?? null);
-                  setValue("imageId", media?.id ?? null, { shouldDirty: true });
-                  if (!media) setValue("imagePosition", null, { shouldDirty: true });
-                }}
-                onPositionChange={(position) => setValue("imagePosition", position, { shouldDirty: true })}
-              />
-            </div>
-          </div>
-        </fieldset>
+        </div>
+        <p className="-mt-2 text-xs text-brand-graphite/50">
+          Para entrada de mercadoria use a tela Compras (soma no estoque e registra o gasto). Aqui é para corrigir a contagem.
+        </p>
         <label className="flex items-center gap-2 text-sm text-brand-graphite">
-          <input type="checkbox" {...register("isActive")} className="h-4 w-4 rounded border-brand-beige" />
-          Produto ativo (disponível para venda)
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4 rounded border-brand-beige" />
+          Produto ativo (aparece nas vendas)
         </label>
-        <div className="flex justify-end gap-3 pt-2">
+
+        <div className="rounded-xl border border-brand-beige">
+          <button
+            type="button"
+            onClick={() => setSiteOpen((v) => !v)}
+            aria-expanded={siteOpen}
+            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-brand-graphite"
+          >
+            <Globe size={15} className="text-brand-moss" /> Site (opcional, para quando o site estiver no ar)
+            <ChevronDown size={16} className={cn("ml-auto transition-transform", siteOpen && "rotate-180")} />
+          </button>
+          {siteOpen ? (
+            <div className="space-y-4 px-4 pb-4">
+              <label className="flex items-center gap-2 text-sm text-brand-graphite">
+                <input type="checkbox" checked={showOnSite} onChange={(e) => setShowOnSite(e.target.checked)} className="h-4 w-4 rounded border-brand-beige" />
+                Mostrar este produto no site
+              </label>
+              <div>
+                <FieldLabel htmlFor="p-desc">Descrição para o site</FieldLabel>
+                <Textarea id="p-desc" rows={3} maxLength={400} value={description} onChange={(e) => setDescription(e.target.value)} />
+              </div>
+              <div className="max-w-xs">
+                <FieldLabel>Foto</FieldLabel>
+                <ImageField
+                  label={name || "Produto"}
+                  imageUrl={imageUrl}
+                  mediaId={imageId}
+                  position={imagePosition}
+                  onChange={(media) => {
+                    setImageUrl(media?.url ?? null);
+                    setImageId(media?.id ?? null);
+                    if (!media) setImagePosition(null);
+                  }}
+                  onPositionChange={setImagePosition}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <div className="flex justify-end gap-3 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando..." : "Salvar"}
+          <Button type="submit" disabled={busy}>
+            {busy ? "Salvando..." : "Salvar"}
           </Button>
         </div>
       </form>
+      <BarcodeScanner
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onDetected={(code) => {
+          setScannerOpen(false);
+          setBarcode(code);
+        }}
+      />
     </Modal>
   );
 }

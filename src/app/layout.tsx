@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { DemoBanner } from "@/components/DemoBanner";
 import { Playfair_Display, Inter, Caveat } from "next/font/google";
 import { headers } from "next/headers";
 import "lenis/dist/lenis.css";
@@ -11,6 +12,8 @@ import { ScrollRestoration } from "@/components/layout/ScrollRestoration";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { SectionStack } from "@/components/motion/SectionStack";
 import { INTRO_DECISION_SCRIPT } from "@/components/motion/introScript";
+import { PANEL_THEME_SCRIPT } from "@/lib/panel/theme";
+import { DEVICE_PREFS_SCRIPT } from "@/lib/panel/device-script";
 import { getSettings } from "@/lib/data/settings";
 import { getSiteImageMap } from "@/lib/data/media";
 import { getBusinessHours } from "@/lib/data/business-hours";
@@ -114,14 +117,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // suppressHydrationWarning: o script do <head> põe data-intro no <html> antes da hidratação.
     <html lang="pt-BR" className={`${playfair.variable} ${inter.variable} ${caveat.variable}`} suppressHydrationWarning>
       <head>
-        {!isAdminRoute && <script dangerouslySetInnerHTML={{ __html: INTRO_DECISION_SCRIPT }} />}
+        {isAdminRoute ? (
+          <script dangerouslySetInnerHTML={{ __html: PANEL_THEME_SCRIPT + DEVICE_PREFS_SCRIPT }} />
+        ) : (
+          <script dangerouslySetInnerHTML={{ __html: INTRO_DECISION_SCRIPT }} />
+        )}
       </head>
-      <body className={isAdminRoute ? "font-sans antialiased" : "site-organic font-sans antialiased"}>
+      <body className={isAdminRoute ? "painel font-sans antialiased" : "site-organic font-sans antialiased"}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <ScrollRestoration />
+        <DemoBanner />
         {isAdminRoute ? (
           children
         ) : (

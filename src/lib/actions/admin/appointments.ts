@@ -11,8 +11,11 @@ import {
   completeAppointment,
   updateAppointmentAdminNotes,
   updateAppointmentPrice,
+  updateAppointmentDiscount,
+  setReminderSent,
   type AppointmentFilters,
 } from "@/lib/data/appointments";
+import { getActiveProfessionals, getAppointmentProducts, setAppointmentProducts } from "@/lib/data/professionals";
 import {
   adminCreateAppointment,
   adminRescheduleAppointment,
@@ -99,4 +102,40 @@ export async function adminRescheduleAppointmentAction(id: string, newDate: stri
   const result = await adminRescheduleAppointment(id, newDate, newStartTime);
   revalidateAppointmentPaths();
   return result;
+}
+
+export async function updateAppointmentDiscountAction(id: string, discountCents: number) {
+  await requireAdmin();
+  const updated = await updateAppointmentDiscount(id, discountCents);
+  revalidateAppointmentPaths();
+  return updated;
+}
+
+export async function getAppointmentProductsAction(appointmentId: string) {
+  await requireAdmin();
+  return getAppointmentProducts(appointmentId);
+}
+
+export async function setAppointmentProductsAction(
+  appointmentId: string,
+  lines: { productId: string; quantity: number }[]
+) {
+  await requireAdmin();
+  await setAppointmentProducts(
+    appointmentId,
+    lines.filter((l) => Number.isInteger(l.quantity) && l.quantity > 0)
+  );
+  revalidateAppointmentPaths();
+}
+
+export async function listProfessionalsAction() {
+  await requireAdmin();
+  return getActiveProfessionals();
+}
+
+export async function setReminderSentAction(id: string, sent: boolean) {
+  await requireAdmin();
+  const updated = await setReminderSent(id, sent);
+  revalidatePath("/admin");
+  return updated;
 }

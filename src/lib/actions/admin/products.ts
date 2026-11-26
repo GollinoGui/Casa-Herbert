@@ -7,37 +7,57 @@ import {
   updateProduct,
   setProductActive,
   getActiveProducts,
+  getAllProducts,
+  getProductByBarcode,
   type ProductInput,
 } from "@/lib/data/products";
 
-export async function createProductAction(input: ProductInput) {
-  await requireAdmin();
-  const product = await createProduct(input);
+/** Ação recebe o input direto do cliente: o mínimo de estoque é o único campo novo sem validação no data. */
+function invalidMinStock(input: Partial<ProductInput>) {
+  return input.minStock !== undefined && input.minStock !== null && (!Number.isInteger(input.minStock) || input.minStock < 0);
+}
+
+function revalidateProductPaths() {
+  revalidatePath("/admin");
   revalidatePath("/admin/estoque");
   revalidatePath("/produtos");
   revalidatePath("/");
-  return product;
+}
+
+export async function createProductAction(input: ProductInput) {
+  await requireAdmin();
+  if (invalidMinStock(input)) return { ok: false as const, error: "Estoque mínimo inválido." };
+  const result = await createProduct(input);
+  revalidateProductPaths();
+  return result;
 }
 
 export async function updateProductAction(id: string, input: Partial<ProductInput>) {
   await requireAdmin();
-  const product = await updateProduct(id, input);
-  revalidatePath("/admin/estoque");
-  revalidatePath("/produtos");
-  revalidatePath("/");
-  return product;
+  if (invalidMinStock(input)) return { ok: false as const, error: "Estoque mínimo inválido." };
+  const result = await updateProduct(id, input);
+  revalidateProductPaths();
+  return result;
 }
 
 export async function setProductActiveAction(id: string, isActive: boolean) {
   await requireAdmin();
-  const product = await setProductActive(id, isActive);
-  revalidatePath("/admin/estoque");
-  revalidatePath("/produtos");
-  revalidatePath("/");
-  return product;
+  const result = await setProductActive(id, isActive);
+  revalidateProductPaths();
+  return result;
 }
 
 export async function listActiveProductsAction() {
   await requireAdmin();
   return getActiveProducts();
+}
+
+export async function listAllProductsAction() {
+  await requireAdmin();
+  return getAllProducts();
+}
+
+export async function findProductByBarcodeAction(barcode: string) {
+  await requireAdmin();
+  return getProductByBarcode(barcode);
 }

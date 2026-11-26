@@ -31,14 +31,20 @@ export async function getCustomerAppointmentsAction(customerId: string) {
 
 export async function saveCustomerAction(
   id: string | null,
-  input: { fullName: string; phone: string; email: string }
+  input: { fullName: string; phone: string; email: string; birthDate?: string }
 ): Promise<SaveCustomerResult> {
   await requireAdmin();
   const parsed = customerFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
 
-  const values = { ...parsed.data, email: parsed.data.email || null };
+  const values = {
+    ...parsed.data,
+    email: parsed.data.email || null,
+    // Campo ausente (formulário antigo) não apaga o aniversário já gravado.
+    birthDate: input.birthDate === undefined ? undefined : parsed.data.birthDate || null,
+  };
   const result = id ? await updateCustomer(id, values) : await createCustomer(values);
+  revalidatePath("/admin");
   revalidatePath("/admin/clientes");
   revalidatePath("/admin/agendamentos");
   revalidatePath("/admin/agenda");

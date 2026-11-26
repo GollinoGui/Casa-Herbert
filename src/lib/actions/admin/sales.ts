@@ -2,24 +2,71 @@
 
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
-import { checkout, listSales, type CheckoutInput } from "@/lib/data/sales";
+import {
+  cancelSale,
+  listOpenSales,
+  listSales,
+  receiveSalePayment,
+  registerSale,
+  type RegisterSaleInput,
+  type SaleFilters,
+} from "@/lib/data/sales";
+import { isPaymentMethodEnabled } from "@/lib/data/finance-options";
+import type { PaymentMethod } from "@/types";
 
-function revalidateSalePaths() {
-  revalidatePath("/admin");
-  revalidatePath("/admin/agenda");
-  revalidatePath("/admin/agendamentos");
-  revalidatePath("/admin/estoque");
-  revalidatePath("/admin/financeiro");
+const METHOD_OFF = "Esta forma de pagamento está desligada em Configurações. Escolha outra.";
+
+function revalidateMoneyPaths() {
+  for (const path of [
+    "/admin",
+    "/admin/agenda",
+    "/admin/agendamentos",
+    "/admin/clientes",
+    "/admin/vendas",
+    "/admin/estoque",
+    "/admin/financeiro",
+    "/admin/contas-a-receber",
+    "/admin/relatorios",
+  ]) {
+    revalidatePath(path);
+  }
 }
 
-export async function checkoutAction(input: CheckoutInput) {
+export async function registerSaleAction(input: RegisterSaleInput) {
   await requireAdmin();
-  const result = await checkout(input);
-  revalidateSalePaths();
+  if (input.payment && !(await isPaymentMethodEnabled(input.payment.method))) return { ok: false as const, error: METHOD_OFF };
+  const result = await registerSale(input);
+  if (result.ok) revalidateMoneyPaths();
   return result;
 }
 
-export async function listSalesAction(filters?: { dateFrom?: string; dateTo?: string }) {
+export async function receiveSalePaymentAction(input: {
+  saleId: string;
+  amountCents: number;
+  method: PaymentMethod;
+  date: string;
+  receiptTxid?: string | null;
+}) {
+  await requireAdmin();
+  if (!(await isPaymentMethodEnabled(input.method))) return { ok: false as const, error: METHOD_OFF };
+  const result = await receiveSalePayment(input);
+  if (result.ok) revalidateMoneyPaths();
+  return result;
+}
+
+export async function cancelSaleAction(saleId: string, reason?: string) {
+  await requireAdmin();
+  const result = await cancelSale(saleId, reason);
+  if (result.ok) revalidateMoneyPaths();
+  return result;
+}
+
+export async function listSalesAction(filters?: SaleFilters) {
   await requireAdmin();
   return listSales(filters);
+}
+
+export async function listOpenSalesAction(customerId?: string) {
+  await requireAdmin();
+  return listOpenSales(customerId);
 }

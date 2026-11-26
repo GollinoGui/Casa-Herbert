@@ -23,6 +23,7 @@ import {
   toSpecialHours,
 } from "@/lib/supabase/mappers";
 import { findOrCreateCustomer } from "./customers";
+import { setAppointmentProducts } from "./professionals";
 
 /** Tudo que o engine precisa para calcular qualquer dia dentro de [dateFrom, dateTo], buscado de uma vez. */
 interface BookingContext {
@@ -266,6 +267,10 @@ export interface AdminCreateAppointmentInput {
   newCustomer?: { fullName: string; phone: string; email?: string | null };
   adminNotes?: string | null;
   status?: Extract<AppointmentStatus, "PENDING" | "CONFIRMED">;
+  professionalId?: string | null;
+  discountCents?: number;
+  /** Produtos que o cliente já vai levar — viram itens da venda ao finalizar o atendimento. */
+  products?: { productId: string; quantity: number }[];
 }
 
 /**
@@ -297,7 +302,7 @@ export async function adminCreateAppointment(input: AdminCreateAppointmentInput)
 
   const now = new Date().toISOString();
   const status = input.status ?? "CONFIRMED";
-  return insertAppointment({
+  const result = await insertAppointment({
     customer_id: customerId,
     service_id: service.id,
     appointment_date: input.date,
@@ -306,8 +311,14 @@ export async function adminCreateAppointment(input: AdminCreateAppointmentInput)
     status,
     admin_notes: input.adminNotes || null,
     price_cents: input.priceCentsOverride !== undefined ? input.priceCentsOverride : service.priceCents,
+    discount_cents: input.discountCents ?? 0,
+    professional_id: input.professionalId || null,
     confirmed_at: status === "CONFIRMED" ? now : null,
   });
+  if (result.ok && input.products?.length) {
+    await setAppointmentProducts(result.appointment.id, input.products);
+  }
+  return result;
 }
 
 /**

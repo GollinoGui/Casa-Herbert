@@ -28,6 +28,7 @@ export interface ServiceInput {
   imageId: string | null;
   imagePosition: ImagePosition | null;
   showOnHome: boolean;
+  barcode?: string | null;
 }
 
 const DIACRITICS_REGEX = /[̀-ͯ]/g;
@@ -54,6 +55,7 @@ function toRow(input: Partial<ServiceInput>) {
   if (input.imageId !== undefined) row.image_id = input.imageId;
   if (input.imagePosition !== undefined) row.image_position = input.imagePosition;
   if (input.showOnHome !== undefined) row.show_on_home = input.showOnHome;
+  if (input.barcode !== undefined) row.barcode = input.barcode?.trim() || null;
   return row;
 }
 

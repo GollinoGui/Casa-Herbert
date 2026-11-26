@@ -42,6 +42,7 @@ export function toService(r: Row): Service {
     imageUrl: r.image?.url ?? null,
     imagePosition: r.image_position ?? null,
     showOnHome: r.show_on_home ?? true,
+    barcode: r.barcode ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -67,6 +68,7 @@ export function toCustomer(r: Row): Customer {
     normalizedPhone: r.normalized_phone,
     email: r.email,
     notes: r.notes,
+    birthDate: r.birth_date ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -84,6 +86,9 @@ export function toAppointment(r: Row): Appointment {
     customerNotes: r.customer_notes,
     adminNotes: r.admin_notes,
     priceCents: r.price_cents,
+    discountCents: r.discount_cents ?? 0,
+    professionalId: r.professional_id ?? null,
+    reminderSentAt: r.reminder_sent_at ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     confirmedAt: r.confirmed_at,
@@ -130,6 +135,13 @@ export function toBlockedSlot(r: Row): BlockedSlot {
   };
 }
 
+export const DEFAULT_BIRTHDAY_TEMPLATE =
+  "Oi, {nome}! Hoje é um dia especial e a Casa Herbert não podia deixar passar: feliz aniversário! Que seja um ano leve e cheio de cuidado com você. 🌿";
+export const DEFAULT_REMINDER_TEMPLATE =
+  "Oi, {nome}! Passando para lembrar do seu horário na Casa Herbert amanhã, {data}, às {horario} ({servico}). Se precisar remarcar, é só responder por aqui. 🌿";
+export const DEFAULT_COMEBACK_TEMPLATE =
+  "Oi, {nome}! Faz um tempinho que você não vem à Casa Herbert e sentimos sua falta. Quer marcar um horário para o seu acompanhamento? É só responder por aqui. 🌿";
+
 export function toSettings(r: Row): Settings {
   const templates = r.message_templates ?? {};
   return {
@@ -150,6 +162,9 @@ export function toSettings(r: Row): Settings {
       confirmed: templates.confirmed ?? "",
       rejected: templates.rejected ?? "",
       cancelled: templates.cancelled ?? "",
+      birthday: templates.birthday ?? DEFAULT_BIRTHDAY_TEMPLATE,
+      comeback: templates.comeback ?? DEFAULT_COMEBACK_TEMPLATE,
+      reminder: templates.reminder ?? DEFAULT_REMINDER_TEMPLATE,
     },
   };
 }
@@ -212,6 +227,9 @@ export function toProduct(r: Row): Product {
     imageUrl: r.image?.url ?? null,
     imagePosition: r.image_position ?? null,
     showOnSite: r.show_on_site ?? false,
+    barcode: r.barcode ?? null,
+    costCents: r.cost_cents ?? null,
+    minStock: r.min_stock ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };

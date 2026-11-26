@@ -1,6 +1,7 @@
 import type { AppointmentWithRelations, Customer } from "@/types";
 import { canonicalPhone } from "@/lib/utils/phone";
-import { getSupabase, PG_UNIQUE_VIOLATION, unwrap } from "@/lib/supabase/server";
+import { addDaysToDateStr, diffInCalendarDays, todayDateStr } from "@/lib/utils/date-format";
+import { fetchAll, getSupabase, PG_UNIQUE_VIOLATION, unwrap } from "@/lib/supabase/server";
 import { APPOINTMENT_WITH_RELATIONS, toAppointmentWithRelations, toCustomer } from "@/lib/supabase/mappers";
 
 export async function getCustomers(): Promise<Customer[]> {
@@ -73,6 +74,13 @@ export interface CustomerInput {
   fullName: string;
   phone: string;
   email: string | null;
+  birthDate?: string | null;
+}
+
+function customerRow(input: CustomerInput) {
+  const row: Record<string, unknown> = { full_name: input.fullName, phone: input.phone, email: input.email || null };
+  if (input.birthDate !== undefined) row.birth_date = input.birthDate || null;
+  return row;
 }
 
 export type SaveCustomerResult = { ok: true; customer: Customer } | { ok: false; error: string };
@@ -90,7 +98,7 @@ async function phoneTakenError(phone: string): Promise<SaveCustomerResult> {
 export async function createCustomer(input: CustomerInput): Promise<SaveCustomerResult> {
   const result = await getSupabase()
     .from("customers")
-    .insert({ full_name: input.fullName, phone: input.phone, email: input.email || null })
+    .insert(customerRow(input))
     .select("*")
     .single();
   if (result.error?.code === PG_UNIQUE_VIOLATION) return phoneTakenError(input.phone);
@@ -100,7 +108,7 @@ export async function createCustomer(input: CustomerInput): Promise<SaveCustomer
 export async function updateCustomer(id: string, input: CustomerInput): Promise<SaveCustomerResult> {
   const result = await getSupabase()
     .from("customers")
-    .update({ full_name: input.fullName, phone: input.phone, email: input.email || null })
+    .update(customerRow(input))
     .eq("id", id)
     .select("*")
     .maybeSingle();
@@ -108,6 +116,101 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
   const row = unwrap(result);
   if (!row) return { ok: false, error: "Cliente não encontrado." };
   return { ok: true, customer: toCustomer(row) };
+}
+
+function isLeapYear(year: number) {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+export interface UpcomingBirthday {
+  customer: Customer;
+  /** Dia do aniversário neste ciclo ("YYYY-MM-DD"). */
+  date: string;
+  /** 0 = hoje. */
+  daysAway: number;
+}
+
+/**
+ * Aniversários de hoje até `days - 1` dias à frente. Compara dia e mês (o ano
+ * do cadastro não importa), então atravessa a virada do ano. Quem nasceu em
+ * 29/02 comemora em 28/02 nos anos não bissextos.
+ */
+export async function getUpcomingBirthdays(days = 7): Promise<UpcomingBirthday[]> {
+  const today = todayDateStr();
+  const rows = unwrap(await getSupabase().from("customers").select("*").not("birth_date", "is", null));
+  const window = new Map<string, { date: string; daysAway: number }>();
+  for (let i = 0; i < days; i++) {
+    const date = addDaysToDateStr(today, i);
+    window.set(date.slice(5), { date, daysAway: i });
+    if (date.slice(5) === "02-28" && !isLeapYear(Number(date.slice(0, 4)))) window.set("02-29", { date, daysAway: i });
+  }
+  return rows
+    .map(toCustomer)
+    .flatMap((customer) => {
+      const hit = customer.birthDate ? window.get(customer.birthDate.slice(5)) : undefined;
+      return hit ? [{ customer, ...hit }] : [];
+    })
+    .sort((a, b) => a.daysAway - b.daysAway || a.customer.fullName.localeCompare(b.customer.fullName, "pt-BR"));
+}
+
+export interface LapsedCustomer {
+  customer: Customer;
+  /** Último atendimento concluído. */
+  lastVisit: string;
+  daysSince: number;
+}
+
+/**
+ * Quem já foi atendido no último ano, não tem atendimento concluído há pelo
+ * menos `lapsedDays` dias e não tem nada marcado. Quem nunca foi atendido não
+ * entra: não é "sumido", é só cadastro. Volta os mais recentes primeiro (os
+ * mais fáceis de trazer de volta) e o total.
+ */
+export async function getLapsedCustomers(lapsedDays: number, limit = 8): Promise<{ total: number; list: LapsedCustomer[] }> {
+  const supabase = getSupabase();
+  const today = todayDateStr();
+  const [completed, upcoming] = await Promise.all([
+    fetchAll<{ id: string; customer_id: string; appointment_date: string }>((from, to) =>
+      supabase
+        .from("appointments")
+        .select("id, customer_id, appointment_date")
+        .eq("status", "COMPLETED")
+        .gte("appointment_date", addDaysToDateStr(today, -365))
+        .lte("appointment_date", today)
+        .order("id")
+        .range(from, to)
+    ),
+    fetchAll<{ id: string; customer_id: string }>((from, to) =>
+      supabase
+        .from("appointments")
+        .select("id, customer_id")
+        .in("status", ["PENDING", "CONFIRMED"])
+        .gte("appointment_date", today)
+        .order("id")
+        .range(from, to)
+    ),
+  ]);
+
+  const lastVisit = new Map<string, string>();
+  for (const a of completed) {
+    const prev = lastVisit.get(a.customer_id);
+    if (!prev || a.appointment_date > prev) lastVisit.set(a.customer_id, a.appointment_date);
+  }
+  const booked = new Set(upcoming.map((a) => a.customer_id));
+  const cutoff = addDaysToDateStr(today, -lapsedDays);
+  const lapsed = [...lastVisit]
+    .filter(([id, date]) => date <= cutoff && !booked.has(id))
+    .sort((a, b) => b[1].localeCompare(a[1]));
+  if (!lapsed.length) return { total: 0, list: [] };
+
+  const top = lapsed.slice(0, limit);
+  const rows = unwrap(await supabase.from("customers").select("*").in("id", top.map(([id]) => id)));
+  const byId = new Map(rows.map((r) => [r.id as string, toCustomer(r)]));
+  const list = top.flatMap(([id, date]) => {
+    const customer = byId.get(id);
+    return customer ? [{ customer, lastVisit: date, daysSince: diffInCalendarDays(today, date) }] : [];
+  });
+  return { total: lapsed.length, list };
 }
 
 export async function updateCustomerNotes(id: string, notes: string): Promise<Customer | null> {

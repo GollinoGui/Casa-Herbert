@@ -4,27 +4,36 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      // Cores em variáveis (RGB) para o painel trocar de paleta e de tema sem mexer nas
+      // classes: o :root guarda os valores do site e o body.painel a paleta verde
+      // (claro e escuro), ver globals.css. `forest` segue laranja nos dois — é o acento
+      // de fundo, sempre com texto `ink` por cima.
       colors: {
+        white: "rgb(var(--c-white) / <alpha-value>)",
+        snow: "#FFFFFF",
         brand: {
-          // Laranja é a cor dominante da marca (botões, títulos, header/footer,
-          // navegação ativa, ícones) — ver documentação.md > Identidade visual.
-          forest: "#EF8523",
-          forestDark: "#BA681B",
-          // Verde vira suporte secundário discreto (eyebrows, detalhes, placeholders).
-          moss: "#53735A",
-          sage: "#A3B89A",
-          cream: "#F7F3EA",
-          beige: "#E7E3D8",
-          gold: "#CBB89A",
-          graphite: "#2E2E2E",
+          forest: "rgb(var(--c-forest) / <alpha-value>)",
+          forestDark: "rgb(var(--c-forest-dark) / <alpha-value>)",
+          moss: "rgb(var(--c-moss) / <alpha-value>)",
+          sage: "rgb(var(--c-sage) / <alpha-value>)",
+          cream: "rgb(var(--c-cream) / <alpha-value>)",
+          beige: "rgb(var(--c-beige) / <alpha-value>)",
+          gold: "rgb(var(--c-gold) / <alpha-value>)",
+          graphite: "rgb(var(--c-graphite) / <alpha-value>)",
+          // Texto escuro fixo: sobre o laranja/dourado, também no tema escuro.
+          ink: "rgb(var(--c-ink) / <alpha-value>)",
+          // Verde profundo da lateral do painel e o texto claro que vai por cima.
+          pine: "rgb(var(--c-pine) / <alpha-value>)",
+          pineSoft: "rgb(var(--c-pine-soft) / <alpha-value>)",
+          onPine: "rgb(var(--c-on-pine) / <alpha-value>)",
         },
       },
       // Como cor de texto, o laranja da marca fica em 2.4:1 sobre o creme — reprova o
-      // WCAG até para título grande. `text-brand-forest` usa um tom tijolo (5:1 no creme,
-      // 5.5:1 no branco); fundos, bordas e anéis seguem com o laranja vivo.
+      // WCAG até para título grande. No site, `text-brand-forest` é um tom tijolo
+      // (5:1 no creme); no painel, o verde dos títulos.
       textColor: {
         brand: {
-          forest: "#A4520E",
+          forest: "rgb(var(--c-forest-text) / <alpha-value>)",
         },
       },
       fontFamily: {
@@ -36,8 +45,9 @@ const config: Config = {
         xl2: "1.25rem",
       },
       boxShadow: {
-        soft: "0 4px 24px -8px rgba(46, 75, 62, 0.12)",
-        softer: "0 2px 12px -4px rgba(46, 75, 62, 0.08)",
+        soft: "0 4px 24px -8px rgb(var(--c-shadow) / 0.14)",
+        softer: "0 2px 12px -4px rgb(var(--c-shadow) / 0.09)",
+        lift: "0 18px 40px -18px rgb(var(--c-shadow) / 0.28)",
       },
       keyframes: {
         float: {

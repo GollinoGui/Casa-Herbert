@@ -1,20 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Minus, Plus, Search, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea, FieldLabel, FieldError } from "@/components/ui/Field";
+import { MoneyInput } from "@/components/ui/MoneyInput";
+import { ProductSearch } from "@/components/admin/SaleModal";
 import { adminAppointmentFormSchema } from "@/lib/booking/validators";
-import { adminCreateAppointmentAction } from "@/lib/actions/admin/appointments";
+import { adminCreateAppointmentAction, listProfessionalsAction } from "@/lib/actions/admin/appointments";
+import { listActiveProductsAction } from "@/lib/actions/admin/products";
+import { formatBRL } from "@/lib/utils/money";
 import { listActiveServicesAction } from "@/lib/actions/admin/services";
 import { listCustomersAction } from "@/lib/actions/admin/customers";
 import { canonicalPhone, formatPhoneDisplay } from "@/lib/utils/phone";
 import { matchesCustomerSearch } from "@/lib/utils/customer-search";
-import type { Customer, Service } from "@/types";
+import type { Customer, Product, Professional, Service } from "@/types";
 
 type FormValues = z.infer<typeof adminAppointmentFormSchema>;
 
@@ -54,6 +58,12 @@ export function NewAppointmentModal({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerQuery, setCustomerQuery] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [professionalId, setProfessionalId] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productLines, setProductLines] = useState<{ product: Product; quantity: number }[]>([]);
+  const [addingProduct, setAddingProduct] = useState(false);
+  const [discountCents, setDiscountCents] = useState(0);
 
   const {
     register,
@@ -70,15 +80,38 @@ export function NewAppointmentModal({
   useEffect(() => {
     if (!open) return;
     setSubmitError(null);
-    Promise.all([listActiveServicesAction(), listCustomersAction()]).then(([svc, cust]) => {
-      setServices(svc);
-      setCustomers(cust);
-    });
+    Promise.all([listActiveServicesAction(), listCustomersAction(), listProfessionalsAction(), listActiveProductsAction()]).then(
+      ([svc, cust, pros, prods]) => {
+        setServices(svc);
+        setCustomers(cust);
+        setProfessionals(pros);
+        // Hoje só o Herbert atende: já vem selecionado.
+        setProfessionalId(pros[0]?.id ?? "");
+        setProducts(prods);
+      }
+    );
+    setProductLines([]);
+    setAddingProduct(false);
+    setDiscountCents(0);
     setCustomerQuery("");
     reset(EMPTY_VALUES(initialDate ?? "", initialStartTime ?? "", initialCustomerId));
   }, [open, initialDate, initialStartTime, initialCustomerId, reset]);
 
   const customerMode = watch("customerMode");
+  const priceCents = watch("priceCents") ?? null;
+  const productsTotal = productLines.reduce((sum, l) => sum + l.product.priceCents * l.quantity, 0);
+  const estimatedTotal = Math.max(0, (priceCents ?? 0) + productsTotal - discountCents);
+
+  function addProductLine(product: Product) {
+    setAddingProduct(false);
+    setProductLines((prev) => {
+      const existing = prev.find((l) => l.product.id === product.id);
+      if (existing) {
+        return prev.map((l) => (l === existing ? { ...l, quantity: Math.min(l.quantity + 1, product.stockQuantity) } : l));
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  }
   const customerId = watch("customerId");
   const serviceId = watch("serviceId");
   const newCustomerPhone = watch("newCustomerPhone") ?? "";
@@ -127,6 +160,9 @@ export function NewAppointmentModal({
           : undefined,
       adminNotes: values.adminNotes || null,
       status: values.status,
+      professionalId: professionalId || null,
+      discountCents,
+      products: productLines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
     });
 
     if (!result.ok) {
@@ -268,16 +304,14 @@ export function NewAppointmentModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <FieldLabel htmlFor="priceCents">Valor combinado (centavos)</FieldLabel>
-            <Input
-              id="priceCents"
-              type="number"
-              placeholder="Vazio = sob consulta"
-              {...register("priceCents", {
-                setValueAs: (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
-              })}
-            />
-            <FieldError>{errors.priceCents?.message}</FieldError>
+            <FieldLabel htmlFor="professionalId">Profissional</FieldLabel>
+            <Select id="professionalId" value={professionalId} onChange={(e) => setProfessionalId(e.target.value)}>
+              {professionals.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
           </div>
           <div>
             <FieldLabel htmlFor="status">Status inicial</FieldLabel>
@@ -287,6 +321,83 @@ export function NewAppointmentModal({
             </Select>
           </div>
         </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel htmlFor="priceCents">Valor do serviço</FieldLabel>
+            <MoneyInput
+              id="priceCents"
+              value={priceCents}
+              allowEmpty
+              placeholder="Sob consulta"
+              onChange={(v) => setValue("priceCents", v, { shouldValidate: true })}
+            />
+            <FieldError>{errors.priceCents?.message}</FieldError>
+          </div>
+          <div>
+            <FieldLabel htmlFor="discountCents">Desconto</FieldLabel>
+            <MoneyInput id="discountCents" value={discountCents} onChange={(v) => setDiscountCents(v ?? 0)} />
+          </div>
+        </div>
+
+        <div>
+          <FieldLabel>Produtos que o cliente vai levar (opcional)</FieldLabel>
+          {productLines.length > 0 ? (
+            <ul className="mb-2 space-y-1.5">
+              {productLines.map((line) => (
+                <li key={line.product.id} className="flex items-center gap-2 rounded-xl border border-brand-beige px-3 py-2 text-sm">
+                  <span className="min-w-0 flex-1 truncate">{line.product.name}</span>
+                  <div className="flex items-center rounded-full border border-brand-beige">
+                    <button
+                      type="button"
+                      aria-label="Diminuir"
+                      className="p-1.5"
+                      onClick={() =>
+                        setProductLines((prev) => prev.map((l) => (l === line ? { ...l, quantity: Math.max(1, l.quantity - 1) } : l)))
+                      }
+                    >
+                      <Minus size={12} />
+                    </button>
+                    <span className="w-5 text-center tabular-nums">{line.quantity}</span>
+                    <button type="button" aria-label="Aumentar" className="p-1.5" onClick={() => addProductLine(line.product)}>
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                  <span className="w-20 text-right tabular-nums">{formatBRL(line.product.priceCents * line.quantity)}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remover ${line.product.name}`}
+                    className="p-1 text-brand-graphite/50 hover:text-red-600"
+                    onClick={() => setProductLines((prev) => prev.filter((l) => l !== line))}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {addingProduct ? (
+            <ProductSearch
+              products={products}
+              stockLeft={(id) =>
+                (products.find((p) => p.id === id)?.stockQuantity ?? 0) - (productLines.find((l) => l.product.id === id)?.quantity ?? 0)
+              }
+              onPick={addProductLine}
+              onCancel={() => setAddingProduct(false)}
+            />
+          ) : (
+            <Button type="button" variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setAddingProduct(true)}>
+              <Plus size={14} /> Adicionar produto
+            </Button>
+          )}
+          <p className="mt-1.5 text-xs text-brand-graphite/50">O estoque só baixa quando você finalizar o atendimento.</p>
+        </div>
+
+        {priceCents != null || productLines.length > 0 ? (
+          <p className="rounded-xl bg-brand-cream/60 px-4 py-3 text-sm text-brand-graphite">
+            Total previsto: <strong className="tabular-nums">{formatBRL(estimatedTotal)}</strong>
+          </p>
+        ) : null}
 
         <div>
           <FieldLabel htmlFor="adminNotes">Observações internas (opcional)</FieldLabel>

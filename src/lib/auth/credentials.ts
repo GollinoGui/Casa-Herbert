@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase/server";
+import { DEMO_LOGIN, isDemoMode } from "@/lib/demo/mode";
 
 /**
  * Confere e-mail/senha no Supabase Auth e exige uma linha em admin_profiles —
@@ -10,6 +11,9 @@ import { getSupabase } from "@/lib/supabase/server";
  * do usuário nas consultas seguintes.
  */
 export async function verifyAdminCredentials(email: string, password: string): Promise<boolean> {
+  // Sem Supabase Auth no modo demonstração: um login fixo, e a sessão segue o fluxo normal (cookie HMAC).
+  if (isDemoMode()) return email.trim().toLowerCase() === DEMO_LOGIN.email && password === DEMO_LOGIN.password;
+
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key || !email || !password) return false;
