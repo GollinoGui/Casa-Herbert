@@ -26,6 +26,8 @@ import {
   Receipt,
   BarChart3,
   Leaf,
+  Layers,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -33,20 +35,21 @@ import { adminLogoutAction } from "@/lib/actions/admin/auth";
 import { BotanicalBranch } from "@/components/admin/BotanicalBranch";
 import { ThemeToggle } from "@/components/admin/ThemeToggle";
 import { HideMoneyToggle } from "@/components/admin/HideMoneyToggle";
+import { NotificationsBell } from "@/components/admin/NotificationsBell";
 
-interface NavItem {
+export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
 }
 
-interface NavGroup {
+export interface NavGroup {
   title: string | null;
   items: NavItem[];
   siteOnly?: boolean;
 }
 
-const NAV_GROUPS: NavGroup[] = [
+export const NAV_GROUPS: NavGroup[] = [
   { title: null, items: [{ href: "/admin", label: "Início", icon: LayoutDashboard }] },
   {
     title: "Atendimento",
@@ -54,12 +57,14 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/agenda", label: "Agenda", icon: CalendarDays },
       { href: "/admin/agendamentos", label: "Agendamentos", icon: ClipboardList },
       { href: "/admin/clientes", label: "Clientes", icon: Users },
+      { href: "/admin/lista-de-espera", label: "Lista de espera", icon: ListChecks },
     ],
   },
   {
     title: "Vendas e estoque",
     items: [
       { href: "/admin/vendas", label: "Vendas", icon: ShoppingBag },
+      { href: "/admin/pacotes", label: "Pacotes", icon: Layers },
       { href: "/admin/compras", label: "Compras", icon: Truck },
       { href: "/admin/estoque", label: "Estoque", icon: Package },
       { href: "/admin/servicos", label: "Serviços", icon: Sparkles },
@@ -166,7 +171,6 @@ export function Sidebar({ siteEnabled }: { siteEnabled: boolean }) {
 
         <div className="relative space-y-0.5 border-t border-brand-onPine/10 px-3 py-4">
           <HideMoneyToggle withLabel className="w-full px-3 py-2.5 text-brand-onPine/80 hover:bg-brand-onPine/[0.07] hover:text-brand-onPine" />
-          <ThemeToggle withLabel className="w-full px-3 py-2.5 text-brand-onPine/80 hover:bg-brand-onPine/[0.07] hover:text-brand-onPine" />
           <form action={adminLogoutAction}>
             <button
               type="submit"
@@ -225,6 +229,7 @@ function MobileNav({ pathname, groups }: { pathname: string | null; groups: NavG
 
         <div className="flex min-w-0 items-center gap-1.5">
           <HideMoneyToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
+          <NotificationsBell className="h-10 w-10 shrink-0 rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
           <ThemeToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
           <button
             type="button"

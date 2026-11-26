@@ -3,7 +3,7 @@ import { db, insertRow, updateRow, type PgError } from "@/lib/demo/client";
 import type { Row } from "@/lib/demo/seed";
 
 /**
- * As RPCs de supabase/migrations (0006, 0012, 0014) refeitas em TS para o modo
+ * As RPCs de supabase/migrations (0006, 0012, 0014, 0017) refeitas em TS para o modo
  * demonstração. Mesmas validações e mensagens; sem concorrência (um processo só).
  * Se uma RPC real mudar, esta cópia não acompanha sozinha — é só para demo.
  */
@@ -270,6 +270,15 @@ function cancelSale({ p_sale_id, p_reason }: Json) {
   const sale = find("sales", p_sale_id);
   if (!sale) return fail("Venda não encontrada.");
   if (sale.status === "cancelled") return fail("Esta venda já foi cancelada.");
+  const pkg = db().customer_packages.find((cp) => cp.sale_id === sale.id);
+  if (pkg) {
+    if (sessionsUsed(pkg.id) > 0) {
+      return fail(
+        "Este pacote já tem sessões usadas e não pode ser cancelado. Para devolver parte do valor, lance um ajuste de saída em Saldo e extrato."
+      );
+    }
+    mustUpdate("customer_packages", pkg, { status: "cancelled" });
+  }
   for (const item of db().sale_items.filter((i) => i.sale_id === sale.id && i.item_type === "product")) {
     const product = find("products", item.ref_id);
     if (product) mustUpdate("products", product, { stock_quantity: product.stock_quantity + item.quantity });
@@ -362,6 +371,125 @@ function registerPurchase({ p }: Json) {
   return { ok: true, purchaseId: purchase.id };
 }
 
+const sessionsUsed = (packageId: unknown) =>
+  db().appointments.filter((a) => a.customer_package_id === packageId && a.status === "COMPLETED").length;
+
+/** Espelho de sell_package (0017). */
+function sellPackage({ p }: Json) {
+  const customerId: string | null = p?.customerId || null;
+  if (!customerId || !find("customers", customerId)) return fail("Escolha a cliente do pacote.");
+  const pkg = find("service_packages", p?.packageId);
+  if (!pkg || !pkg.is_active) return fail("Pacote não encontrado.");
+  const discount = Number(p?.discountCents ?? 0);
+  const date: string = p?.saleDate || todayDateStr();
+  const result = registerSale({
+    p: {
+      customerId,
+      saleDate: date,
+      dueDate: p?.dueDate || undefined,
+      discountCents: discount,
+      notes: p?.notes,
+      items: [{ type: "custom", description: `Pacote: ${pkg.name} (${pkg.sessions} sessões)`, unitPriceCents: pkg.price_cents }],
+      payment: p?.payment ?? undefined,
+    },
+  }) as Json;
+  if (!result.ok) return result;
+  const cp = must(
+    insertRow("customer_packages", {
+      customer_id: customerId,
+      service_id: pkg.service_id,
+      package_id: pkg.id,
+      name: pkg.name,
+      sessions_total: pkg.sessions,
+      session_value_cents: Math.round((pkg.price_cents - discount) / pkg.sessions),
+      sale_id: result.saleId,
+      expires_on: pkg.valid_days ? addDaysToDateStr(date, pkg.valid_days) : null,
+    })
+  );
+  return { ok: true, saleId: result.saleId, customerPackageId: cp.id };
+}
+
+/** Espelho de use_package_session (0017). */
+function consumePackageSession({ p_appointment_id, p_customer_package_id }: Json) {
+  const appt = find("appointments", p_appointment_id);
+  if (!appt) return fail("Agendamento não encontrado.");
+  if (appt.status !== "CONFIRMED") return fail("Só dá para usar o pacote em um atendimento confirmado.");
+  const pkg = find("customer_packages", p_customer_package_id);
+  if (!pkg || pkg.customer_id !== appt.customer_id) return fail("Pacote não encontrado para esta cliente.");
+  if (pkg.status !== "active") return fail("Este pacote não está ativo.");
+  if (pkg.service_id !== appt.service_id) return fail("O pacote é de outro serviço.");
+  if (pkg.expires_on && appt.appointment_date > pkg.expires_on) return fail("O pacote venceu antes da data deste atendimento.");
+  const used = sessionsUsed(pkg.id);
+  if (used >= pkg.sessions_total) return fail("Todas as sessões deste pacote já foram usadas.");
+  mustUpdate("appointments", appt, { customer_package_id: pkg.id, status: "COMPLETED" });
+  if (used + 1 >= pkg.sessions_total) mustUpdate("customer_packages", pkg, { status: "finished" });
+  return { ok: true, remaining: pkg.sessions_total - used - 1 };
+}
+
+const time = (iso: unknown) => Date.parse(String(iso));
+
+/** Espelho de cash_drawer_preview (0017). */
+function cashDrawerPreview({ p_opening_cents }: Json) {
+  const prev = [...db().cash_closings].sort((a, b) => time(b.created_at) - time(a.created_at))[0];
+  const today = todayDateStr();
+  const opening = prev ? prev.counted_cents - prev.withdrawn_cents : Math.max(Number(p_opening_cents ?? 0), 0);
+  const moves = db().cash_entries.filter(
+    (e) => e.payment_method === "dinheiro" && (prev ? time(e.created_at) > time(prev.created_at) : e.entry_date === today)
+  );
+  const cashIn = moves.filter((e) => e.direction === "in").reduce((sum, e) => sum + e.amount_cents, 0);
+  const cashOut = moves.filter((e) => e.direction === "out").reduce((sum, e) => sum + e.amount_cents, 0);
+  return {
+    firstClosing: !prev,
+    previousAt: prev?.created_at ?? null,
+    openingCents: opening,
+    cashInCents: cashIn,
+    cashOutCents: cashOut,
+    expectedCents: opening + cashIn - cashOut,
+  };
+}
+
+/** Espelho de close_cash_drawer (0017). */
+function closeCashDrawer({ p }: Json) {
+  const counted = p?.countedCents;
+  const withdrawn = Number(p?.withdrawnCents ?? 0);
+  if (counted == null || counted < 0) return fail("Informe quanto tem na gaveta.");
+  if (withdrawn < 0 || withdrawn > counted) return fail("A retirada não pode passar do que foi contado.");
+  const preview = cashDrawerPreview({ p_opening_cents: p?.openingCents ?? 0 });
+  const diff = counted - preview.expectedCents;
+  // O fechamento e o ajuste nascem no mesmo instante, como no Postgres (now() da transação).
+  const stamp = now();
+  let entryId: string | null = null;
+  if (p?.postDifference && diff !== 0) {
+    entryId = must(
+      insertRow("cash_entries", {
+        entry_date: todayDateStr(),
+        direction: diff > 0 ? "in" : "out",
+        amount_cents: Math.abs(diff),
+        category: "ajuste",
+        description: diff > 0 ? "Sobra no fechamento do caixa" : "Falta no fechamento do caixa",
+        payment_method: "dinheiro",
+        created_at: stamp,
+      })
+    ).id;
+  }
+  const closing = must(
+    insertRow("cash_closings", {
+      closing_date: todayDateStr(),
+      opening_cents: preview.openingCents,
+      cash_in_cents: preview.cashInCents,
+      cash_out_cents: preview.cashOutCents,
+      expected_cents: preview.expectedCents,
+      counted_cents: counted,
+      withdrawn_cents: withdrawn,
+      difference_cents: diff,
+      adjustment_entry_id: entryId,
+      notes: String(p?.notes ?? "").trim() || null,
+      created_at: stamp,
+    })
+  );
+  return { ok: true, closingId: closing.id, differenceCents: diff };
+}
+
 const RPCS: Record<string, (args: Json) => unknown> = {
   cash_balance: cashBalance,
   generate_recurring_payables: generateRecurringPayables,
@@ -374,6 +502,10 @@ const RPCS: Record<string, (args: Json) => unknown> = {
   undo_payable_payment: undoPayablePayment,
   register_purchase: registerPurchase,
   replace_service_products: replaceServiceProducts,
+  sell_package: sellPackage,
+  use_package_session: consumePackageSession,
+  cash_drawer_preview: cashDrawerPreview,
+  close_cash_drawer: closeCashDrawer,
 };
 
 export function runRpc(name: string, args: Json): unknown {

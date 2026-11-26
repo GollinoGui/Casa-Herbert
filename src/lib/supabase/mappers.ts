@@ -43,6 +43,7 @@ export function toService(r: Row): Service {
     imagePosition: r.image_position ?? null,
     showOnHome: r.show_on_home ?? true,
     barcode: r.barcode ?? null,
+    returnDays: r.return_days ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -69,6 +70,7 @@ export function toCustomer(r: Row): Customer {
     email: r.email,
     notes: r.notes,
     birthDate: r.birth_date ?? null,
+    photoConsentAt: r.photo_consent_at ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -89,6 +91,7 @@ export function toAppointment(r: Row): Appointment {
     discountCents: r.discount_cents ?? 0,
     professionalId: r.professional_id ?? null,
     reminderSentAt: r.reminder_sent_at ?? null,
+    customerPackageId: r.customer_package_id ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     confirmedAt: r.confirmed_at,
@@ -139,6 +142,8 @@ export const DEFAULT_BIRTHDAY_TEMPLATE =
   "Oi, {nome}! Hoje é um dia especial e a Casa Herbert não podia deixar passar: feliz aniversário! Que seja um ano leve e cheio de cuidado com você. 🌿";
 export const DEFAULT_REMINDER_TEMPLATE =
   "Oi, {nome}! Passando para lembrar do seu horário na Casa Herbert amanhã, {data}, às {horario} ({servico}). Se precisar remarcar, é só responder por aqui. 🌿";
+export const DEFAULT_RETURN_DUE_TEMPLATE =
+  "Oi, {nome}! Está chegando a hora do seu retorno de {servico} na Casa Herbert. Quer que a gente reserve um horário para continuar o seu acompanhamento? É só responder por aqui. 🌿";
 export const DEFAULT_COMEBACK_TEMPLATE =
   "Oi, {nome}! Faz um tempinho que você não vem à Casa Herbert e sentimos sua falta. Quer marcar um horário para o seu acompanhamento? É só responder por aqui. 🌿";
 
@@ -165,6 +170,7 @@ export function toSettings(r: Row): Settings {
       birthday: templates.birthday ?? DEFAULT_BIRTHDAY_TEMPLATE,
       comeback: templates.comeback ?? DEFAULT_COMEBACK_TEMPLATE,
       reminder: templates.reminder ?? DEFAULT_REMINDER_TEMPLATE,
+      returnDue: templates.returnDue ?? DEFAULT_RETURN_DUE_TEMPLATE,
     },
   };
 }

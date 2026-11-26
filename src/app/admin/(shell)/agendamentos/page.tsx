@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { AppointmentsTable } from "@/components/admin/AppointmentsTable";
 import { PageHeader } from "@/components/admin/PageHeader";
+import type { AppointmentStatus } from "@/types";
+
+const STATUSES: AppointmentStatus[] = ["PENDING", "CONFIRMED", "REJECTED", "CANCELLED", "COMPLETED"];
 
 export const metadata: Metadata = { title: "Agendamentos" };
 
-export default function AgendamentosPage() {
+export default function AgendamentosPage({ searchParams }: { searchParams: { status?: string } }) {
+  const initialStatus = STATUSES.find((s) => s === searchParams.status);
   return (
     <div className="space-y-6">
       <PageHeader
@@ -20,7 +24,7 @@ export default function AgendamentosPage() {
           </>,
         ]}
       />
-      <AppointmentsTable />
+      <AppointmentsTable key={initialStatus ?? "todos"} initialStatus={initialStatus} />
     </div>
   );
 }

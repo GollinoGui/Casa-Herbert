@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { AlertCircle, MessageCircle, Phone, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Layers, MessageCircle, Phone, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
@@ -32,7 +32,8 @@ import { getCustomerAppointmentsAction } from "@/lib/actions/admin/customers";
 import { listOpenSalesAction, listSalesAction } from "@/lib/actions/admin/sales";
 import { listActiveProductsAction } from "@/lib/actions/admin/products";
 import { getSettingsAction } from "@/lib/actions/admin/settings";
-import type { AppointmentProduct, AppointmentWithRelations, Product, Sale, Settings } from "@/types";
+import { listCustomerPackagesAction, consumePackageSessionAction } from "@/lib/actions/admin/packages";
+import type { AppointmentProduct, AppointmentWithRelations, CustomerPackage, Product, Sale, Settings } from "@/types";
 
 interface AppointmentDetailModalProps {
   appointmentId: string | null;
@@ -63,9 +64,12 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
   const [addingProduct, setAddingProduct] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [openSales, setOpenSales] = useState<Sale[]>([]);
+  const [packages, setPackages] = useState<CustomerPackage[]>([]);
+  const [packageError, setPackageError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function loadRelated(appt: AppointmentWithRelations) {
+    listCustomerPackagesAction({ customerId: appt.customerId, serviceId: appt.serviceId }).then(setPackages);
     getAppointmentProductsAction(appt.id).then(setApptProducts);
     listSalesAction({ appointmentId: appt.id }).then(setSales);
     listOpenSalesAction(appt.customerId).then(setOpenSales);
@@ -93,6 +97,8 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
     setApptProducts([]);
     setSales([]);
     setOpenSales([]);
+    setPackages([]);
+    setPackageError(null);
     Promise.all([getAppointmentAction(appointmentId), getSettingsAction()]).then(([appt, sett]) => {
       if (cancelled) return;
       applyAppointment(appt);
@@ -153,6 +159,19 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
     });
   }
 
+  function handleUsePackage(pkg: CustomerPackage) {
+    if (!appointment) return;
+    setPackageError(null);
+    startTransition(async () => {
+      const result = await consumePackageSessionAction(appointment.id, pkg.id);
+      if (!result.ok) {
+        setPackageError(result.error);
+        return;
+      }
+      refresh();
+    });
+  }
+
   function handleSaveNotes() {
     if (!appointment) return;
     startTransition(async () => {
@@ -195,6 +214,10 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
   }
 
   const editable = appointment?.status === "PENDING" || appointment?.status === "CONFIRMED";
+  const usablePackages = packages.filter(
+    (p) => p.status === "active" && p.sessionsUsed < p.sessionsTotal && (!p.expiresOn || !appointment || appointment.date <= p.expiresOn)
+  );
+  const usedPackage = appointment?.customerPackageId ? packages.find((p) => p.id === appointment.customerPackageId) : null;
   const productsTotal = apptProducts.reduce((s, p) => s + p.priceCents * p.quantity, 0);
   const totalOpen = openSales.reduce((s, sale) => s + openAmount(sale), 0);
 
@@ -447,6 +470,26 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
 
             {appointment.status === "CONFIRMED" ? (
               <div className="space-y-3">
+                {usablePackages.length ? (
+                  <div className="space-y-2 rounded-xl border border-brand-sage/50 bg-brand-sage/10 p-3">
+                    {usablePackages.map((pkg) => (
+                      <div key={pkg.id} className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="flex min-w-0 items-center gap-2 text-sm text-brand-graphite">
+                          <Layers size={16} className="shrink-0 text-brand-moss" aria-hidden="true" />
+                          <span className="min-w-0">
+                            <strong className="font-medium">{pkg.name}</strong>
+                            <span className="text-brand-graphite/70"> · faltam {pkg.sessionsTotal - pkg.sessionsUsed} de {pkg.sessionsTotal}</span>
+                          </span>
+                        </p>
+                        <Button onClick={() => handleUsePackage(pkg)} disabled={isPending} className="!px-4 !py-2 text-xs">
+                          Usar sessão do pacote
+                        </Button>
+                      </div>
+                    ))}
+                    <p className="text-xs text-brand-graphite/60">Conclui o atendimento sem cobrar: o pacote já foi pago na venda.</p>
+                    {packageError ? <p className="text-sm text-red-600">{packageError}</p> : null}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap gap-3">
                   <Button onClick={() => setCheckoutOpen(true)} disabled={isPending || valuesDirty}>
                     Finalizar e receber
@@ -495,7 +538,11 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
 
             {appointment.status === "COMPLETED" ? (
               <div className="space-y-2">
-                <p className="text-sm text-brand-graphite/60">Atendimento concluído.</p>
+                <p className="text-sm text-brand-graphite/60">
+                  {appointment.customerPackageId
+                    ? `Atendimento concluído com uma sessão do pacote${usedPackage ? ` “${usedPackage.name}” (${usedPackage.sessionsUsed} de ${usedPackage.sessionsTotal} usadas)` : ""}.`
+                    : "Atendimento concluído."}
+                </p>
                 <Button variant="secondary" onClick={() => setPendingOpen(true)}>
                   <Plus size={16} /> Lançar algo que ficou sem pagar
                 </Button>

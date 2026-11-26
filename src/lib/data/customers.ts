@@ -219,3 +219,85 @@ export async function updateCustomerNotes(id: string, notes: string): Promise<Cu
   );
   return row ? toCustomer(row) : null;
 }
+
+export interface ReturnDueCustomer {
+  customer: Customer;
+  serviceName: string;
+  lastVisit: string;
+  /** Dia sugerido para o retorno (último atendimento + prazo do serviço). */
+  dueDate: string;
+  /** Negativo = já passou do dia. */
+  daysUntil: number;
+}
+
+/** Quem passou do dia do retorno há mais que isso já está em "não voltam há um tempo". */
+const RETURN_OVERDUE_WINDOW_DAYS = 60;
+
+/**
+ * Clientes na hora do retorno: para cada serviço com prazo (services.return_days),
+ * o último atendimento concluído daquele serviço + o prazo cai entre 60 dias atrás
+ * e `aheadDays` à frente, e a cliente não tem nada marcado. Uma linha por cliente
+ * (o retorno mais próximo), mais atrasados primeiro.
+ */
+export async function getReturnDueCustomers(aheadDays = 7, limit = 8): Promise<{ total: number; list: ReturnDueCustomer[] }> {
+  const supabase = getSupabase();
+  const today = todayDateStr();
+  const services = unwrap(await supabase.from("services").select("id, name, return_days").not("return_days", "is", null));
+  if (!services.length) return { total: 0, list: [] };
+  const serviceById = new Map(services.map((s) => [s.id as string, s as { id: string; name: string; return_days: number }]));
+  const longest = Math.max(...services.map((s) => Number(s.return_days)));
+
+  const [completed, upcoming] = await Promise.all([
+    fetchAll<{ id: string; customer_id: string; service_id: string; appointment_date: string }>((from, to) =>
+      supabase
+        .from("appointments")
+        .select("id, customer_id, service_id, appointment_date")
+        .eq("status", "COMPLETED")
+        .in("service_id", [...serviceById.keys()])
+        .gte("appointment_date", addDaysToDateStr(today, -(longest + RETURN_OVERDUE_WINDOW_DAYS)))
+        .lte("appointment_date", today)
+        .order("id")
+        .range(from, to)
+    ),
+    fetchAll<{ id: string; customer_id: string }>((from, to) =>
+      supabase
+        .from("appointments")
+        .select("id, customer_id")
+        .in("status", ["PENDING", "CONFIRMED"])
+        .gte("appointment_date", today)
+        .order("id")
+        .range(from, to)
+    ),
+  ]);
+
+  const last = new Map<string, { customerId: string; serviceId: string; date: string }>();
+  for (const a of completed) {
+    const key = `${a.customer_id}|${a.service_id}`;
+    const prev = last.get(key);
+    if (!prev || a.appointment_date > prev.date) last.set(key, { customerId: a.customer_id, serviceId: a.service_id, date: a.appointment_date });
+  }
+
+  const booked = new Set(upcoming.map((a) => a.customer_id));
+  const earliest = addDaysToDateStr(today, -RETURN_OVERDUE_WINDOW_DAYS);
+  const latest = addDaysToDateStr(today, aheadDays);
+  const best = new Map<string, { serviceName: string; lastVisit: string; dueDate: string }>();
+  for (const { customerId, serviceId, date } of last.values()) {
+    if (booked.has(customerId)) continue;
+    const service = serviceById.get(serviceId)!;
+    const dueDate = addDaysToDateStr(date, Number(service.return_days));
+    if (dueDate < earliest || dueDate > latest) continue;
+    const prev = best.get(customerId);
+    if (!prev || dueDate < prev.dueDate) best.set(customerId, { serviceName: service.name, lastVisit: date, dueDate });
+  }
+  const sorted = [...best].sort((a, b) => a[1].dueDate.localeCompare(b[1].dueDate));
+  if (!sorted.length) return { total: 0, list: [] };
+
+  const top = sorted.slice(0, limit);
+  const rows = unwrap(await supabase.from("customers").select("*").in("id", top.map(([id]) => id)));
+  const byId = new Map(rows.map((r) => [r.id as string, toCustomer(r)]));
+  const list = top.flatMap(([id, info]) => {
+    const customer = byId.get(id);
+    return customer ? [{ customer, ...info, daysUntil: diffInCalendarDays(info.dueDate, today) }] : [];
+  });
+  return { total: sorted.length, list };
+}

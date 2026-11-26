@@ -18,13 +18,24 @@ import { matchesText, matchesValue, parseListFilters } from "@/lib/utils/list-fi
 import { formatBRL } from "@/lib/utils/money";
 import { cn } from "@/lib/utils/cn";
 import type { ImagePosition, Product } from "@/types";
+import type { StockForecast } from "@/lib/data/products";
 
 /** Sem mínimo definido no produto, "estoque baixo" é até 3. Com mínimo, ele manda (e entra no aviso do Início). */
 const LOW_STOCK_THRESHOLD = 3;
 const lowLimit = (p: Product) => p.minStock ?? LOW_STOCK_THRESHOLD;
 const NO_DATES = { dateFrom: "", dateTo: "" };
 
-export function ProductsManager({ products }: { products: Product[] }) {
+/** Abaixo disso a previsão aparece em destaque: dá tempo de pedir antes de acabar. */
+const FORECAST_ALERT_DAYS = 14;
+
+function forecastLabel(f: StockForecast | undefined, stock: number) {
+  if (!f || f.daysLeft === null || stock === 0) return null;
+  if (f.daysLeft < 1) return "acaba hoje no ritmo atual";
+  if (f.daysLeft > 180) return null;
+  return `acaba em ~${f.daysLeft} dia${f.daysLeft === 1 ? "" : "s"}`;
+}
+
+export function ProductsManager({ products, forecast = {} }: { products: Product[]; forecast?: Record<string, StockForecast> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [editing, setEditing] = useState<Product | "new" | null>(null);
@@ -136,6 +147,17 @@ export function ProductsManager({ products }: { products: Product[] }) {
                     <p className={cn("text-xs", isLow ? "font-medium text-red-700" : "text-brand-graphite/50")}>
                       {p.stockQuantity === 0 ? "sem estoque" : isLow ? "estoque baixo" : "em estoque"}
                     </p>
+                    {p.isActive && forecastLabel(forecast[p.id], p.stockQuantity) ? (
+                      <p
+                        className={cn(
+                          "mt-0.5 text-xs",
+                          (forecast[p.id].daysLeft ?? Infinity) <= FORECAST_ALERT_DAYS ? "font-medium text-amber-800" : "text-brand-graphite/50"
+                        )}
+                        title={`Uso médio: ${forecast[p.id].dailyUse.toFixed(2).replace(".", ",")} por dia nos últimos 30 dias`}
+                      >
+                        {forecastLabel(forecast[p.id], p.stockQuantity)}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2 border-t border-brand-beige/70 pt-3">

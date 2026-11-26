@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarPlus, HandCoins, MessageCircle, Pencil, Plus, Search } from "lucide-react";
+import { CalendarPlus, HandCoins, Layers, ListChecks, MessageCircle, Pencil, Plus, Search } from "lucide-react";
+import { CustomerRecordsCard } from "@/components/admin/CustomerRecordsCard";
+import { CustomerTimeline } from "@/components/admin/CustomerTimeline";
+import { CustomerPackageCard, SellPackageModal } from "@/components/admin/PackagesManager";
+import { WaitlistModal } from "@/components/admin/WaitlistManager";
+import { listCustomerPackagesAction } from "@/lib/actions/admin/packages";
+import { listCustomerRecordsAction } from "@/lib/actions/admin/customer-records";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea, FieldLabel, Select } from "@/components/ui/Field";
@@ -26,7 +32,7 @@ import {
 } from "@/lib/actions/admin/customers";
 import { matchesCustomerSearch } from "@/lib/utils/customer-search";
 import { cn } from "@/lib/utils/cn";
-import type { Customer, AppointmentWithRelations, Sale } from "@/types";
+import type { Customer, AppointmentWithRelations, CustomerPackage, CustomerRecord, Sale } from "@/types";
 
 interface CustomersPanelProps {
   customers: Customer[];
@@ -50,7 +56,16 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
   const [pendingOpen, setPendingOpen] = useState(false);
   const [receiving, setReceiving] = useState<Sale | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [packages, setPackages] = useState<CustomerPackage[]>([]);
+  const [records, setRecords] = useState<CustomerRecord[]>([]);
+  const [sellOpen, setSellOpen] = useState(false);
+  const [waitOpen, setWaitOpen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
+
+  function loadExtras(customerId: string) {
+    listCustomerPackagesAction({ customerId }).then(setPackages);
+    listCustomerRecordsAction(customerId).then(setRecords);
+  }
 
   const selected = customers.find((c) => c.id === selectedId) ?? null;
   const filtered = useMemo(() => customers.filter((c) => matchesCustomerSearch(c, query)), [customers, query]);
@@ -70,6 +85,9 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
     setDirty(false);
     getCustomerAppointmentsAction(selectedId).then(setHistory);
     listSalesAction({ customerId: selectedId }).then(setCustomerSales);
+    setPackages([]);
+    setRecords([]);
+    loadExtras(selectedId);
     // Só ao trocar de cliente — um refresh da lista não pode apagar observações em edição.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
@@ -160,6 +178,9 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
                 >
                   <Pencil size={14} /> Editar
                 </Button>
+                <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setWaitOpen(true)}>
+                  <ListChecks size={14} /> Lista de espera
+                </Button>
                 <Button className="!px-3 !py-1.5 text-xs" onClick={() => setBookingOpen(true)}>
                   <CalendarPlus size={14} /> Agendar
                 </Button>
@@ -242,33 +263,53 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
           </Card>
 
           <Card className="p-5">
-            <h3 className="mb-4 font-serif text-lg text-brand-forest">Histórico de agendamentos</h3>
-            {history.length === 0 ? (
-              <p className="text-sm text-brand-graphite/60">Nenhum agendamento encontrado.</p>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h3 className="flex items-center gap-2 font-serif text-lg text-brand-forest">
+                <Layers size={18} strokeWidth={1.75} className="text-brand-moss" aria-hidden="true" /> Pacotes
+              </h3>
+              <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setSellOpen(true)}>
+                <Plus size={14} /> Vender pacote
+              </Button>
+            </div>
+            {packages.length === 0 ? (
+              <p className="text-sm text-brand-graphite/60">Nenhum pacote vendido para esta cliente.</p>
             ) : (
-              <ul className="space-y-2">
-                {history.map((a) => (
-                  <li key={a.id}>
-                    <button
-                      type="button"
-                      onClick={() => setDetailId(a.id)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-brand-beige px-4 py-3 text-left text-sm transition hover:border-brand-moss"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-brand-graphite">{a.service.name}</p>
-                        <p className="text-xs text-brand-graphite/60">
-                          {formatShortDatePtBR(a.date)} · {a.startTime}
-                        </p>
-                      </div>
-                      <StatusBadge status={a.status} />
-                    </button>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {packages.map((p) => (
+                  <li key={p.id}>
+                    <CustomerPackageCard pkg={p} compact />
                   </li>
                 ))}
               </ul>
             )}
           </Card>
+
+          <CustomerRecordsCard
+            customer={selected}
+            records={records}
+            onChanged={() => {
+              loadExtras(selected.id);
+              router.refresh();
+            }}
+          />
+
+          <CustomerTimeline appointments={history} sales={customerSales} records={records} onOpenAppointment={setDetailId} />
         </div>
       ) : null}
+
+      <SellPackageModal
+        open={sellOpen}
+        customerId={selected?.id}
+        onClose={() => setSellOpen(false)}
+        onCompleted={() => {
+          setSellOpen(false);
+          if (selectedId) {
+            loadExtras(selectedId);
+            listSalesAction({ customerId: selectedId }).then(setCustomerSales);
+          }
+        }}
+      />
+      <WaitlistModal open={waitOpen} customerId={selected?.id} onClose={() => setWaitOpen(false)} onSaved={() => setWaitOpen(false)} />
 
       <CustomerFormModal
         open={formOpen}
@@ -299,6 +340,7 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
           if (!selectedId) return;
           getCustomerAppointmentsAction(selectedId).then(setHistory);
           listSalesAction({ customerId: selectedId }).then(setCustomerSales);
+          loadExtras(selectedId);
         }}
       />
       <ReceivePaymentModal

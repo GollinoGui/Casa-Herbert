@@ -29,6 +29,7 @@ export interface ServiceInput {
   imagePosition: ImagePosition | null;
   showOnHome: boolean;
   barcode?: string | null;
+  returnDays?: number | null;
 }
 
 const DIACRITICS_REGEX = /[̀-ͯ]/g;
@@ -56,6 +57,7 @@ function toRow(input: Partial<ServiceInput>) {
   if (input.imagePosition !== undefined) row.image_position = input.imagePosition;
   if (input.showOnHome !== undefined) row.show_on_home = input.showOnHome;
   if (input.barcode !== undefined) row.barcode = input.barcode?.trim() || null;
+  if (input.returnDays !== undefined) row.return_days = input.returnDays || null;
   return row;
 }
 

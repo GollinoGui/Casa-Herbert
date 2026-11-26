@@ -25,8 +25,12 @@ export function buildAppointmentMessage(
 }
 
 /** Mensagens fora de um agendamento (aniversário, convite para voltar): só o primeiro nome. */
-export function buildCustomerMessage(template: string, customer: Pick<Customer, "fullName">) {
-  return fillTemplate(template, { nome: customer.fullName.split(" ")[0] });
+export function buildCustomerMessage(
+  template: string,
+  customer: Pick<Customer, "fullName">,
+  extra: Record<string, string> = {}
+) {
+  return fillTemplate(template, { nome: customer.fullName.split(" ")[0], ...extra });
 }
 
 /** Link wa.me com mensagem pré-preenchida, endereçado ao WhatsApp do cliente. */

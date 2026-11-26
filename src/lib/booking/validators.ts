@@ -58,6 +58,11 @@ export const serviceFormSchema = z.object({
   imagePosition: z.enum(["center", "top", "bottom"]).nullable(),
   showOnHome: z.boolean(),
   barcode: z.string().trim().max(64, "Código muito longo."),
+  // Campo vazio chega como "" (input numérico): vira null = sem retorno.
+  returnDays: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined || Number.isNaN(v) ? null : Number(v)),
+    z.number().int("Use dias inteiros.").min(1, "Mínimo de 1 dia.").max(730, "Máximo de 730 dias.").nullable()
+  ),
 });
 
 export const customerFormSchema = z.object({

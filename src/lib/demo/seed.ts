@@ -80,6 +80,8 @@ export function buildSeed(): Tables {
     { id: id("bh"), weekday, start_time: "14:00:00", end_time: "19:00:00", is_active: true },
   ]);
 
+  // Retorno sugerido (dias) por serviço, na mesma ordem de serviceDefs.
+  const returnDays = [null, 90, 15, 7, 30, 45, 30];
   const serviceDefs: [string, string, number, number, string][] = [
     ["Avaliação Capilar", "avaliacao-capilar", 30, 12000, "Conversa e observação individual do couro cabeludo e dos fios para entender a necessidade de cada pessoa antes de qualquer protocolo."],
     ["Tricoscopia", "tricoscopia", 30, 15000, "Exame de observação capilar com equipamento próprio, usado para acompanhar a saúde do couro cabeludo ao longo do cuidado."],
@@ -102,6 +104,7 @@ export function buildSeed(): Tables {
     image_position: null,
     show_on_home: true,
     barcode: null,
+    return_days: returnDays[i],
     created_at: now,
     updated_at: now,
   }));
@@ -131,6 +134,7 @@ export function buildSeed(): Tables {
     email: null,
     notes: null,
     birth_date: birthDates[i] ?? null,
+    photo_consent_at: null,
     created_at: ts(addDaysToDateStr(today, -90)),
     updated_at: now,
   }));
@@ -464,6 +468,60 @@ export function buildSeed(): Tables {
   while (!OPEN_WEEKDAYS.includes(weekdayOf(holiday))) holiday = addDaysToDateStr(holiday, 1);
   const special_hours: Row[] = [{ id: id("sph"), special_date: holiday, is_closed: true, reason: "Feriado (exemplo)", created_at: now }];
 
+  // Pacote de exemplo: vendido há 10 dias para a primeira cliente, nenhuma sessão usada ainda.
+  const therapy = services.find((sv) => sv.slug === "terapia-capilar")!;
+  const service_packages: Row[] = [
+    { id: id("spk"), name: "Protocolo Terapia Capilar", service_id: therapy.id, sessions: 6, price_cents: 110000, valid_days: 180, is_active: true, created_at: now },
+    { id: id("spk"), name: "Fotobiomodulação 10 sessões", service_id: services.find((sv) => sv.slug === "fotobiomodulacao")!.id, sessions: 10, price_cents: 150000, valid_days: null, is_active: true, created_at: now },
+  ];
+  const packageSaleDate = addDaysToDateStr(today, -10);
+  const packageSaleId = id("sale");
+  const packageBuyer = customers[0];
+  sales.push({
+    id: packageSaleId, appointment_id: null, customer_id: packageBuyer.id, total_cents: 110000, payment_method: "pix", notes: null,
+    created_at: ts(packageSaleDate, "11:00"), status: "paid", discount_cents: 0, paid_cents: 110000, sale_date: packageSaleDate,
+    due_date: null, paid_at: ts(packageSaleDate, "11:00"), cancelled_at: null,
+  });
+  sale_items.push({
+    id: id("item"), sale_id: packageSaleId, item_type: "service", ref_id: null, description: "Pacote: Protocolo Terapia Capilar (6 sessões)",
+    unit_price_cents: 110000, quantity: 1, total_cents: 110000,
+  });
+  cash_entries.push({
+    id: id("cash"), entry_date: packageSaleDate, direction: "in", amount_cents: 110000, category: "venda",
+    description: "Pacote: Protocolo Terapia Capilar (6 sessões)", payment_method: "pix", sale_id: packageSaleId, payable_id: null,
+    customer_id: packageBuyer.id, receipt_txid: null, reversal_of: null, created_at: ts(packageSaleDate, "11:00"),
+  });
+  const customer_packages: Row[] = [
+    {
+      id: id("cpk"), customer_id: packageBuyer.id, service_id: therapy.id, package_id: service_packages[0].id, name: "Protocolo Terapia Capilar",
+      sessions_total: 6, session_value_cents: 18333, sale_id: packageSaleId, status: "active",
+      expires_on: addDaysToDateStr(packageSaleDate, 180), created_at: ts(packageSaleDate, "11:00"),
+    },
+  ];
+
+  // Um atendimento confirmado da compradora, para o demo ter onde usar uma sessão.
+  const nextSession = appointments.find((ap) => ap.appointment_date > today && ap.status === "CONFIRMED");
+  if (nextSession) {
+    nextSession.customer_id = packageBuyer.id;
+    nextSession.service_id = therapy.id;
+    nextSession.end_time = `${plusMinutes(nextSession.start_time.slice(0, 5), therapy.duration_minutes)}:00`;
+  }
+
+  const waitDate = addDaysToDateStr(today, 3);
+  const waitlist: Row[] = [
+    {
+      id: id("wl"), customer_id: customers[4].id, service_id: services[5].id, desired_date: waitDate, period: "afternoon",
+      notes: "Prefere depois das 16h", status: "waiting", created_at: ts(addDaysToDateStr(today, -2)), updated_at: ts(addDaysToDateStr(today, -2)),
+    },
+  ];
+
+  const customer_records: Row[] = [
+    {
+      id: id("rec"), customer_id: packageBuyer.id, record_date: packageSaleDate, appointment_id: null,
+      notes: "Início do protocolo. Combinado acompanhamento a cada 15 dias e reavaliação na 3ª sessão.", created_at: ts(packageSaleDate, "11:10"),
+    },
+  ];
+
   return {
     settings: [settings],
     business_hours,
@@ -486,6 +544,12 @@ export function buildSeed(): Tables {
     purchases,
     purchase_items,
     testimonials,
+    service_packages,
+    customer_packages,
+    cash_closings: [],
+    waitlist,
+    customer_records,
+    customer_record_photos: [],
     gallery: [],
     media: [],
     site_image_slots: [],

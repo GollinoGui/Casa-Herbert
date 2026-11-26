@@ -12,6 +12,7 @@ import { monthRange } from "@/lib/utils/list-filters";
 
 export const DASHBOARD_BLOCKS = {
   quickActions: "Botões de nova venda e comprovante",
+  goal: "Meta do mês",
   balance: "Saldo em caixa",
   todayIn: "Entrou hoje",
   receivable: "A receber",
@@ -26,21 +27,24 @@ export const DASHBOARD_BLOCKS = {
   upcomingList: "Lista de próximos agendamentos",
   reminders: "Lembretes de amanhã",
   birthdays: "Aniversariantes da semana",
+  returns: "Retornos para chamar",
   lapsed: "Clientes que não voltam há um tempo",
   lowStock: "Produtos com estoque baixo",
 } as const;
 
 export const DASHBOARD_GROUPS: { title: string; keys: DashboardBlock[] }[] = [
   { title: "Atalhos", keys: ["quickActions"] },
+  { title: "Meta", keys: ["goal"] },
   { title: "Cartões de dinheiro", keys: ["balance", "todayIn", "receivable", "payableDue"] },
   { title: "Cartões da agenda", keys: ["apptToday", "apptPending", "apptConfirmed", "apptWeek", "apptMonth"] },
   { title: "Blocos da página", keys: ["calendar", "todayList", "upcomingList"] },
-  { title: "Avisos", keys: ["reminders", "birthdays", "lapsed", "lowStock"] },
+  { title: "Avisos", keys: ["reminders", "returns", "birthdays", "lapsed", "lowStock"] },
 ];
 
 /** Partes do Início que mudam de lugar juntas (os cartões de cada grupo andam em bloco). */
 export const DASHBOARD_SECTIONS = {
   quickActions: "Atalhos",
+  goal: "Meta do mês",
   finance: "Cartões de dinheiro",
   agenda: "Cartões da agenda",
   alerts: "Avisos (lembretes, aniversários, retornos, estoque)",
@@ -65,11 +69,12 @@ export const REPORT_BLOCKS = {
   chartServices: "Gráfico de serviços realizados",
   chartProducts: "Gráfico de produtos vendidos",
   chartPayments: "Gráfico por forma de pagamento",
+  chartHeatmap: "Mapa dos horários mais cheios",
 } as const;
 
 export const REPORT_GROUPS: { title: string; keys: ReportBlock[] }[] = [
   { title: "Números do topo", keys: ["tileIn", "tileOut", "tileResult", "tileSales", "tileServices"] },
-  { title: "Gráficos", keys: ["chartCash", "chartServices", "chartProducts", "chartPayments"] },
+  { title: "Gráficos", keys: ["chartCash", "chartServices", "chartProducts", "chartPayments", "chartHeatmap"] },
 ];
 
 export const REPORT_PERIODS = {
@@ -102,6 +107,8 @@ export interface PanelPreferences {
   /** "HH:00"; os dois vazios = usa o horário de funcionamento. */
   agendaStart: string;
   agendaEnd: string;
+  /** Meta de entradas do mês no caixa; 0 = sem meta (o bloco pede para definir). */
+  monthlyGoalCents: number;
 }
 
 function allOn<K extends string>(labels: Record<K, string>): Record<K, boolean> {
@@ -120,6 +127,7 @@ export const DEFAULT_PANEL_PREFERENCES: PanelPreferences = {
   agendaSlotMinutes: 30,
   agendaStart: "",
   agendaEnd: "",
+  monthlyGoalCents: 0,
 };
 
 /** Mantém as seções conhecidas na ordem gravada e põe no fim as que faltarem (seção nova). */
@@ -148,6 +156,7 @@ const payableDueDaysSchema = oneOf(PAYABLE_DUE_DAYS);
 const lapsedDaysSchema = oneOf(LAPSED_DAYS);
 const agendaSlotSchema = oneOf(AGENDA_SLOT_MINUTES);
 const paymentMethodSchema = z.enum(PAYMENT_METHODS as [PaymentMethod, ...PaymentMethod[]]);
+const goalSchema = z.number().int().min(0).max(100_000_000);
 const hourSchema = z.union([z.literal(""), z.string().regex(/^([01]\d|2[0-4]):00$/, "Hora inválida.")]);
 
 function pick<T>(schema: z.ZodType<T>, value: unknown, fallback: T): T {
@@ -176,6 +185,7 @@ export function parsePanelPreferences(raw: unknown): PanelPreferences {
     agendaSlotMinutes: pick(agendaSlotSchema, stored.agendaSlotMinutes, d.agendaSlotMinutes),
     agendaStart,
     agendaEnd,
+    monthlyGoalCents: pick(goalSchema, stored.monthlyGoalCents, d.monthlyGoalCents),
   };
 }
 
@@ -244,6 +254,7 @@ export const panelPreferencesInputSchema = z.object({
   agendaSlotMinutes: agendaSlotSchema,
   agendaStart: hourSchema,
   agendaEnd: hourSchema,
+  monthlyGoalCents: goalSchema,
 })
   .refine((p) => (p.agendaStart === "") === (p.agendaEnd === ""), "Escolha o início e o fim da agenda, ou deixe os dois automáticos.")
   .refine((p) => !p.agendaStart || p.agendaStart < p.agendaEnd, "O fim da agenda tem que ser depois do início.");

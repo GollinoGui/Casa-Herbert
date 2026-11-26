@@ -258,12 +258,13 @@ function MessageTemplatesForm({ settings }: { settings: Settings }) {
   const [birthday, setBirthday] = useState(settings.messageTemplates.birthday);
   const [comeback, setComeback] = useState(settings.messageTemplates.comeback);
   const [reminder, setReminder] = useState(settings.messageTemplates.reminder);
+  const [returnDue, setReturnDue] = useState(settings.messageTemplates.returnDue);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   async function handleSave() {
     setSaving(true);
-    await updateSettingsAction({ messageTemplates: { confirmed, rejected, cancelled, birthday, comeback, reminder } });
+    await updateSettingsAction({ messageTemplates: { confirmed, rejected, cancelled, birthday, comeback, reminder, returnDue } });
     setSaving(false);
     setSaved(true);
     router.refresh();
@@ -309,6 +310,13 @@ function MessageTemplatesForm({ settings }: { settings: Settings }) {
             Para quem não vem há um tempo (bloco do Início). Só usa {"{nome}"}.
           </p>
           <Textarea id="tpl-comeback" rows={4} value={comeback} onChange={(e) => setComeback(e.target.value)} />
+        </div>
+        <div>
+          <FieldLabel htmlFor="tpl-return">Hora do retorno</FieldLabel>
+          <p className="mb-1.5 text-xs text-brand-graphite/50">
+            Bloco “Retornos para chamar” do Início, pelo prazo de retorno de cada serviço. Usa {"{nome}"} e {"{servico}"}.
+          </p>
+          <Textarea id="tpl-return" rows={4} value={returnDue} onChange={(e) => setReturnDue(e.target.value)} />
         </div>
       </div>
       <div className="mt-4 flex items-center gap-3">

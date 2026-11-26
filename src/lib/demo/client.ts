@@ -60,9 +60,9 @@ const PRIMARY_KEY: Record<string, string> = {
 const pk = (table: string) => PRIMARY_KEY[table] ?? "id";
 
 const DEFAULTS: Record<string, () => Row> = {
-  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null }),
-  customers: () => ({ email: null, notes: null }),
-  services: () => ({ description: null, price_cents: null, is_active: true, display_order: 0, image_id: null, image_position: null, show_on_home: true, barcode: null }),
+  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, customer_package_id: null, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null }),
+  customers: () => ({ email: null, notes: null, birth_date: null, photo_consent_at: null }),
+  services: () => ({ description: null, price_cents: null, is_active: true, display_order: 0, image_id: null, image_position: null, show_on_home: true, barcode: null, return_days: null }),
   products: () => ({ stock_quantity: 0, open_usage: 0, min_stock: null, is_active: true, barcode: null, cost_cents: null, description: null, image_id: null, image_position: null, show_on_site: false }),
   blocked_slots: () => ({ is_full_day: true, start_time: null, end_time: null, notes: null, created_by: null }),
   testimonials: () => ({ rating: null, is_published: false, display_order: 0 }),
@@ -78,10 +78,15 @@ const DEFAULTS: Record<string, () => Row> = {
   sales: () => ({ appointment_id: null, customer_id: null, payment_method: null, notes: null, status: "paid", discount_cents: 0, paid_cents: 0, sale_date: todayDateStr(), due_date: null, paid_at: null, cancelled_at: null }),
   purchase_items: () => ({ product_id: null }),
   purchases: () => ({ supplier: null, notes: null }),
+  service_packages: () => ({ valid_days: null, is_active: true }),
+  customer_packages: () => ({ package_id: null, status: "active", expires_on: null }),
+  cash_closings: () => ({ withdrawn_cents: 0, adjustment_entry_id: null, notes: null }),
+  waitlist: () => ({ service_id: null, period: "any", notes: null, status: "waiting" }),
+  customer_records: () => ({ appointment_id: null, notes: null }),
 };
 
 const NO_TIMESTAMPS = new Set(["business_hours", "special_hours_ranges", "sale_items", "purchase_items", "appointment_products", "service_products"]);
-const HAS_UPDATED_AT = new Set(["services", "customers", "blocked_slots", "appointments", "settings", "products", "recurring_bills", "payables", "site_image_slots"]);
+const HAS_UPDATED_AT = new Set(["waitlist", "services", "customers", "blocked_slots", "appointments", "settings", "products", "recurring_bills", "payables", "site_image_slots"]);
 
 const UNIQUE: Record<string, string[][]> = {
   services: [["slug"]],
@@ -91,6 +96,8 @@ const UNIQUE: Record<string, string[][]> = {
   payables: [["recurring_bill_id", "competence"]],
   appointment_products: [["appointment_id", "product_id"]],
   service_products: [["service_id", "product_id"]],
+  customer_packages: [["sale_id"]],
+  customer_record_photos: [["storage_path"]],
 };
 
 /** Filhos apagados junto (on delete cascade) e referências zeradas (on delete set null). */
@@ -106,6 +113,9 @@ const ON_DELETE: Record<string, { cascade?: [string, string][]; setNull?: [strin
     setNull: [["services", "image_id"], ["products", "image_id"], ["gallery", "media_id"]],
   },
   recurring_bills: { setNull: [["payables", "recurring_bill_id"]] },
+  customers: { cascade: [["waitlist", "customer_id"], ["customer_records", "customer_id"]] },
+  customer_records: { cascade: [["customer_record_photos", "record_id"]] },
+  service_packages: { setNull: [["customer_packages", "package_id"]] },
 };
 
 /** Lado "um" das relações embutidas um-para-muitos: nome da FK no filho. */
@@ -114,6 +124,7 @@ const CHILD_FK: Record<string, string> = {
   purchases: "purchase_id",
   special_hours: "special_hours_id",
   appointments: "appointment_id",
+  customer_records: "record_id",
 };
 
 const TIME_RE = /^\d{2}:\d{2}$/;
@@ -567,6 +578,7 @@ export function createDemoClient() {
         upload: async () => ({ data: null, error: UPLOAD_OFF }),
         remove: async () => ({ data: [], error: null }),
         getPublicUrl: (path: string) => ({ data: { publicUrl: `/${path}` } }),
+        createSignedUrls: async (paths: string[]) => ({ data: paths.map((path) => ({ path, signedUrl: null, error: null })), error: null }),
       }),
     },
   };

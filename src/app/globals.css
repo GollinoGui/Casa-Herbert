@@ -21,11 +21,14 @@
   --c-shadow: 46 75 62;
 }
 
-/* Painel: o verde domina (lateral, títulos, bordas, sombras) e o laranja da logo
-   fica como acento quente (item ativo, botão principal). Contrastes AA conferidos:
-   graphite/branco 13:1, forest-text/creme 7:1, moss/branco 5.9:1, ink/laranja 6.3:1. */
+/* Painel, tema "verde" (padrão): tudo verde, inclusive o acento (item ativo,
+   botão principal), que vira um verde-folha claro com texto `ink` por cima.
+   Contrastes AA conferidos: graphite/branco 13:1, forest-text/creme 7:1,
+   moss/branco 5.9:1, ink/forest 7.9:1. */
 body.painel {
   --c-white: 255 255 252;
+  --c-forest: 134 198 120;
+  --c-forest-dark: 108 176 96;
   --c-forest-text: 47 93 63;
   --c-moss: 70 105 79;
   --c-sage: 158 184 150;
@@ -38,6 +41,29 @@ body.painel {
   --chart-in: #2f855a;
   --chart-out: #e0761c;
   color-scheme: light;
+}
+
+/* Tema "laranja": laranja da logo + creme. Lateral em terracota, títulos em
+   tijolo, fundo creme. Contrastes: on-pine/pine-soft 5.5:1, forest-text/creme
+   6.5:1, moss/branco 6:1, ink/laranja 6.8:1. */
+html[data-tema="laranja"] body.painel {
+  --c-white: 255 252 246;
+  --c-forest: 239 133 35;
+  --c-forest-dark: 196 104 24;
+  --c-forest-text: 150 66 12;
+  --c-moss: 139 84 38;
+  --c-sage: 233 190 140;
+  --c-cream: 249 242 229;
+  --c-beige: 239 223 198;
+  --c-gold: 214 170 112;
+  --c-graphite: 52 36 24;
+  --c-ink: 44 28 16;
+  --c-pine: 122 52 16;
+  --c-pine-soft: 160 74 22;
+  --c-on-pine: 252 244 230;
+  --c-shadow: 110 50 14;
+  --chart-in: #2f855a;
+  --chart-out: #c2410c;
 }
 
 /* "Floresta à noite". Mesmos papéis, valores claros/escuros trocados; o laranja
@@ -425,7 +451,7 @@ html:not([data-intro="play"]) .intro-curtain[data-pending] {
 
 /* ===================== Painel ===================== */
 
-/* Troca de tema claro/escuro: revelação em círculo a partir do botão (View
+/* Troca de tema (verde, laranja, escuro): revelação em círculo a partir do botão (View
    Transitions). Sem suporte ou com movimento reduzido, as cores esmaecem. */
 html.trocando-tema-vt::view-transition-old(root),
 html.trocando-tema-vt::view-transition-new(root) {
@@ -451,9 +477,27 @@ html.trocando-tema *::after {
 
 /* O ícone do botão de tema segue o atributo do <html>: assim o quadro "novo" da
    View Transition já sai com o ícone certo, sem esperar o React. */
-html[data-tema="escuro"] .tema-icone-claro,
-html:not([data-tema="escuro"]) .tema-icone-escuro {
+/* Mostra só a amostra do próximo tema (verde → laranja → escuro → verde). */
+html[data-tema="laranja"] .tema-proximo-laranja,
+html[data-tema="laranja"] .tema-proximo-verde,
+html[data-tema="escuro"] .tema-proximo-laranja,
+html[data-tema="escuro"] .tema-proximo-escuro,
+html:not([data-tema="laranja"]):not([data-tema="escuro"]) .tema-proximo-verde,
+html:not([data-tema="laranja"]):not([data-tema="escuro"]) .tema-proximo-escuro {
   display: none;
+}
+
+/* Sino de avisos: balança uma vez quando chega aviso novo. */
+@keyframes sino {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  75% { transform: rotate(2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[sino"] { animation: none !important; }
 }
 
 /* Fundo do painel: papel com grão leve e duas manchas de luz verde, fixas. */

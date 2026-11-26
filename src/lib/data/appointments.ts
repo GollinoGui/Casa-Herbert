@@ -163,3 +163,22 @@ export async function getTomorrowAppointments(): Promise<AppointmentWithRelation
 export async function setReminderSent(id: string, sent: boolean): Promise<AppointmentWithRelations | null> {
   return updateFields(id, { reminder_sent_at: sent ? new Date().toISOString() : null });
 }
+
+/**
+ * Valor dos atendimentos ainda marcados (pendentes e confirmados) de hoje até o fim
+ * do mês: o valor combinado no agendamento, ou o preço do serviço, menos o desconto.
+ * É previsão: sessão de pacote e "sob consulta" podem não virar entrada no caixa.
+ */
+export async function getMonthScheduledCents(): Promise<number> {
+  const today = todayDateStr();
+  const monthEnd = addDaysToDateStr(`${addDaysToDateStr(`${today.slice(0, 7)}-01`, 32).slice(0, 7)}-01`, -1);
+  const rows = unwrap(
+    await getSupabase()
+      .from("appointments")
+      .select("price_cents, discount_cents, service:services(price_cents)")
+      .in("status", ACTIVE_STATUSES)
+      .gte("appointment_date", today)
+      .lte("appointment_date", monthEnd)
+  );
+  return rows.reduce((sum, r: any) => sum + Math.max(0, (r.price_cents ?? r.service?.price_cents ?? 0) - (r.discount_cents ?? 0)), 0);
+}

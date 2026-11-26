@@ -18,10 +18,10 @@ import type { AppointmentStatus, AppointmentWithRelations, Service } from "@/typ
 
 const ALL_STATUSES: AppointmentStatus[] = ["PENDING", "CONFIRMED", "REJECTED", "CANCELLED", "COMPLETED"];
 
-export function AppointmentsTable() {
+export function AppointmentsTable({ initialStatus }: { initialStatus?: AppointmentStatus }) {
   const [items, setItems] = useState<AppointmentWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<AppointmentStatus[]>([]);
+  const [statusFilter, setStatusFilter] = useState<AppointmentStatus[]>(initialStatus ? [initialStatus] : []);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");

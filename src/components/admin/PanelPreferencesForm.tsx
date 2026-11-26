@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Select } from "@/components/ui/Field";
 import { Switch } from "@/components/ui/Switch";
+import { MoneyInput } from "@/components/ui/MoneyInput";
 import { useFinanceOptions } from "@/components/admin/FinanceOptionsProvider";
 import { savePanelPreferencesAction } from "@/lib/actions/admin/settings";
 import type { PaymentMethod } from "@/types";
@@ -157,6 +158,19 @@ export function PanelPreferencesForm({ preferences }: { preferences: PanelPrefer
                 ))}
               </Select>
               <p className="mt-1 text-xs text-brand-graphite/50">Conta desde o último atendimento concluído.</p>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldLabel htmlFor="pref-goal">Meta de entradas do mês</FieldLabel>
+              <MoneyInput
+                id="pref-goal"
+                value={prefs.monthlyGoalCents || null}
+                allowEmpty
+                placeholder="Sem meta"
+                onChange={(v) => setPrefs((p) => ({ ...p, monthlyGoalCents: v ?? 0 }))}
+              />
+              <p className="mt-1 text-xs text-brand-graphite/50">
+                O bloco “Meta do mês” compara com o que entrou no caixa e com o que ainda está marcado até o fim do mês.
+              </p>
             </div>
           </div>
         </Card>

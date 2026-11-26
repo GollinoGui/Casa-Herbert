@@ -292,6 +292,7 @@ const EMPTY_SERVICE: ServiceFormValues = {
   imagePosition: null,
   showOnHome: true,
   barcode: "",
+  returnDays: null,
 };
 
 function ServiceFormModal({
@@ -329,6 +330,7 @@ function ServiceFormModal({
           imagePosition: service.imagePosition,
           showOnHome: service.showOnHome,
           barcode: service.barcode ?? "",
+          returnDays: service.returnDays,
         }
       : EMPTY_SERVICE,
   });
@@ -378,6 +380,15 @@ function ServiceFormModal({
             />
             <FieldError>{errors.priceCents?.message}</FieldError>
           </div>
+        </div>
+
+        <div>
+          <FieldLabel htmlFor="returnDays">Retorno recomendado (dias, opcional)</FieldLabel>
+          <Input id="returnDays" type="number" min={1} max={730} inputMode="numeric" placeholder="Ex.: 15" {...register("returnDays")} />
+          <p className="mt-1.5 text-xs text-brand-graphite/50">
+            Depois desse prazo sem nada marcado, a cliente aparece em “Retornos para chamar” no Início.
+          </p>
+          <FieldError>{errors.returnDays?.message}</FieldError>
         </div>
 
         <div>

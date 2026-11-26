@@ -1,5 +1,6 @@
 import type { ImagePosition, Product } from "@/types";
-import { getSupabase, PG_UNIQUE_VIOLATION, unwrap } from "@/lib/supabase/server";
+import { fetchAll, getSupabase, PG_UNIQUE_VIOLATION, unwrap } from "@/lib/supabase/server";
+import { addDaysToDateStr, todayDateStr } from "@/lib/utils/date-format";
 import { PRODUCT_WITH_IMAGE, toProduct } from "@/lib/supabase/mappers";
 
 function byName(a: Product, b: Product) {
@@ -107,4 +108,65 @@ export async function getProductByBarcode(barcode: string): Promise<Product | nu
 
 export async function setProductActive(id: string, isActive: boolean) {
   return updateProduct(id, { isActive });
+}
+
+export interface StockForecast {
+  /** Unidades por dia na média da janela (vendas + receita dos serviços). */
+  dailyUse: number;
+  /** Dias até acabar no ritmo atual; null = sem uso na janela. */
+  daysLeft: number | null;
+}
+
+/**
+ * Ritmo de uso de cada produto nos últimos `windowDays` dias: unidades vendidas
+ * (vendas não canceladas) mais o consumo interno pela receita dos serviços
+ * concluídos (service_products). É estimativa para montar o pedido de compra.
+ */
+export async function getStockForecast(windowDays = 30): Promise<Record<string, StockForecast>> {
+  const supabase = getSupabase();
+  const today = todayDateStr();
+  const from = addDaysToDateStr(today, -(windowDays - 1));
+  const [sales, completed, recipes, products] = await Promise.all([
+    fetchAll<{ id: string }>((a, b) =>
+      supabase.from("sales").select("id").neq("status", "cancelled").gte("sale_date", from).lte("sale_date", today).order("id").range(a, b)
+    ),
+    fetchAll<{ id: string; service_id: string }>((a, b) =>
+      supabase
+        .from("appointments")
+        .select("id, service_id")
+        .eq("status", "COMPLETED")
+        .gte("appointment_date", from)
+        .lte("appointment_date", today)
+        .order("id")
+        .range(a, b)
+    ),
+    supabase.from("service_products").select("service_id, product_id, quantity"),
+    supabase.from("products").select("id, stock_quantity").eq("is_active", true),
+  ]);
+
+  const used = new Map<string, number>();
+  const add = (productId: string, qty: number) => used.set(productId, (used.get(productId) ?? 0) + qty);
+
+  // Lotes para a URL do PostgREST não estourar com muitas vendas.
+  for (let i = 0; i < sales.length; i += 200) {
+    const ids = sales.slice(i, i + 200).map((s) => s.id);
+    const items = unwrap(
+      await supabase.from("sale_items").select("ref_id, quantity").eq("item_type", "product").in("sale_id", ids)
+    );
+    for (const item of items) if (item.ref_id) add(item.ref_id, item.quantity);
+  }
+
+  const servicesDone = new Map<string, number>();
+  for (const a of completed) servicesDone.set(a.service_id, (servicesDone.get(a.service_id) ?? 0) + 1);
+  for (const line of unwrap(recipes)) {
+    const times = servicesDone.get(line.service_id);
+    if (times) add(line.product_id, Number(line.quantity) * times);
+  }
+
+  const out: Record<string, StockForecast> = {};
+  for (const p of unwrap(products)) {
+    const dailyUse = (used.get(p.id) ?? 0) / windowDays;
+    out[p.id] = { dailyUse, daysLeft: dailyUse > 0 ? Math.floor(p.stock_quantity / dailyUse) : null };
+  }
+  return out;
 }

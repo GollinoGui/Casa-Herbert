@@ -27,6 +27,8 @@ export interface Service {
   imagePosition: ImagePosition | null;
   showOnHome: boolean; // aparece no carrossel "Nossos cuidados" da home
   barcode: string | null;
+  /** Retorno sugerido em dias depois do atendimento; null = sem retorno. */
+  returnDays: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -65,6 +67,8 @@ export interface Customer {
   notes: string | null;
   /** "YYYY-MM-DD"; ano 1900 = só dia e mês (ver BIRTH_YEAR_UNKNOWN). */
   birthDate: string | null;
+  /** Quando a cliente autorizou fotos de acompanhamento; null = sem autorização. */
+  photoConsentAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +88,8 @@ export interface Appointment {
   professionalId: string | null;
   /** Quando o painel abriu o WhatsApp com o lembrete de véspera; remarcar zera. */
   reminderSentAt: string | null;
+  /** Pacote de onde saiu a sessão; null = atendimento avulso. */
+  customerPackageId: string | null;
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
@@ -300,6 +306,8 @@ export interface Settings {
     comeback: string;
     /** Lembrete de véspera (bloco "Lembretes de amanhã" do Início). */
     reminder: string;
+    /** Hora do retorno sugerido pelo serviço. Aceita {servico}. */
+    returnDue: string;
   };
 }
 
@@ -334,4 +342,91 @@ export interface AvailabilityResult {
   bookable: boolean;
   reason?: SlotUnavailableReason;
   slots: TimeRange[];
+}
+
+export interface ServicePackage {
+  id: string;
+  name: string;
+  serviceId: string;
+  serviceName: string;
+  sessions: number;
+  priceCents: number;
+  /** Validade em dias a partir da venda; null = sem validade. */
+  validDays: number | null;
+  isActive: boolean;
+}
+
+export type CustomerPackageStatus = "active" | "finished" | "cancelled";
+
+export interface CustomerPackage {
+  id: string;
+  customerId: string;
+  customerName: string;
+  serviceId: string;
+  serviceName: string;
+  name: string;
+  sessionsTotal: number;
+  sessionsUsed: number;
+  /** Valor de cada sessão fixado na venda (preço do pacote menos desconto, dividido pelas sessões). */
+  sessionValueCents: number;
+  saleId: string;
+  status: CustomerPackageStatus;
+  expiresOn: string | null;
+  createdAt: string;
+}
+
+export interface CashDrawerPreview {
+  firstClosing: boolean;
+  previousAt: string | null;
+  openingCents: number;
+  cashInCents: number;
+  cashOutCents: number;
+  expectedCents: number;
+}
+
+export interface CashClosing {
+  id: string;
+  closingDate: string;
+  openingCents: number;
+  cashInCents: number;
+  cashOutCents: number;
+  expectedCents: number;
+  countedCents: number;
+  withdrawnCents: number;
+  differenceCents: number;
+  /** Diferença lançada no livro-caixa como ajuste. */
+  posted: boolean;
+  notes: string | null;
+  createdAt: string;
+}
+
+export type WaitlistPeriod = "any" | "morning" | "afternoon";
+export type WaitlistStatus = "waiting" | "scheduled" | "cancelled";
+
+export interface WaitlistEntry {
+  id: string;
+  customer: Pick<Customer, "id" | "fullName" | "phone">;
+  serviceId: string | null;
+  serviceName: string | null;
+  desiredDate: string;
+  period: WaitlistPeriod;
+  notes: string | null;
+  status: WaitlistStatus;
+  createdAt: string;
+}
+
+export interface CustomerRecordPhoto {
+  id: string;
+  /** URL assinada, válida por pouco tempo. */
+  url: string | null;
+}
+
+export interface CustomerRecord {
+  id: string;
+  customerId: string;
+  date: string;
+  appointmentId: string | null;
+  notes: string | null;
+  photos: CustomerRecordPhoto[];
+  createdAt: string;
 }

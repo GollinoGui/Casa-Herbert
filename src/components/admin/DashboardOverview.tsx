@@ -21,6 +21,8 @@ import {
   Settings2,
   Sun,
   Sunrise,
+  Target,
+  Undo2,
   UserRoundSearch,
   Users,
 } from "lucide-react";
@@ -42,7 +44,7 @@ import { buildAppointmentMessage, buildCustomerMessage, buildWhatsAppLink } from
 import { setReminderSentAction } from "@/lib/actions/admin/appointments";
 import type { AppointmentWithRelations, Customer, Product, Settings } from "@/types";
 import type { AgendaGrid, DashboardBlock, DashboardSection } from "@/lib/panel/preferences";
-import type { LapsedCustomer, UpcomingBirthday } from "@/lib/data/customers";
+import type { LapsedCustomer, ReturnDueCustomer, UpcomingBirthday } from "@/lib/data/customers";
 
 interface DashboardStats {
   todayCount: number;
@@ -67,6 +69,8 @@ export function DashboardOverview({
   lapsed,
   lowStock,
   tomorrow,
+  returns,
+  goal,
 }: {
   stats: DashboardStats;
   finance: DashboardFinance;
@@ -81,6 +85,8 @@ export function DashboardOverview({
   lapsed: { total: number; list: LapsedCustomer[] };
   lowStock: Product[];
   tomorrow: AppointmentWithRelations[];
+  returns: { total: number; list: ReturnDueCustomer[] };
+  goal: { goalCents: number; scheduledCents: number };
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -116,7 +122,7 @@ export function DashboardOverview({
     },
   ].filter((c) => show[c.key as DashboardBlock]);
   const showLists = show.todayList || show.upcomingList;
-  const showAlerts = show.reminders || show.birthdays || show.lapsed || show.lowStock;
+  const showAlerts = show.reminders || show.returns || show.birthdays || show.lapsed || show.lowStock;
 
   function openAppointment(id: string) {
     setSelectedId(id);
@@ -139,6 +145,8 @@ export function DashboardOverview({
         </Button>
       </div>
     ) : null,
+
+    goal: show.goal ? <GoalCard goal={goal} monthInCents={finance.monthInCents} /> : null,
 
     finance: financeCards.length ? (
       // Celular: carrossel com encaixe (o próximo cartão aparece na borda); tela maior: grade.
@@ -206,6 +214,7 @@ export function DashboardOverview({
     alerts: showAlerts ? (
       <div data-cascata className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {show.reminders ? <RemindersCard appointments={tomorrow} templates={templates} /> : null}
+        {show.returns ? <ReturnsCard returns={returns} template={templates?.returnDue ?? ""} /> : null}
         {show.birthdays ? <BirthdaysCard birthdays={birthdays} template={templates?.birthday ?? ""} today={today} /> : null}
         {show.lapsed ? <LapsedCard lapsed={lapsed} lapsedDays={lapsedDays} template={templates?.comeback ?? ""} /> : null}
         {show.lowStock ? <LowStockCard products={lowStock} /> : null}
@@ -339,8 +348,18 @@ function AlertCard({
 }
 
 /** Botão de WhatsApp com alvo de toque de 44px; sem modelo, abre a conversa vazia. */
-function WhatsAppButton({ customer, template, label }: { customer: Customer; template: string; label: string }) {
-  const message = template ? buildCustomerMessage(template, customer) : "";
+function WhatsAppButton({
+  customer,
+  template,
+  label,
+  extra,
+}: {
+  customer: Customer;
+  template: string;
+  label: string;
+  extra?: Record<string, string>;
+}) {
+  const message = template ? buildCustomerMessage(template, customer, extra) : "";
   return (
     <a
       href={buildWhatsAppLink(customer.phone, message)}
@@ -503,6 +522,96 @@ function LapsedCard({
         </ul>
       )}
     </AlertCard>
+  );
+}
+
+function ReturnsCard({ returns, template }: { returns: { total: number; list: ReturnDueCustomer[] }; template: string }) {
+  return (
+    <AlertCard
+      icon={Undo2}
+      title="Retornos para chamar"
+      count={returns.total}
+      footer={
+        returns.total > returns.list.length ? (
+          <p className="text-xs text-brand-graphite/60">
+            Mostrando {returns.list.length} de {returns.total}, os mais atrasados primeiro.
+          </p>
+        ) : null
+      }
+    >
+      {returns.list.length === 0 ? (
+        <EmptyState compact title="Nenhum retorno nesta semana" hint="Defina o prazo de retorno de cada serviço em Serviços." />
+      ) : (
+        <ul className="space-y-2">
+          {returns.list.map(({ customer, serviceName, daysUntil }) => (
+            <li key={customer.id} className="flex items-center justify-between gap-3 rounded-xl border border-brand-beige bg-white px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-brand-graphite">{customer.fullName}</p>
+                <p className={cn("truncate text-xs", daysUntil < 0 ? "font-medium text-amber-800" : "text-brand-graphite/60")}>
+                  {serviceName} ·{" "}
+                  {daysUntil === 0 ? "hoje" : daysUntil > 0 ? `em ${daysUntil} dia(s)` : `passou há ${-daysUntil} dia(s)`}
+                </p>
+              </div>
+              <WhatsAppButton customer={customer} template={template} extra={{ servico: serviceName }} label="Chamar" />
+            </li>
+          ))}
+        </ul>
+      )}
+    </AlertCard>
+  );
+}
+
+function GoalCard({ goal, monthInCents }: { goal: { goalCents: number; scheduledCents: number }; monthInCents: number }) {
+  if (goal.goalCents <= 0) {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-sage/20 text-brand-moss">
+            <Target size={18} strokeWidth={1.75} aria-hidden="true" />
+          </span>
+          <p className="text-sm text-brand-graphite/70">Defina uma meta de entradas para acompanhar o mês aqui.</p>
+        </div>
+        <Link
+          href="/admin/configuracoes?aba=painel"
+          className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand-moss hover:underline"
+        >
+          Definir meta <ArrowUpRight size={14} aria-hidden="true" />
+        </Link>
+      </Card>
+    );
+  }
+  const forecast = monthInCents + goal.scheduledCents;
+  const pct = (v: number) => Math.min(100, Math.round((v / goal.goalCents) * 100));
+  const reached = monthInCents >= goal.goalCents;
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-serif text-lg text-brand-forest">
+          <Target size={18} strokeWidth={1.75} className="text-brand-moss" aria-hidden="true" /> Meta do mês
+        </h2>
+        <p className="valor-sensivel text-sm tabular-nums text-brand-graphite/70">
+          <strong className="text-brand-graphite">{formatBRL(monthInCents)}</strong> de {formatBRL(goal.goalCents)} (
+          {pct(monthInCents)}%)
+        </p>
+      </div>
+      <div
+        className="relative h-3 overflow-hidden rounded-full bg-brand-beige"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct(monthInCents)}
+        aria-label="Entradas do mês em relação à meta"
+      >
+        {/* Faixa clara = previsão com o que está marcado; faixa cheia = o que já entrou. */}
+        <div className="absolute inset-y-0 left-0 rounded-full bg-brand-sage/50" style={{ width: `${pct(forecast)}%` }} />
+        <div className="absolute inset-y-0 left-0 rounded-full bg-brand-forest transition-[width] duration-700" style={{ width: `${pct(monthInCents)}%` }} />
+      </div>
+      <p className="valor-sensivel mt-2 text-xs text-brand-graphite/60">
+        {reached
+          ? "Meta alcançada neste mês."
+          : `Com o que está marcado até o fim do mês, a previsão é ${formatBRL(forecast)} (${pct(forecast)}%). Faltam ${formatBRL(goal.goalCents - monthInCents)}.`}
+      </p>
+    </Card>
   );
 }
 

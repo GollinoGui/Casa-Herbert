@@ -1,8 +1,8 @@
-import { getDashboardStats, getTomorrowAppointments } from "@/lib/data/appointments";
+import { getDashboardStats, getMonthScheduledCents, getTomorrowAppointments } from "@/lib/data/appointments";
 import { getDashboardFinance } from "@/lib/data/financials";
 import { getPanelPreferences, getSettings } from "@/lib/data/settings";
 import { getBusinessHours } from "@/lib/data/business-hours";
-import { getLapsedCustomers, getUpcomingBirthdays } from "@/lib/data/customers";
+import { getLapsedCustomers, getReturnDueCustomers, getUpcomingBirthdays } from "@/lib/data/customers";
 import { getLowStockProducts } from "@/lib/data/products";
 import { agendaGrid } from "@/lib/panel/preferences";
 import { DashboardOverview } from "@/components/admin/DashboardOverview";
@@ -21,15 +21,18 @@ export default async function AdminDashboardPage() {
   const prefs = await getPanelPreferences();
   const show = prefs.dashboard;
   // Aviso desligado não consulta nada.
-  const [stats, finance, hours, settings, birthdays, lapsed, lowStock, tomorrow] = await Promise.all([
+  const noReturns = { total: 0, list: [] };
+  const [stats, finance, hours, settings, birthdays, lapsed, lowStock, tomorrow, returns, scheduledCents] = await Promise.all([
     getDashboardStats(),
     getDashboardFinance(prefs.payableDueDays),
     show.calendar ? getBusinessHours() : Promise.resolve([]),
-    show.birthdays || show.lapsed || show.reminders ? getSettings() : Promise.resolve(null),
+    show.birthdays || show.lapsed || show.reminders || show.returns ? getSettings() : Promise.resolve(null),
     show.birthdays ? orEmpty("aniversários", getUpcomingBirthdays, []) : Promise.resolve([]),
     show.lapsed ? orEmpty("clientes sumidos", () => getLapsedCustomers(prefs.lapsedDays), { total: 0, list: [] }) : Promise.resolve({ total: 0, list: [] }),
     show.lowStock ? orEmpty("estoque baixo", getLowStockProducts, []) : Promise.resolve([]),
     show.reminders ? orEmpty("lembretes", getTomorrowAppointments, []) : Promise.resolve([]),
+    show.returns ? orEmpty("retornos", () => getReturnDueCustomers(), noReturns) : Promise.resolve(noReturns),
+    show.goal && prefs.monthlyGoalCents > 0 ? orEmpty("meta", getMonthScheduledCents, 0) : Promise.resolve(0),
   ]);
   return (
     <DashboardOverview
@@ -45,6 +48,8 @@ export default async function AdminDashboardPage() {
       lapsed={lapsed}
       lowStock={lowStock}
       tomorrow={tomorrow}
+      returns={returns}
+      goal={{ goalCents: prefs.monthlyGoalCents, scheduledCents }}
     />
   );
 }

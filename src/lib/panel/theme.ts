@@ -1,16 +1,20 @@
-export type PanelTheme = "claro" | "escuro";
+export type PanelTheme = "verde" | "laranja" | "escuro";
+
+const ORDER: PanelTheme[] = ["verde", "laranja", "escuro"];
 
 const STORAGE_KEY = "painel-tema";
-const META_COLORS: Record<PanelTheme, string> = { claro: "#1D3A2A", escuro: "#09110C" };
+const META_COLORS: Record<PanelTheme, string> = { verde: "#1D3A2A", laranja: "#7A3410", escuro: "#09110C" };
 
 /**
- * Roda no <head> antes da primeira pintura: aplica o tema salvo (ou o do sistema)
- * para o painel não abrir claro e piscar para o escuro na hidratação.
+ * Roda no <head> antes da primeira pintura: aplica o tema salvo para o painel
+ * não abrir verde e piscar para outro na hidratação. Sem escolha salva, segue o
+ * sistema (escuro ou verde); o antigo "claro" vira verde.
  */
-export const PANEL_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("${STORAGE_KEY}");if(t!=="claro"&&t!=="escuro"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro"}document.documentElement.dataset.tema=t}catch(e){}})();`;
+export const PANEL_THEME_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("${STORAGE_KEY}");if(t!=="verde"&&t!=="laranja"&&t!=="escuro"){t=t==="claro"?"verde":window.matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"verde"}d.dataset.tema=t}catch(e){d.dataset.tema="verde"}})();`;
 
 function current(): PanelTheme {
-  return document.documentElement.dataset.tema === "escuro" ? "escuro" : "claro";
+  const theme = document.documentElement.dataset.tema as PanelTheme;
+  return ORDER.includes(theme) ? theme : "verde";
 }
 
 function apply(theme: PanelTheme) {
@@ -26,7 +30,7 @@ function apply(theme: PanelTheme) {
 type ToggleEvent = { detail?: number; clientX?: number; clientY?: number; currentTarget?: EventTarget | null };
 
 export function toggleTheme(event?: ToggleEvent) {
-  const next: PanelTheme = current() === "escuro" ? "claro" : "escuro";
+  const next = ORDER[(ORDER.indexOf(current()) + 1) % ORDER.length];
   const html = document.documentElement;
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
