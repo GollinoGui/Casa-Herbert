@@ -2,6 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
+    // A Cloudflare não otimiza imagem de graça: as fotos saem direto do Supabase Storage.
+    unoptimized: true,
     // Fotos enviadas pelo painel (bucket público 'site-images' do Supabase Storage).
     remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }],
   },

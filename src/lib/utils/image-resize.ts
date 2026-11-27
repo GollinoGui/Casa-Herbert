@@ -9,8 +9,8 @@ export interface PreparedImage {
 
 /**
  * Foto de celular chega com 5–12 MB; reduz para no máximo 2000px no lado maior e
- * reencoda em WebP antes do upload (o corpo da Server Action tem limite de ~4 MB na
- * Vercel, e o site não precisa de mais que isso). Só roda no navegador.
+ * reencoda em WebP antes do upload (o corpo da Server Action tem limite de 4,5 MB no
+ * next.config.mjs, e o site não precisa de mais que isso). Só roda no navegador.
  */
 export async function prepareImageForUpload(file: File): Promise<PreparedImage> {
   let bitmap: ImageBitmap;

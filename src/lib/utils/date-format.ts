@@ -12,7 +12,7 @@ export function formatDateOnly(date: Date): string {
 }
 
 /**
- * "Hoje"/"agora" sempre no fuso do salão, nunca no do processo: na Vercel o
+ * "Hoje"/"agora" sempre no fuso do salão, nunca no do processo: na Cloudflare o
  * servidor roda em UTC, e a partir das 21h de Brasília já seria "amanhã".
  */
 export const SALON_TIMEZONE = "America/Sao_Paulo";

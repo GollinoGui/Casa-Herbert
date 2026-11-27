@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "casa-herbert",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "casa-herbert" }],
+  "observability": { "enabled": true },
+  // Segredos (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AUTH_SECRET) vão por `npx wrangler secret put`, nunca aqui.
+  "vars": {
+    "SITE_ENABLED": ""
+  }
+}

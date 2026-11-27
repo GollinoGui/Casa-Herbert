@@ -2,7 +2,7 @@
 
 Site institucional + painel administrativo de agendamentos para a **Casa Herbert Embelezamento e Saúde Capilar** (Orlândia/SP).
 
-Next.js 14 + TypeScript + Tailwind CSS + Framer Motion, com Supabase (banco e login do painel) e deploy na Vercel. Documentação completa em `documentação.md`.
+Next.js 14 + TypeScript + Tailwind CSS + Framer Motion, com Supabase (banco e login do painel) e deploy na Cloudflare (Workers). Documentação completa em `documentação.md`.
 
 ```bash
 npm install

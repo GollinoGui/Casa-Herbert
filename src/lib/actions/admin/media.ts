@@ -13,7 +13,7 @@ import {
 import { SITE_IMAGE_SLOT_KEYS } from "@/lib/site-images/slots";
 import type { ImagePosition, Media } from "@/types";
 
-// Abaixo do limite de corpo de requisição da Vercel (4,5 MB). O painel reduz a
+// Abaixo do bodySizeLimit das Server Actions (4,5 MB, next.config.mjs). O painel reduz a
 // foto no navegador antes de enviar, então isso só barra arquivos que não deu para reduzir.
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const POSITIONS: ImagePosition[] = ["center", "top", "bottom"];

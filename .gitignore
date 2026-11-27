@@ -59,3 +59,7 @@ CLAUDE.md
 
 #videos demonstrativos
 brag-output*/
+# cloudflare
+/.open-next/
+/.wrangler/
+.dev.vars*

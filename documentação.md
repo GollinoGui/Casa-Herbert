@@ -12,9 +12,9 @@ Site institucional + painel administrativo para a **Casa Herbert Embelezamento e
 
 ## 2. Status atual
 
-**Em produção.** Site e painel rodam na Vercel (`https://casa-herbert.vercel.app`, região São Paulo — `gru1`) sobre Supabase (projeto na organização da Casa Herbert, região `sa-east-1`). As duas contas (Supabase e Vercel) estão no e-mail da Casa Herbert.
+**Migrando para a Cloudflare.** O painel roda como Worker na Cloudflare (plano grátis, que permite uso comercial) sobre Supabase (região `sa-east-1`). A Vercel saiu porque o plano grátis dela é só para uso não comercial.
 
-Deploy é feito pela Vercel CLI a partir da pasta do projeto (`npx vercel deploy --prod`), não por integração com o GitHub. Ver seção 8.
+Deploy pela integração Git da Cloudflare (Workers Builds), não da máquina local. Ver seção 8.
 
 ## 3. Regras de negócio do agendamento
 
@@ -125,7 +125,9 @@ npm run dev
 
 Atenção: localmente o site usa **o mesmo banco de produção** — agendamentos e alterações feitas em `localhost` aparecem no site real.
 
-`npm run build` no Windows falha só em `/opengraph-image` e `/twitter-image` ("Invalid URL") por causa do espaço no caminho da pasta ("Casa Herbert") — bug do `@vercel/og` no Windows. Na Vercel (Linux) funciona normalmente.
+Para testar o worker no runtime da Cloudflare: `npm run preview` (lê os segredos de `.dev.vars`, fora do git, com `DEMO_MODE=` vazio — o build é de produção e recusa o modo demo).
+
+A imagem de compartilhamento (`public/og-image.png`) é estática: o `@vercel/og` não roda no Windows e não cabe no limite de 3 MiB do worker grátis. Para mudá-la, editar o PNG.
 
 ## 7. Variáveis de ambiente
 
@@ -135,16 +137,19 @@ Atenção: localmente o site usa **o mesmo banco de produção** — agendamento
 | `SUPABASE_SERVICE_ROLE_KEY` | chave secreta (Project Settings → API Keys) — só no servidor, nunca em variável `NEXT_PUBLIC_` |
 | `AUTH_SECRET` | chave para assinar o cookie de sessão do painel (`openssl rand -base64 48`); trocar invalida todas as sessões |
 
-Localmente ficam em `.env` (fora do git). Na Vercel, em Project → Settings → Environment Variables (ou `npx vercel env add`).
+Localmente ficam em `.env` (fora do git). Na Cloudflare, os três acima são **segredos** (Worker → Settings → Variables and Secrets, ou `npx wrangler secret put NOME`); `SITE_ENABLED` fica em `vars` no `wrangler.jsonc`. Nunca colocar segredo no `wrangler.jsonc`.
 
 ## 8. Operação
 
-- **Deploy:** `npx vercel deploy --prod` na pasta do projeto (CLI logada na conta da Casa Herbert). Região das funções fixada em `vercel.json` (`gru1`, São Paulo — perto do banco).
+- **Deploy:** push no GitHub → a Cloudflare (Workers Builds) roda `npx opennextjs-cloudflare build` e `npx opennextjs-cloudflare deploy`. Não fazer deploy da máquina local: o OpenNext embute os arquivos `.env*` dentro do worker (levaria a chave secreta e o `DEMO_MODE`), por isso `npm run deploy` recusa quando existe `.env` na pasta.
+- **Versões travadas:** `@opennextjs/cloudflare` 1.15.1 é a última que aceita Next 14 (a 1.16+ exige Next 15). Atualizar o adaptador = migrar para Next 15 antes.
+- **Limites do plano grátis da Cloudflare:** worker de até 3 MiB comprimido (hoje ~2,3 MiB — conferir com `npx wrangler deploy --dry-run` depois de adicionar biblioteca pesada no servidor) e 10 ms de CPU por requisição. Se aparecer erro "exceeded CPU" nos logs (Worker → Observability), o plano pago é US$ 5/mês.
+- **Supabase grátis:** pausa após 7 dias sem uso (com uso diário não acontece) e não tem backup para baixar — manter um `pg_dump` periódico fora do Supabase.
 - **Mudança de schema:** nunca editar migration já aplicada. Criar `supabase/migrations/000N_descricao.sql` e aplicar no banco (SQL Editor ou Supabase CLI).
 - **Dados iniciais:** o banco começou só com serviços, horários e configurações reais (`0004_seed.sql`). Depoimentos, galeria e produtos são cadastrados pelo painel; enquanto vazios, as seções correspondentes não aparecem no site.
 - **Conteúdo que vem do painel:** links de Instagram/Facebook (**/admin/configuracoes** — vazio esconde a rede no site), horário de funcionamento (rodapé, card de visita e JSON-LD), e a vitrine de produtos (**/admin/estoque** → "Mostrar este produto no site", com descrição e foto; alimenta `/produtos` e o chat simulado da home), e o aviso no topo do site (**/admin/configuracoes** → "Aviso no topo do site": texto, link opcional e data de término; vazio = sem faixa).
 - **Home personalizada:** o questionário "Como está o seu couro cabeludo?" manda as respostas como observação do pedido (`/agendar?notas=`); os horários livres do topo levam direto aos dados pessoais (`/agendar?service=&date=&time=`, revalidados antes de pular etapas); e quem já agendou por aquele navegador é reconhecido no topo (localStorage, `src/lib/utils/last-booking.ts`) — sem login, some se a pessoa limpar os dados do navegador.
-- **Domínio:** o site ainda responde em `casa-herbert.vercel.app`. `SITE_URL` em `src/app/layout.tsx` (usado em SEO/sitemap) já aponta para `casaherbert.com.br` — configurar esse domínio na Vercel quando for registrado.
+- **Domínio:** o worker responde em `casa-herbert.<conta>.workers.dev`. `SITE_URL` em `src/app/layout.tsx` (usado em SEO/sitemap) já aponta para `casaherbert.com.br` — ligar esse domínio ao worker (Custom Domains) quando for registrado.
 - **(Futuro)** integrar com a WhatsApp Business Cloud API para envio automático de mensagens, em vez dos links `wa.me` manuais.
 
 - **Painel instalável (PWA):** `src/app/manifest.ts` + ícones fixos em `public/pwa/` (fundo verde, "CH" em Playfair). No celular ou no computador do balcão, "Instalar app"/"Adicionar à tela inicial" abre direto em `/admin`, sem barra do navegador.
@@ -167,8 +172,6 @@ Localmente ficam em `.env` (fora do git). Na Vercel, em Project → Settings →
 
 - Sem upload real de imagens (galeria/produtos usam placeholders com legenda) — a tabela `gallery` já tem `image_url`/`storage_path` para quando entrar o Supabase Storage.
 - Sem integração real com WhatsApp Business API — os botões do painel geram links `wa.me` com mensagem pré-preenchida, que o admin envia manualmente.
-- Plano Hobby (grátis) da Vercel é, pelos termos de uso, para projetos não comerciais — avaliar o plano Pro.
-
 ## 10. Ideias para funcionalidades futuras
 
 - **Comissões.** Venda de produto gera comissão para a Casa Herbert (o negócio). Prestação de serviço também deve gerar comissão no futuro — mas atribuída a qual **funcionária** realizou o atendimento/a venda. Hoje o modelo de dados não tem conceito de funcionária/profissional (`Sale`/`SaleItem` em `src/lib/data/sales.ts` não têm campo de quem vendeu ou atendeu) — precisa entrar como uma entidade nova antes de calcular comissão por pessoa.

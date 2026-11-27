@@ -13,7 +13,7 @@ import {
   updateCustomerRecordNotes,
 } from "@/lib/data/customer-records";
 
-// Abaixo do limite de corpo da Vercel; a foto é reduzida no navegador antes de subir.
+// Abaixo do bodySizeLimit das Server Actions (next.config.mjs); a foto é reduzida no navegador antes de subir.
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 const uuid = z.string().uuid();
