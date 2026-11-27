@@ -6,7 +6,8 @@
  */
 
 export const SESSION_COOKIE_NAME = "ch_admin_session";
-const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8h
+export const SESSION_TTL_SECONDS = 60 * 60 * 8;
+export const REMEMBER_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
@@ -31,11 +32,11 @@ async function getSigningKey(secret: string) {
   );
 }
 
-export async function createSessionToken(email: string): Promise<string> {
+export async function createSessionToken(email: string, ttlSeconds = SESSION_TTL_SECONDS): Promise<string> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) throw new Error("AUTH_SECRET não configurado no .env");
 
-  const payload = JSON.stringify({ email, exp: Date.now() + SESSION_TTL_MS });
+  const payload = JSON.stringify({ email, exp: Date.now() + ttlSeconds * 1000 });
   const payloadB64 = base64UrlEncode(new TextEncoder().encode(payload));
   const key = await getSigningKey(secret);
   const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payloadB64));

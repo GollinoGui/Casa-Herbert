@@ -28,6 +28,10 @@ export function LoginForm({ next }: { next?: string }) {
         <FieldLabel htmlFor="password">Senha</FieldLabel>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-brand-graphite">
+        <input type="checkbox" name="remember" defaultChecked className="h-4 w-4 rounded border-brand-beige accent-brand-forest" />
+        Lembrar de mim neste aparelho
+      </label>
       <FieldError>{state?.error}</FieldError>
       <SubmitButton />
     </form>

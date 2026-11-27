@@ -50,7 +50,7 @@ Operações com várias escritas que precisam acontecer inteiras ou não acontec
 
 ### Autenticação do admin
 
-O login confere e-mail/senha no **Supabase Auth** e só aceita usuários cadastrados na tabela `admin_profiles` (`src/lib/auth/credentials.ts`). Depois do login, a sessão é um cookie httpOnly assinado com HMAC-SHA256 (`AUTH_SECRET`, validade de 8h), conferido em `src/middleware.ts` para as páginas `/admin/*` e em `requireAdmin()` no início de toda Server Action administrativa.
+O login confere e-mail/senha no **Supabase Auth** e só aceita usuários cadastrados na tabela `admin_profiles` (`src/lib/auth/credentials.ts`). Depois do login, a sessão é um cookie httpOnly assinado com HMAC-SHA256 (`AUTH_SECRET`, validade de 8h, ou 30 dias com "Lembrar de mim" marcado), conferido em `src/middleware.ts` para as páginas `/admin/*` e em `requireAdmin()` no início de toda Server Action administrativa.
 
 **Liberar alguém no painel** (SQL Editor do Supabase), depois de criar o usuário em Authentication → Add user:
 
@@ -65,7 +65,7 @@ O SQL Editor responde "Success. No rows returned" quando o insert dá certo; con
 select u.email, a.full_name from admin_profiles a join auth.users u on u.id = a.id;
 ```
 
-**Tirar o acesso:** `delete from admin_profiles where id = (select id from auth.users where email = 'email@dapessoa.com');` — a sessão atual continua válida até expirar (até 8h); para cortar na hora, apague também o usuário em Authentication → Users.
+**Tirar o acesso:** `delete from admin_profiles where id = (select id from auth.users where email = 'email@dapessoa.com');` — a sessão atual continua válida até expirar (até 8h, ou 30 dias se a pessoa marcou "Lembrar de mim"); para cortar na hora, apague também o usuário em Authentication → Users.
 
 ### Estrutura de pastas
 

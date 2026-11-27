@@ -84,7 +84,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", images: ["/og-image.png"] },
   robots: { index: true, follow: true },
   appleWebApp: { capable: true, title: "Casa Herbert", statusBarStyle: "default" },
-  icons: { apple: "/pwa/apple-icon.png" },
+  icons: { icon: [{ url: "/icon.png", type: "image/png" }], apple: "/pwa/apple-icon.png" },
   other: { "mobile-web-app-capable": "yes" },
 };
 
