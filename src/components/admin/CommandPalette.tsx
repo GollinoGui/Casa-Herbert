@@ -8,6 +8,7 @@ import { CornerDownLeft, Package, Search, Sparkles, User, type LucideIcon } from
 import { cn } from "@/lib/utils/cn";
 import { NAV_GROUPS } from "@/components/admin/Sidebar";
 import { searchPanelAction, type SearchHit } from "@/lib/actions/admin/search";
+import { OPEN_SEARCH_EVENT } from "@/components/admin/SearchButton";
 
 interface Row {
   key: string;
@@ -25,8 +26,6 @@ function normalize(text: string) {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-/** Evento para abrir a busca de qualquer botão (barra do topo, celular). */
-export const OPEN_SEARCH_EVENT = "painel:abrir-busca";
 
 /**
  * Busca rápida: Ctrl+K (ou ⌘K, ou "/") abre de qualquer tela. Páginas do painel
@@ -238,26 +237,5 @@ export function CommandPalette({ siteEnabled }: { siteEnabled: boolean }) {
       ) : null}
     </AnimatePresence>,
     document.body
-  );
-}
-
-/** Botão que abre a busca (o atalho de teclado funciona sem ele). */
-export function SearchButton({ className, withHint }: { className?: string; withHint?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))}
-      aria-label="Buscar (Ctrl+K)"
-      title="Buscar (Ctrl+K)"
-      className={cn("inline-flex items-center gap-2 transition", className)}
-    >
-      <Search size={17} strokeWidth={1.8} aria-hidden="true" />
-      {withHint ? (
-        <>
-          <span className="text-sm">Buscar</span>
-          <kbd className="rounded-md border border-brand-beige px-1.5 py-0.5 text-[10px] text-brand-graphite/50">Ctrl K</kbd>
-        </>
-      ) : null}
-    </button>
   );
 }

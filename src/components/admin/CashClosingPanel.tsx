@@ -85,7 +85,7 @@ export function CashClosingPanel({ preview, closings }: { preview: CashDrawerPre
             <dt className="text-brand-graphite/70">{preview.firstClosing ? "Troco no início do dia" : "Ficou na gaveta"}</dt>
             <dd className="valor-sensivel tabular-nums">
               {preview.firstClosing ? (
-                <MoneyInput id="cc-opening" className="!w-36 !py-1.5 text-right" value={openingCents} allowEmpty onChange={setOpeningCents} />
+                <MoneyInput id="cc-opening" aria-label="Troco no início do dia" className="!w-36 !py-1.5 text-right" value={openingCents} allowEmpty onChange={setOpeningCents} />
               ) : (
                 formatBRL(opening)
               )}
@@ -108,11 +108,11 @@ export function CashClosingPanel({ preview, closings }: { preview: CashDrawerPre
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
             <FieldLabel htmlFor="cc-counted">Contei na gaveta</FieldLabel>
-            <MoneyInput id="cc-counted" value={countedCents} allowEmpty placeholder="R$ 0,00" onChange={setCountedCents} />
+            <MoneyInput id="cc-counted" value={countedCents} allowEmpty onChange={setCountedCents} />
           </div>
           <div>
             <FieldLabel htmlFor="cc-withdrawn">Levei para o banco (opcional)</FieldLabel>
-            <MoneyInput id="cc-withdrawn" value={withdrawnCents} allowEmpty placeholder="R$ 0,00" onChange={setWithdrawnCents} />
+            <MoneyInput id="cc-withdrawn" value={withdrawnCents} allowEmpty onChange={setWithdrawnCents} />
             <p className="mt-1 text-xs text-brand-graphite/50">Não muda o saldo: o dinheiro só troca de lugar.</p>
           </div>
         </div>

@@ -507,7 +507,9 @@ export function buildSeed(): Tables {
     nextSession.end_time = `${plusMinutes(nextSession.start_time.slice(0, 5), therapy.duration_minutes)}:00`;
   }
 
-  const waitDate = addDaysToDateStr(today, 3);
+  // Dia aberto (e fora do feriado de exemplo) para a lista de espera mostrar vaga no demo.
+  let waitDate = addDaysToDateStr(today, 2);
+  while (!OPEN_WEEKDAYS.includes(weekdayOf(waitDate)) || waitDate === holiday) waitDate = addDaysToDateStr(waitDate, 1);
   const waitlist: Row[] = [
     {
       id: id("wl"), customer_id: customers[4].id, service_id: services[5].id, desired_date: waitDate, period: "afternoon",

@@ -24,6 +24,8 @@ export interface Report {
   paymentMethods: { method: PaymentMethod | "outro"; totalCents: number }[];
   salesCount: number;
   averageTicketCents: number;
+  /** Atendimentos (concluídos ou confirmados) por dia da semana (0 = domingo) e hora de início: heatmap[dia][hora]. */
+  heatmap: number[][];
 }
 
 /** Período longo agrupa por mês para o gráfico continuar legível. */
@@ -70,11 +72,12 @@ export async function getReport(dateFrom: string, dateTo: string): Promise<Repor
         .range(from, to)
     ),
     // Atendimento concluído sem venda registrada ("Concluir sem venda") ainda conta como serviço feito.
+    // Os confirmados entram só no mapa de horários (procura), não na contagem de serviços feitos.
     fetchAll<Record<string, any>>((from, to) =>
       supabase
         .from("appointments")
-        .select("id, service:services(name)")
-        .eq("status", "COMPLETED")
+        .select("id, status, appointment_date, start_time, service:services(name)")
+        .in("status", ["COMPLETED", "CONFIRMED"])
         .gte("appointment_date", dateFrom)
         .lte("appointment_date", dateTo)
         .order("id")
@@ -111,8 +114,14 @@ export async function getReport(dateFrom: string, dateTo: string): Promise<Repor
       bucket.set(item.description, row);
     }
   }
+  const heatmap = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
   for (const appt of apptRows) {
-    if (appointmentsWithSale.has(appt.id) || !appt.service) continue;
+    const weekday = new Date(`${appt.appointment_date}T12:00:00Z`).getUTCDay();
+    const hour = Number(String(appt.start_time).slice(0, 2));
+    if (hour >= 0 && hour < 24) heatmap[weekday][hour] += 1;
+  }
+  for (const appt of apptRows) {
+    if (appt.status !== "COMPLETED" || appointmentsWithSale.has(appt.id) || !appt.service) continue;
     const name = appt.service.name as string;
     const row = services.get(name) ?? { name, count: 0, totalCents: 0 };
     row.count += 1;
@@ -135,5 +144,6 @@ export async function getReport(dateFrom: string, dateTo: string): Promise<Repor
       .sort((a, b) => b.totalCents - a.totalCents),
     salesCount: sales.length,
     averageTicketCents: sales.length ? Math.round(salesTotal / sales.length) : 0,
+    heatmap,
   };
 }

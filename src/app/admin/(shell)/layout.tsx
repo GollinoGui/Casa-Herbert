@@ -3,6 +3,8 @@ import { Sidebar } from "@/components/admin/Sidebar";
 import { ShortcutBar } from "@/components/admin/ShortcutBar";
 import { NotificationsBell } from "@/components/admin/NotificationsBell";
 import { ThemeToggle } from "@/components/admin/ThemeToggle";
+import { CommandPalette } from "@/components/admin/CommandPalette";
+import { SearchButton } from "@/components/admin/SearchButton";
 import { FinanceOptionsProvider } from "@/components/admin/FinanceOptionsProvider";
 import { getFinanceOptions } from "@/lib/data/finance-options";
 import { isSiteEnabled } from "@/lib/site";
@@ -17,6 +19,10 @@ export default async function AdminShellLayout({ children }: { children: ReactNo
         <div className="lg:pl-72">
           {/* No celular, sino e tema ficam na barra do topo (Sidebar > MobileNav). */}
           <div className="relative z-20 mx-auto hidden max-w-[1500px] items-center justify-end gap-2 px-10 pt-6 lg:flex 2xl:px-14">
+            <SearchButton
+              withHint
+              className="h-10 rounded-full border border-brand-beige bg-white px-4 text-brand-moss shadow-softer hover:text-brand-forest"
+            />
             <NotificationsBell className="h-10 w-10 rounded-full border border-brand-beige bg-white text-brand-moss shadow-softer hover:text-brand-forest" />
             <ThemeToggle className="h-10 w-10 justify-center rounded-full border border-brand-beige bg-white shadow-softer hover:bg-brand-cream" />
           </div>
@@ -29,6 +35,7 @@ export default async function AdminShellLayout({ children }: { children: ReactNo
           </main>
         </div>
         <ShortcutBar />
+        <CommandPalette siteEnabled={isSiteEnabled()} />
       </div>
     </FinanceOptionsProvider>
   );

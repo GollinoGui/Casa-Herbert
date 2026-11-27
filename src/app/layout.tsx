@@ -80,6 +80,9 @@ export const metadata: Metadata = {
     type: "website",
   },
   robots: { index: true, follow: true },
+  appleWebApp: { capable: true, title: "Casa Herbert", statusBarStyle: "default" },
+  icons: { apple: "/pwa/apple-icon.png" },
+  other: { "mobile-web-app-capable": "yes" },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

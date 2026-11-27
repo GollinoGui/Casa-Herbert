@@ -36,6 +36,7 @@ import { BotanicalBranch } from "@/components/admin/BotanicalBranch";
 import { ThemeToggle } from "@/components/admin/ThemeToggle";
 import { HideMoneyToggle } from "@/components/admin/HideMoneyToggle";
 import { NotificationsBell } from "@/components/admin/NotificationsBell";
+import { SearchButton } from "@/components/admin/SearchButton";
 
 export interface NavItem {
   href: string;
@@ -228,6 +229,7 @@ function MobileNav({ pathname, groups }: { pathname: string | null; groups: NavG
         </Link>
 
         <div className="flex min-w-0 items-center gap-1.5">
+          <SearchButton className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
           <HideMoneyToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
           <NotificationsBell className="h-10 w-10 shrink-0 rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
           <ThemeToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />

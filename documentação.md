@@ -147,6 +147,22 @@ Localmente ficam em `.env` (fora do git). Na Vercel, em Project → Settings →
 - **Domínio:** o site ainda responde em `casa-herbert.vercel.app`. `SITE_URL` em `src/app/layout.tsx` (usado em SEO/sitemap) já aponta para `casaherbert.com.br` — configurar esse domínio na Vercel quando for registrado.
 - **(Futuro)** integrar com a WhatsApp Business Cloud API para envio automático de mensagens, em vez dos links `wa.me` manuais.
 
+- **Painel instalável (PWA):** `src/app/manifest.ts` + ícones fixos em `public/pwa/` (fundo verde, "CH" em Playfair). No celular ou no computador do balcão, "Instalar app"/"Adicionar à tela inicial" abre direto em `/admin`, sem barra do navegador.
+- **Migration 0017 (`0017_pacotes_retorno_caixa.sql`):** pacotes de sessões, retorno por serviço, fechamento do caixa, lista de espera e acompanhamento com fotos. Precisa estar aplicada no banco antes do deploy do código que usa essas tabelas. Ela cria o bucket **privado** `customer-photos`.
+
+### Funcionalidades de atendimento e gestão (0017)
+
+- **Pacotes de sessões** (**/admin/pacotes**): a Casa cadastra pacotes (serviço, nº de sessões, preço, validade) e vende para a cliente pela ficha ou pela tela de pacotes. A venda passa pela mesma `register_sale` (entra no caixa e em contas a receber como qualquer venda) e o valor de cada sessão fica fixado na hora da venda. No atendimento confirmado, "Usar sessão do pacote" conclui sem novo pagamento (RPC `use_package_session`). Pacote com sessão usada não pode ser cancelado: devolução parcial é um ajuste de saída em Saldo e extrato.
+- **Retorno por serviço:** cada serviço pode ter "Retorno recomendado (dias)". O Início mostra quem está na hora de voltar (sem horário futuro marcado) com botão de WhatsApp; o texto vem do modelo "Hora do retorno" em Configurações.
+- **Fechamento do caixa** (**/admin/financeiro?aba=fechamento**): confere só o dinheiro em espécie. Esperado = troco inicial + entradas − saídas em dinheiro desde o último fechamento; a pessoa informa o contado e o que foi retirado (depósito/banco). Sobra ou falta pode virar um ajuste no extrato (opcional). O fechamento olha os lançamentos pela hora de gravação, então lançamento com data retroativa entra no próximo fechamento, não reabre o anterior.
+- **Lista de espera** (**/admin/lista-de-espera**): cliente, serviço, dia desejado e período. Quando abre um horário que serve, a lista destaca e o sino avisa; "Agendar" já abre o novo agendamento no horário livre.
+- **Acompanhamento capilar com fotos** (ficha da cliente): registros datados com observações e fotos de antes/depois. Fotos só com o consentimento da cliente registrado na ficha. Ficam no bucket privado `customer-photos` e aparecem por link temporário (30 min) — nunca no bucket público do site.
+- **Ficha como linha do tempo:** atendimentos, compras e registros de acompanhamento em uma lista só, por mês, com filtro.
+- **Meta do mês:** definida em Configurações → Painel. O Início mostra quanto já entrou e a previsão com os atendimentos marcados até o fim do mês.
+- **Previsão de estoque:** "acaba em ~N dias" pelo uso dos últimos 30 dias (vendas + receita de consumo dos serviços).
+- **Busca rápida (Ctrl+K ou "/")**: clientes, produtos, serviços e páginas do painel de qualquer tela; no celular, pela lupa da barra do topo.
+- **Mapa dos horários mais cheios** (Relatórios): atendimentos concluídos e confirmados por dia da semana × hora.
+
 ## 9. Limitações conhecidas
 
 - Sem upload real de imagens (galeria/produtos usam placeholders com legenda) — a tabela `gallery` já tem `image_url`/`storage_path` para quando entrar o Supabase Storage.
@@ -156,3 +172,9 @@ Localmente ficam em `.env` (fora do git). Na Vercel, em Project → Settings →
 ## 10. Ideias para funcionalidades futuras
 
 - **Comissões.** Venda de produto gera comissão para a Casa Herbert (o negócio). Prestação de serviço também deve gerar comissão no futuro — mas atribuída a qual **funcionária** realizou o atendimento/a venda. Hoje o modelo de dados não tem conceito de funcionária/profissional (`Sale`/`SaleItem` em `src/lib/data/sales.ts` não têm campo de quem vendeu ou atendeu) — precisa entrar como uma entidade nova antes de calcular comissão por pessoa.
+
+### Adiados de propósito (revisados em 27/11/2026)
+
+- **Comissão por profissional.** Hoje só existe uma profissional, então não compensa ainda. Quando entrar: cadastro de profissional, quem atendeu/vendeu em cada item, e o **percentual gravado na própria venda** (snapshot), para que mudar a regra depois não altere comissões passadas. Estorno/cancelamento da venda precisa estornar a comissão junto.
+- **Vale-presente / crédito da cliente.** Precisa de um **código resgatável** (o presente é de uma pessoa e é usado por outra) e de um saldo próprio por vale. Cuidado contábil: a venda do vale é a entrada de dinheiro; o resgate **não** pode contar como receita de novo (é forma de pagamento "vale", sem novo lançamento de entrada no livro-caixa). Validade e cancelamento seguem as mesmas regras de estorno do caixa.
+- **Agenda em colunas por profissional:** a visão "resource" do FullCalendar é paga (licença premium) e só faz sentido com mais de uma profissional.

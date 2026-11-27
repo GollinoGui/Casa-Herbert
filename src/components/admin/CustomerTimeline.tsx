@@ -20,6 +20,8 @@ interface Item {
   date: string;
   render: () => React.ReactNode;
   onClick?: () => void;
+  /** Venda de um atendimento que já está na lista: em "Tudo" ela aparece dentro da linha do atendimento. */
+  merged?: boolean;
 }
 
 const FILTERS: { value: Kind | "all"; label: string }[] = [
@@ -38,6 +40,13 @@ const monthLabel = (date: string) => {
   return label.charAt(0).toUpperCase() + label.slice(1);
 };
 
+/** Produtos levados junto com o atendimento (o serviço já é o título da linha). */
+function saleExtras(sale: Sale | undefined, serviceName: string) {
+  if (!sale) return null;
+  const extras = sale.items.filter((i) => i.description !== serviceName).map((i) => `${i.description}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`);
+  return extras.length ? ` · + ${extras.join(", ")}` : null;
+}
+
 /** Tudo o que aconteceu com a cliente numa sequência só, do mais recente ao mais antigo. */
 export function CustomerTimeline({
   appointments,
@@ -54,6 +63,10 @@ export function CustomerTimeline({
   const [limit, setLimit] = useState(PAGE);
 
   const items = useMemo<Item[]>(() => {
+    const appointmentIds = new Set(appointments.map((a) => a.id));
+    const saleByAppointment = new Map(
+      sales.filter((s) => s.appointmentId && s.status !== "cancelled").map((s) => [s.appointmentId as string, s])
+    );
     const list: Item[] = [
       ...appointments.map(
         (a): Item => ({
@@ -69,11 +82,17 @@ export function CustomerTimeline({
                   {a.service.name}
                   {a.customerPackageId ? <Layers size={13} className="shrink-0 text-brand-moss" aria-label="Sessão de pacote" /> : null}
                 </p>
-                <p className="text-xs text-brand-graphite/60">
+                <p className="truncate text-xs text-brand-graphite/60">
                   {formatShortDatePtBR(a.date)} · {a.startTime}
+                  {saleExtras(saleByAppointment.get(a.id), a.service.name)}
                 </p>
               </div>
-              <StatusBadge status={a.status} />
+              <div className="flex shrink-0 items-center gap-2">
+                <StatusBadge status={a.status} />
+                {saleByAppointment.has(a.id) && filter === "all" ? (
+                  <span className="valor-sensivel font-medium tabular-nums">{formatBRL(saleByAppointment.get(a.id)!.totalCents)}</span>
+                ) : null}
+              </div>
             </>
           ),
         })
@@ -82,6 +101,7 @@ export function CustomerTimeline({
         (s): Item => ({
           key: `s-${s.id}`,
           kind: "sale",
+          merged: !!s.appointmentId && appointmentIds.has(s.appointmentId) && s.status !== "cancelled",
           sort: `${s.saleDate} ${s.createdAt.slice(11, 16)}`,
           date: s.saleDate,
           render: () => (
@@ -118,9 +138,9 @@ export function CustomerTimeline({
       ),
     ];
     return list.sort((a, b) => b.sort.localeCompare(a.sort));
-  }, [appointments, sales, records, onOpenAppointment]);
+  }, [appointments, sales, records, onOpenAppointment, filter]);
 
-  const visible = items.filter((i) => filter === "all" || i.kind === filter);
+  const visible = items.filter((i) => (filter === "all" ? !i.merged : i.kind === filter));
   const shown = visible.slice(0, limit);
   const groups: [string, Item[]][] = [];
   for (const item of shown) {

@@ -120,6 +120,109 @@ function RankingChart({ rows, unit, valueOf, format, limit }: { rows: CountRow[]
   );
 }
 
+const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+// Sequencial de um tom só: a cor do gráfico em 4 intensidades (o vazio fica no bege).
+const HEAT_STEPS = [0.22, 0.45, 0.7, 1];
+
+function heatmapShape(heatmap: number[][]) {
+  // Dia sem nenhum atendimento no período (fechado) não ganha linha.
+  const days = WEEKDAY_ORDER.filter((d) => heatmap[d].some((v) => v > 0));
+  const used = heatmap.flatMap((row) => row.map((v, h) => (v > 0 ? h : -1))).filter((h) => h >= 0);
+  const first = used.length ? Math.min(...used) : 8;
+  const last = used.length ? Math.max(...used) : 18;
+  const hours = Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  const max = Math.max(0, ...heatmap.flat());
+  return { days, hours, max };
+}
+
+function heatColor(strength: number) {
+  return `color-mix(in srgb, ${SINGLE} ${Math.round(strength * 100)}%, transparent)`;
+}
+
+function heatStep(value: number, max: number) {
+  if (!value || !max) return -1;
+  return Math.min(HEAT_STEPS.length - 1, Math.floor((value / max) * HEAT_STEPS.length - 1e-9));
+}
+
+function countLabel(n: number) {
+  return n === 1 ? "1 atendimento" : `${n} atendimentos`;
+}
+
+function HeatmapChart({ heatmap }: { heatmap: number[][] }) {
+  const { days, hours, max } = heatmapShape(heatmap);
+  const [focus, setFocus] = useState<{ day: number; hour: number } | null>(null);
+  if (!max) return <p className="py-10 text-center text-sm text-brand-graphite/50">Nada neste período.</p>;
+  const busiest = days
+    .flatMap((d) => hours.map((h) => ({ day: d, hour: h, value: heatmap[d][h] })))
+    .sort((a, b) => b.value - a.value)[0];
+  const readout = focus ?? busiest;
+  return (
+    <div>
+      <p className="mb-3 min-h-[1.25rem] text-sm text-brand-graphite/80" aria-live="polite">
+        {focus ? null : <span className="text-brand-graphite/60">Mais cheio: </span>}
+        <span className="font-medium text-brand-graphite">
+          {WEEKDAYS[readout.day]}, {readout.hour}h
+        </span>{" "}
+        · <span className="tabular-nums">{countLabel(heatmap[readout.day][readout.hour])}</span>
+      </p>
+      <div className="overflow-x-auto pb-1" onMouseLeave={() => setFocus(null)}>
+        <table className="border-separate" style={{ borderSpacing: 2 }}>
+          <thead>
+            <tr>
+              <th className="w-10" />
+              {hours.map((h) => (
+                <th key={h} scope="col" className="min-w-[26px] pb-1 text-center text-[10px] font-normal tabular-nums text-brand-graphite/55">
+                  {h}h
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {days.map((d) => (
+              <tr key={d}>
+                <th scope="row" className="pr-2 text-left text-xs font-normal text-brand-graphite/70">
+                  {WEEKDAYS[d].slice(0, 3)}
+                </th>
+                {hours.map((h) => {
+                  const value = heatmap[d][h];
+                  const step = heatStep(value, max);
+                  const active = focus?.day === d && focus.hour === h;
+                  return (
+                    <td key={h} className="p-0">
+                      <div
+                        tabIndex={value ? 0 : -1}
+                        aria-label={`${WEEKDAYS[d]}, ${h}h: ${countLabel(value)}`}
+                        onMouseEnter={() => setFocus({ day: d, hour: h })}
+                        onFocus={() => setFocus({ day: d, hour: h })}
+                        onBlur={() => setFocus(null)}
+                        className={cn(
+                          "h-7 min-w-[26px] rounded-[4px] outline-none transition-shadow",
+                          step < 0 && "bg-brand-beige/45",
+                          active && "ring-2 ring-brand-graphite/60"
+                        )}
+                        style={step >= 0 ? { backgroundColor: heatColor(HEAT_STEPS[step]) } : undefined}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 flex items-center gap-2 text-[11px] text-brand-graphite/60">
+        <span>Menos</span>
+        <span className="h-3 w-4 rounded-[3px] bg-brand-beige/45" />
+        {HEAT_STEPS.map((o) => (
+          <span key={o} className="h-3 w-4 rounded-[3px]" style={{ backgroundColor: heatColor(o) }} />
+        ))}
+        <span>Mais</span>
+      </div>
+    </div>
+  );
+}
+
 function SimpleTable({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
   return (
     <div className="max-h-80 overflow-auto">
@@ -232,7 +335,7 @@ export function ReportsView({
     ),
   ].filter(Boolean);
 
-  const nothingVisible = !tiles.length && !show.chartCash && !rankings.length;
+  const nothingVisible = !tiles.length && !show.chartCash && !rankings.length && !show.chartHeatmap;
 
   return (
     <div className="space-y-5">
@@ -296,6 +399,23 @@ export function ReportsView({
       ) : null}
 
       {rankings.length ? <div className={cn("grid gap-5", rankings.length > 1 && "xl:grid-cols-2")}>{rankings}</div> : null}
+
+      {show.chartHeatmap ? (
+        <ChartCard
+          title="Mapa dos horários mais cheios"
+          subtitle="Atendimentos concluídos e confirmados por dia da semana e hora de início"
+          table={
+            <SimpleTable
+              head={["Dia", "Hora", "Atendimentos"]}
+              rows={WEEKDAY_ORDER.flatMap((d) =>
+                report.heatmap[d].map((v, h) => ({ d, h, v })).filter((c) => c.v > 0)
+              ).map((c) => [WEEKDAYS[c.d], `${c.h}h`, c.v])}
+            />
+          }
+        >
+          <HeatmapChart heatmap={report.heatmap} />
+        </ChartCard>
+      ) : null}
 
       {nothingVisible ? (
         <p className="rounded-2xl border border-dashed border-brand-beige bg-white px-4 py-10 text-center text-sm text-brand-graphite/60">
