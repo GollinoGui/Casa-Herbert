@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Card } from "@/components/ui/Card";
+import { TiltCard } from "@/components/admin/TiltCard";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { BotanicalBranch } from "@/components/admin/BotanicalBranch";
 import { Leaf } from "lucide-react";
@@ -27,9 +27,10 @@ export default function AdminLoginPage({
           <p className="font-serif text-3xl text-brand-onPine">Casa Herbert</p>
           <p className="mt-1 text-xs font-medium uppercase tracking-[0.25em] text-brand-onPine/65">Painel Administrativo</p>
         </div>
-        <Card className="border-transparent bg-white/95 p-6 shadow-lift sm:p-8">
+        {/* Sem backdrop-blur: ele achata o preserve-3d do cartão. */}
+        <TiltCard className="rounded-2xl bg-white/95 p-6 shadow-lift sm:p-8">
           <LoginForm next={searchParams?.next} />
-        </Card>
+        </TiltCard>
         {isDemoMode() ? (
           <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-center text-sm text-brand-graphite">
             Modo demonstração: entre com <strong>{DEMO_LOGIN.email}</strong> e a senha <strong>{DEMO_LOGIN.password}</strong>.
