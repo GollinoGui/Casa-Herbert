@@ -683,3 +683,61 @@ body.painel { --barra-atalhos: 0px; }
   html[data-barra="sim"] body.painel { --barra-atalhos: calc(4.25rem + env(safe-area-inset-bottom)); }
 }
 html:not([data-barra="sim"]) .barra-atalhos { display: none; }
+
+/* Fundo da tela de login: pontos com máscara radial, brilhos e ramos que balançam devagar. */
+.login-pontos {
+  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .login-brilho {
+    animation: login-brilho 18s ease-in-out infinite alternate;
+  }
+  .login-brilho-2 {
+    animation-duration: 22s;
+    animation-direction: alternate-reverse;
+  }
+  .login-balanca {
+    transform-origin: 50% 100%;
+    animation: login-balanca 9s ease-in-out infinite alternate;
+  }
+  .login-balanca-2 {
+    animation-duration: 11s;
+    animation-delay: -4s;
+  }
+  .login-semente {
+    animation: login-semente 9s ease-in-out infinite;
+  }
+}
+.login-semente {
+  opacity: 0.6;
+}
+@keyframes login-brilho {
+  to {
+    transform: translate3d(6%, -5%, 0) scale(1.08);
+  }
+}
+@keyframes login-balanca {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
+@keyframes login-semente {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate3d(12px, -28px, 0);
+  }
+}
