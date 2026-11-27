@@ -10,6 +10,8 @@
   },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "casa-herbert" }],
   "observability": { "enabled": true },
+  "workers_dev": true,
+  "preview_urls": false,
   // Segredos (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AUTH_SECRET) vão por `npx wrangler secret put`, nunca aqui.
   "vars": {
     "SITE_ENABLED": ""
