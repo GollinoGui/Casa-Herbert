@@ -161,7 +161,7 @@ const SLOT_TAKEN: CreateAppointmentResult = { ok: false, error: "SLOT_NO_LONGER_
  * A checagem do engine acontece antes, mas quem garante de verdade sob concorrência é o
  * banco: EXCLUDE em appointments (sobreposição) e o trigger SLOT_BLOCKED (bloqueio manual).
  */
-function isSlotConflictError(error: { code?: string; message?: string } | null): boolean {
+export function isSlotConflictError(error: { code?: string; message?: string } | null): boolean {
   return !!error && (error.code === PG_EXCLUSION_VIOLATION || !!error.message?.includes("SLOT_BLOCKED"));
 }
 
@@ -347,5 +347,39 @@ export async function adminRescheduleAppointment(
     appointment_date: newDate,
     start_time: newStartTime,
     end_time: addMinutesToTime(newStartTime, appointment.service.durationMinutes),
+  });
+}
+
+export type SessionSlotProblem = "PAST_DATE" | "CLOSED" | "TAKEN";
+
+/**
+ * Confere as datas de uma série de sessões (pacote) com a mesma regra do agendamento
+ * manual: sem antecedência mínima, mas com dia fechado, bloqueio, buffer e conflito —
+ * inclusive entre as próprias sessões da série. Só sugestão: quem grava revalida no banco.
+ */
+export async function checkPackageSessionSlots(
+  serviceId: string,
+  sessions: { date: string; startTime: string }[]
+): Promise<(SessionSlotProblem | null)[]> {
+  if (!sessions.length) return [];
+  const dates = sessions.map((s) => s.date).sort();
+  const [service, ctx] = await Promise.all([getActiveService(serviceId), loadBookingContext(dates[0], dates[dates.length - 1])]);
+  if (!service) return sessions.map(() => "CLOSED");
+
+  return sessions.map((session, i) => {
+    const result = computeForDate(ctx, session.date, service.durationMinutes, { ignoreMinAdvance: true });
+    let problem: SessionSlotProblem | null = null;
+    if (result.reason === "PAST_DATE") problem = "PAST_DATE";
+    else if (result.reason === "CLOSED") problem = "CLOSED";
+    else if (!result.slots.some((s) => s.startTime === session.startTime)) problem = "TAKEN";
+    if (!problem) {
+      ctx.appointments.push({
+        id: `serie-${i}`,
+        date: session.date,
+        startTime: session.startTime,
+        endTime: addMinutesToTime(session.startTime, service.durationMinutes),
+      });
+    }
+    return problem;
   });
 }

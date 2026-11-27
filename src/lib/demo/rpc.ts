@@ -1,9 +1,9 @@
-import { addDaysToDateStr, todayDateStr } from "@/lib/utils/date-format";
+import { addDaysToDateStr, addMinutesToTime, todayDateStr } from "@/lib/utils/date-format";
 import { db, insertRow, updateRow, type PgError } from "@/lib/demo/client";
 import type { Row } from "@/lib/demo/seed";
 
 /**
- * As RPCs de supabase/migrations (0006, 0012, 0014, 0017) refeitas em TS para o modo
+ * As RPCs de supabase/migrations (0006, 0012, 0014, 0017, 0018) refeitas em TS para o modo
  * demonstração. Mesmas validações e mensagens; sem concorrência (um processo só).
  * Se uma RPC real mudar, esta cópia não acompanha sozinha — é só para demo.
  */
@@ -272,10 +272,13 @@ function cancelSale({ p_sale_id, p_reason }: Json) {
   if (sale.status === "cancelled") return fail("Esta venda já foi cancelada.");
   const pkg = db().customer_packages.find((cp) => cp.sale_id === sale.id);
   if (pkg) {
-    if (sessionsUsed(pkg.id) > 0) {
+    if (sessionCounts(pkg.id).used > 0) {
       return fail(
         "Este pacote já tem sessões usadas e não pode ser cancelado. Para devolver parte do valor, lance um ajuste de saída em Saldo e extrato."
       );
+    }
+    for (const appt of linkedAppointments(pkg.id).filter((a) => a.status === "PENDING" || a.status === "CONFIRMED")) {
+      mustUpdate("appointments", appt, { status: "CANCELLED", cancelled_at: now(), package_outcome: "returned" });
     }
     mustUpdate("customer_packages", pkg, { status: "cancelled" });
   }
@@ -371,8 +374,30 @@ function registerPurchase({ p }: Json) {
   return { ok: true, purchaseId: purchase.id };
 }
 
-const sessionsUsed = (packageId: unknown) =>
-  db().appointments.filter((a) => a.customer_package_id === packageId && a.status === "COMPLETED").length;
+const linkedAppointments = (packageId: unknown) => db().appointments.filter((a) => a.customer_package_id === packageId);
+
+/** Espelho de package_session_counts (0018). */
+function sessionCounts(packageId: unknown) {
+  const linked = linkedAppointments(packageId);
+  return {
+    used: linked.filter((a) => a.status === "COMPLETED" || (a.status === "CANCELLED" && a.package_outcome === "counted")).length,
+    reserved: linked.filter((a) => a.status === "PENDING" || a.status === "CONFIRMED").length,
+  };
+}
+
+/** Espelho de refresh_customer_package_status (0018). */
+function refreshPackageStatus(pkg: Row | undefined) {
+  if (!pkg || pkg.status === "cancelled") return;
+  const status = sessionCounts(pkg.id).used >= pkg.sessions_total ? "finished" : "active";
+  if (pkg.status !== status) mustUpdate("customer_packages", pkg, { status });
+}
+
+const ddmm = (date: string) => `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+
+/** Erro de constraint vira erro da RPC com o código do Postgres (o client.rpc repassa). */
+function throwPg(error: PgError): never {
+  throw Object.assign(new Error(error.message), { pgError: error });
+}
 
 /** Espelho de sell_package (0017). */
 function sellPackage({ p }: Json) {
@@ -409,21 +434,121 @@ function sellPackage({ p }: Json) {
   return { ok: true, saleId: result.saleId, customerPackageId: cp.id };
 }
 
-/** Espelho de use_package_session (0017). */
+/** Espelho de use_package_session (0018). */
 function consumePackageSession({ p_appointment_id, p_customer_package_id }: Json) {
   const appt = find("appointments", p_appointment_id);
   if (!appt) return fail("Agendamento não encontrado.");
   if (appt.status !== "CONFIRMED") return fail("Só dá para usar o pacote em um atendimento confirmado.");
+  if (appt.appointment_date > todayDateStr()) {
+    return fail("A sessão só é concluída no dia do atendimento. Até lá ela fica reservada no pacote.");
+  }
+  if (appt.customer_package_id && appt.customer_package_id !== p_customer_package_id) return fail("Este atendimento é de outro pacote.");
   const pkg = find("customer_packages", p_customer_package_id);
   if (!pkg || pkg.customer_id !== appt.customer_id) return fail("Pacote não encontrado para esta cliente.");
   if (pkg.status !== "active") return fail("Este pacote não está ativo.");
   if (pkg.service_id !== appt.service_id) return fail("O pacote é de outro serviço.");
   if (pkg.expires_on && appt.appointment_date > pkg.expires_on) return fail("O pacote venceu antes da data deste atendimento.");
-  const used = sessionsUsed(pkg.id);
-  if (used >= pkg.sessions_total) return fail("Todas as sessões deste pacote já foram usadas.");
+  const { used, reserved } = sessionCounts(pkg.id);
+  if (!appt.customer_package_id && used + reserved >= pkg.sessions_total) return fail("Não sobra sessão livre neste pacote.");
   mustUpdate("appointments", appt, { customer_package_id: pkg.id, status: "COMPLETED" });
-  if (used + 1 >= pkg.sessions_total) mustUpdate("customer_packages", pkg, { status: "finished" });
+  refreshPackageStatus(pkg);
   return { ok: true, remaining: pkg.sessions_total - used - 1 };
+}
+
+/** Espelho de schedule_package_sessions (0018): tudo ou nada. */
+function schedulePackageSessions({ p }: Json) {
+  const pkg = find("customer_packages", p?.customerPackageId);
+  if (!pkg) return fail("Pacote não encontrado.");
+  if (pkg.status !== "active") return fail("Este pacote não está em andamento.");
+  const sessions: { date: string; startTime: string }[] = Array.isArray(p?.sessions) ? p.sessions : [];
+  if (!sessions.length) return fail("Escolha ao menos uma data.");
+  const { used, reserved } = sessionCounts(pkg.id);
+  if (used + reserved + sessions.length > pkg.sessions_total) {
+    return fail(`O pacote só tem ${Math.max(pkg.sessions_total - used - reserved, 0)} sessão(ões) livre(s) para agendar.`);
+  }
+  const service = find("services", pkg.service_id);
+  const today = todayDateStr();
+  for (const s of sessions) {
+    if (s.date < today) return fail(`A data ${ddmm(s.date)} já passou.`);
+    if (pkg.expires_on && s.date > pkg.expires_on) {
+      return fail(`O pacote vale até ${ddmm(pkg.expires_on)}: a data ${ddmm(s.date)} passa disso.`);
+    }
+  }
+  const created: Row[] = [];
+  for (const s of sessions) {
+    const result = insertRow("appointments", {
+      customer_id: pkg.customer_id,
+      service_id: pkg.service_id,
+      appointment_date: s.date,
+      start_time: s.startTime,
+      end_time: addMinutesToTime(s.startTime, service?.duration_minutes ?? 60),
+      status: "CONFIRMED",
+      price_cents: pkg.session_value_cents,
+      professional_id: p?.professionalId || null,
+      confirmed_at: now(),
+      customer_package_id: pkg.id,
+    });
+    if (result.error) {
+      const rows = db().appointments;
+      for (const row of created) rows.splice(rows.indexOf(row), 1);
+      throwPg(result.error);
+    }
+    created.push(result.row!);
+  }
+  return { ok: true, appointmentIds: created.map((r) => r.id) };
+}
+
+/** Espelho de cancel_package_session (0018). */
+function cancelPackageSession({ p_appointment_id, p_outcome, p_no_show, p_reason }: Json) {
+  if (p_outcome !== "counted" && p_outcome !== "returned") return fail("Escolha se a sessão conta ou volta para o pacote.");
+  const appt = find("appointments", p_appointment_id);
+  if (!appt || !appt.customer_package_id) return fail("Sessão de pacote não encontrada.");
+  const pkg = find("customer_packages", appt.customer_package_id);
+  if (appt.status === "CANCELLED") {
+    if (appt.package_outcome === p_outcome) return { ok: true };
+    if (p_outcome === "counted" && pkg) {
+      const { used, reserved } = sessionCounts(pkg.id);
+      if (used + reserved >= pkg.sessions_total) {
+        return fail("Não sobra sessão para descontar: a vaga já foi usada numa reposição. Desmarque a reposição antes.");
+      }
+    }
+    mustUpdate("appointments", appt, { package_outcome: p_outcome });
+  } else if (appt.status === "PENDING" || appt.status === "CONFIRMED") {
+    const reason = String(p_reason ?? "").trim();
+    mustUpdate("appointments", appt, {
+      status: "CANCELLED",
+      cancelled_at: now(),
+      package_outcome: p_outcome,
+      no_show: !!p_no_show,
+      admin_notes: reason ? [appt.admin_notes, reason].filter(Boolean).join("\n") : appt.admin_notes,
+    });
+  } else {
+    return fail("Só dá para desmarcar uma sessão que ainda vai acontecer.");
+  }
+  refreshPackageStatus(pkg);
+  return { ok: true };
+}
+
+/** Espelho de reopen_package_session (0018), devolvendo a receita ao estoque. */
+function reopenPackageSession({ p_appointment_id }: Json) {
+  const appt = find("appointments", p_appointment_id);
+  if (!appt || !appt.customer_package_id || appt.status !== "COMPLETED") return fail("Só dá para reabrir uma sessão de pacote concluída.");
+  if (appt.appointment_date <= todayDateStr()) return fail("Esta sessão já aconteceu.");
+  if (db().sales.some((s) => s.appointment_id === appt.id && s.status !== "cancelled")) {
+    return fail("Este atendimento tem venda ligada: cancele a venda antes.");
+  }
+  const error = updateRow("appointments", appt, { status: "CONFIRMED" });
+  if (error) throwPg(error);
+  for (const line of db().service_products.filter((l) => l.service_id === appt.service_id)) {
+    const product = find("products", line.product_id);
+    if (!product) continue;
+    const usage = Math.round((Number(product.open_usage ?? 0) - Number(line.quantity)) * 1000) / 1000;
+    const units = Math.max(Math.ceil(-usage), 0);
+    product.stock_quantity += units;
+    product.open_usage = Math.round((usage + units) * 1000) / 1000;
+  }
+  refreshPackageStatus(find("customer_packages", appt.customer_package_id));
+  return { ok: true };
 }
 
 const time = (iso: unknown) => Date.parse(String(iso));
@@ -504,6 +629,9 @@ const RPCS: Record<string, (args: Json) => unknown> = {
   replace_service_products: replaceServiceProducts,
   sell_package: sellPackage,
   use_package_session: consumePackageSession,
+  schedule_package_sessions: schedulePackageSessions,
+  cancel_package_session: cancelPackageSession,
+  reopen_package_session: reopenPackageSession,
   cash_drawer_preview: cashDrawerPreview,
   close_cash_drawer: closeCashDrawer,
 };

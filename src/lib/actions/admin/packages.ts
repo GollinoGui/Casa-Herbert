@@ -9,9 +9,14 @@ import {
   saveServicePackage,
   sellPackage,
   consumePackageSession,
+  getCustomerPackage,
+  schedulePackageSessions,
+  cancelPackageSession,
+  reopenPackageSession,
   type CustomerPackageFilters,
   type SellPackageInput,
 } from "@/lib/data/packages";
+import { checkPackageSessionSlots } from "@/lib/data/availability";
 import { isPaymentMethodEnabled } from "@/lib/data/finance-options";
 
 const METHOD_OFF = "Esta forma de pagamento está desligada em Configurações. Escolha outra.";
@@ -71,6 +76,62 @@ export async function sellPackageAction(input: SellPackageInput) {
 export async function consumePackageSessionAction(appointmentId: string, customerPackageId: string) {
   await requireAdmin();
   const result = await consumePackageSession(appointmentId, customerPackageId);
+  if (result.ok) revalidatePackagePaths();
+  return result;
+}
+
+const sessionsSchema = z
+  .array(
+    z.object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
+      startTime: z.string().regex(/^\d{2}:\d{2}$/, "Horário inválido."),
+    })
+  )
+  .min(1, "Escolha ao menos uma data.")
+  .max(100, "Datas demais de uma vez.");
+
+export async function getCustomerPackageAction(id: string) {
+  await requireAdmin();
+  return getCustomerPackage(id);
+}
+
+/** Confere cada data da série antes de gravar: null = livre. */
+export async function checkPackageSessionSlotsAction(customerPackageId: string, sessions: { date: string; startTime: string }[]) {
+  await requireAdmin();
+  const parsed = sessionsSchema.safeParse(sessions);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Datas inválidas." };
+  const pkg = await getCustomerPackage(customerPackageId);
+  if (!pkg) return { ok: false as const, error: "Pacote não encontrado." };
+  return { ok: true as const, problems: await checkPackageSessionSlots(pkg.serviceId, parsed.data) };
+}
+
+export async function schedulePackageSessionsAction(customerPackageId: string, sessions: { date: string; startTime: string }[]) {
+  await requireAdmin();
+  const parsed = sessionsSchema.safeParse(sessions);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Datas inválidas." };
+  const pkg = await getCustomerPackage(customerPackageId);
+  if (!pkg) return { ok: false as const, error: "Pacote não encontrado." };
+  const problems = await checkPackageSessionSlots(pkg.serviceId, parsed.data);
+  if (problems.some(Boolean)) return { ok: false as const, error: "SLOT_NO_LONGER_AVAILABLE" };
+  const result = await schedulePackageSessions(customerPackageId, parsed.data);
+  if (result.ok) revalidatePackagePaths();
+  return result;
+}
+
+const outcomeSchema = z.enum(["counted", "returned"], { message: "Escolha se a sessão conta ou volta para o pacote." });
+
+export async function cancelPackageSessionAction(appointmentId: string, outcome: "counted" | "returned", noShow: boolean, reason?: string) {
+  await requireAdmin();
+  const parsed = outcomeSchema.safeParse(outcome);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Escolha inválida." };
+  const result = await cancelPackageSession(appointmentId, parsed.data, noShow === true, reason?.trim().slice(0, 500) || undefined);
+  if (result.ok) revalidatePackagePaths();
+  return result;
+}
+
+export async function reopenPackageSessionAction(appointmentId: string) {
+  await requireAdmin();
+  const result = await reopenPackageSession(appointmentId);
   if (result.ok) revalidatePackagePaths();
   return result;
 }

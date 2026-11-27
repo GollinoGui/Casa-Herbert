@@ -1,5 +1,6 @@
-import type { CustomerPackage, CustomerPackageStatus, PaymentMethod, ServicePackage } from "@/types";
+import type { CustomerPackage, CustomerPackageStatus, PackageOutcome, PaymentMethod, ServicePackage } from "@/types";
 import { fetchAll, getSupabase, unwrap } from "@/lib/supabase/server";
+import { isSlotConflictError } from "@/lib/data/availability";
 
 type Row = Record<string, any>;
 
@@ -45,21 +46,26 @@ export async function saveServicePackage(id: string | null, input: ServicePackag
   unwrap(id ? await supabase.from("service_packages").update(row).eq("id", id) : await supabase.from("service_packages").insert(row));
 }
 
-/** Sessões usadas = atendimentos concluídos ligados ao pacote (0017). */
-async function sessionsUsedBy(packageIds: string[]): Promise<Map<string, number>> {
-  const used = new Map<string, number>();
-  if (!packageIds.length) return used;
-  const rows = await fetchAll<{ id: string; customer_package_id: string }>((from, to) =>
+/** Usadas = concluídas + desmarcadas que contaram; agendadas = ainda por acontecer (0018). */
+async function sessionCountsBy(packageIds: string[]): Promise<Map<string, { used: number; scheduled: number }>> {
+  const counts = new Map<string, { used: number; scheduled: number }>();
+  if (!packageIds.length) return counts;
+  const rows = await fetchAll<{ id: string; customer_package_id: string; status: string; package_outcome: string | null }>((from, to) =>
     getSupabase()
       .from("appointments")
-      .select("id, customer_package_id")
+      .select("id, customer_package_id, status, package_outcome")
       .in("customer_package_id", packageIds)
-      .eq("status", "COMPLETED")
+      .in("status", ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"])
       .order("id")
       .range(from, to)
   );
-  for (const r of rows) used.set(r.customer_package_id, (used.get(r.customer_package_id) ?? 0) + 1);
-  return used;
+  for (const r of rows) {
+    const c = counts.get(r.customer_package_id) ?? { used: 0, scheduled: 0 };
+    if (r.status === "COMPLETED" || (r.status === "CANCELLED" && r.package_outcome === "counted")) c.used++;
+    else if (r.status === "PENDING" || r.status === "CONFIRMED") c.scheduled++;
+    counts.set(r.customer_package_id, c);
+  }
+  return counts;
 }
 
 export interface CustomerPackageFilters {
@@ -74,7 +80,7 @@ export async function listCustomerPackages(filters: CustomerPackageFilters = {})
   if (filters.serviceId) query = query.eq("service_id", filters.serviceId);
   if (filters.status?.length) query = query.in("status", filters.status);
   const rows = unwrap(await query.order("created_at", { ascending: false }));
-  const used = await sessionsUsedBy(rows.map((r) => r.id));
+  const counts = await sessionCountsBy(rows.map((r) => r.id));
   return rows.map(
     (r): CustomerPackage => ({
       id: r.id,
@@ -84,7 +90,8 @@ export async function listCustomerPackages(filters: CustomerPackageFilters = {})
       serviceName: r.service?.name ?? "",
       name: r.name,
       sessionsTotal: r.sessions_total,
-      sessionsUsed: used.get(r.id) ?? 0,
+      sessionsUsed: counts.get(r.id)?.used ?? 0,
+      sessionsScheduled: counts.get(r.id)?.scheduled ?? 0,
       sessionValueCents: r.session_value_cents,
       saleId: r.sale_id,
       status: r.status,
@@ -94,7 +101,9 @@ export async function listCustomerPackages(filters: CustomerPackageFilters = {})
   );
 }
 
-export type PackageActionResult = { ok: true; saleId?: string; remaining?: number } | { ok: false; error: string };
+export type PackageActionResult =
+  | { ok: true; saleId?: string; customerPackageId?: string; remaining?: number }
+  | { ok: false; error: string };
 
 export interface SellPackageInput {
   packageId: string;
@@ -111,8 +120,9 @@ export async function sellPackage(input: SellPackageInput): Promise<PackageActio
     ok: boolean;
     error?: string;
     saleId?: string;
+    customerPackageId?: string;
   };
-  return result.ok ? { ok: true, saleId: result.saleId } : { ok: false, error: result.error ?? "Não foi possível vender o pacote." };
+  return result.ok ? { ok: true, saleId: result.saleId, customerPackageId: result.customerPackageId } : { ok: false, error: result.error ?? "Não foi possível vender o pacote." };
 }
 
 export async function consumePackageSession(appointmentId: string, customerPackageId: string): Promise<PackageActionResult> {
@@ -123,4 +133,59 @@ export async function consumePackageSession(appointmentId: string, customerPacka
     })
   ) as { ok: boolean; error?: string; remaining?: number };
   return result.ok ? { ok: true, remaining: result.remaining } : { ok: false, error: result.error ?? "Não foi possível usar a sessão." };
+}
+
+export async function getCustomerPackage(id: string): Promise<CustomerPackage | null> {
+  const row = unwrap(await getSupabase().from("customer_packages").select("customer_id").eq("id", id).maybeSingle());
+  if (!row) return null;
+  return (await listCustomerPackages({ customerId: row.customer_id })).find((p) => p.id === id) ?? null;
+}
+
+export interface PackageSessionSlot {
+  date: string;
+  startTime: string;
+}
+
+type RpcResult = { ok: boolean; error?: string };
+
+function rpcResult(result: RpcResult, fallback: string): PackageActionResult {
+  return result.ok ? { ok: true } : { ok: false, error: result.error ?? fallback };
+}
+
+/** Grava a série inteira ou nada. A conferência de horário vem antes (checkPackageSessionSlots). */
+export async function schedulePackageSessions(
+  customerPackageId: string,
+  sessions: PackageSessionSlot[],
+  professionalId?: string | null
+): Promise<PackageActionResult> {
+  const result = await getSupabase().rpc("schedule_package_sessions", {
+    p: { customerPackageId, sessions, professionalId: professionalId || null },
+  });
+  if (result.error && isSlotConflictError(result.error)) return { ok: false, error: "SLOT_NO_LONGER_AVAILABLE" };
+  return rpcResult(unwrap(result) as RpcResult, "Não foi possível agendar as sessões.");
+}
+
+export async function cancelPackageSession(
+  appointmentId: string,
+  outcome: PackageOutcome,
+  noShow: boolean,
+  reason?: string
+): Promise<PackageActionResult> {
+  const result = unwrap(
+    await getSupabase().rpc("cancel_package_session", {
+      p_appointment_id: appointmentId,
+      p_outcome: outcome,
+      p_no_show: noShow,
+      p_reason: reason ?? null,
+    })
+  ) as RpcResult;
+  return rpcResult(result, "Não foi possível desmarcar a sessão.");
+}
+
+export async function reopenPackageSession(appointmentId: string): Promise<PackageActionResult> {
+  const result = await getSupabase().rpc("reopen_package_session", { p_appointment_id: appointmentId });
+  if (result.error && isSlotConflictError(result.error)) {
+    return { ok: false, error: "Outro atendimento ocupou esse horário. Remarque aquele antes de reabrir a sessão." };
+  }
+  return rpcResult(unwrap(result) as RpcResult, "Não foi possível reabrir a sessão.");
 }

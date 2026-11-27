@@ -44,21 +44,20 @@ export async function getAppointmentById(id: string): Promise<AppointmentWithRel
   return row ? toAppointmentWithRelations(row) : null;
 }
 
-/** Atualiza só se o status atual estiver em `fromStatuses` — null se não existir ou não puder transicionar. */
+/**
+ * Atualiza só se o status atual estiver em `fromStatuses` — null se não existir ou não puder transicionar.
+ * `onlyStandalone`: sessão de pacote não passa por aqui (desmarcar pede a decisão do pacote e
+ * concluir não aceita data futura — ver cancel_package_session/use_package_session em 0018).
+ */
 async function transition(
   id: string,
   fromStatuses: AppointmentStatus[],
-  changes: Record<string, unknown>
+  changes: Record<string, unknown>,
+  onlyStandalone = false
 ): Promise<AppointmentWithRelations | null> {
-  const row = unwrap(
-    await getSupabase()
-      .from("appointments")
-      .update(changes)
-      .eq("id", id)
-      .in("status", fromStatuses)
-      .select(APPOINTMENT_WITH_RELATIONS)
-      .maybeSingle()
-  );
+  let query = getSupabase().from("appointments").update(changes).eq("id", id).in("status", fromStatuses);
+  if (onlyStandalone) query = query.is("customer_package_id", null);
+  const row = unwrap(await query.select(APPOINTMENT_WITH_RELATIONS).maybeSingle());
   return row ? toAppointmentWithRelations(row) : null;
 }
 
@@ -71,7 +70,7 @@ export async function rejectAppointment(id: string, reason?: string): Promise<Ap
     status: "REJECTED",
     cancelled_at: new Date().toISOString(),
     ...(reason ? { admin_notes: reason } : {}),
-  });
+  }, true);
 }
 
 export async function cancelAppointment(id: string, reason?: string): Promise<AppointmentWithRelations | null> {
@@ -79,11 +78,11 @@ export async function cancelAppointment(id: string, reason?: string): Promise<Ap
     status: "CANCELLED",
     cancelled_at: new Date().toISOString(),
     ...(reason ? { admin_notes: reason } : {}),
-  });
+  }, true);
 }
 
 export async function completeAppointment(id: string): Promise<AppointmentWithRelations | null> {
-  return transition(id, ["CONFIRMED"], { status: "COMPLETED" });
+  return transition(id, ["CONFIRMED"], { status: "COMPLETED" }, true);
 }
 
 async function updateFields(id: string, changes: Record<string, unknown>): Promise<AppointmentWithRelations | null> {
@@ -167,7 +166,8 @@ export async function setReminderSent(id: string, sent: boolean): Promise<Appoin
 /**
  * Valor dos atendimentos ainda marcados (pendentes e confirmados) de hoje até o fim
  * do mês: o valor combinado no agendamento, ou o preço do serviço, menos o desconto.
- * É previsão: sessão de pacote e "sob consulta" podem não virar entrada no caixa.
+ * Sessão de pacote fica de fora: o dinheiro já entrou na venda do pacote.
+ * É previsão: "sob consulta" pode não virar entrada no caixa.
  */
 export async function getMonthScheduledCents(): Promise<number> {
   const today = todayDateStr();
@@ -177,6 +177,7 @@ export async function getMonthScheduledCents(): Promise<number> {
       .from("appointments")
       .select("price_cents, discount_cents, service:services(price_cents)")
       .in("status", ACTIVE_STATUSES)
+      .is("customer_package_id", null)
       .gte("appointment_date", today)
       .lte("appointment_date", monthEnd)
   );

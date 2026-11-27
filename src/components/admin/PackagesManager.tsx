@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Layers, Pencil, Plus } from "lucide-react";
+import { CalendarPlus, Layers, Pencil, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +12,13 @@ import { MoneyInput } from "@/components/ui/MoneyInput";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { CustomerPicker } from "@/components/admin/CustomerPicker";
 import { useFinanceOptions } from "@/components/admin/FinanceOptionsProvider";
-import { listServicePackagesAction, saveServicePackageAction, sellPackageAction } from "@/lib/actions/admin/packages";
+import {
+  getCustomerPackageAction,
+  listServicePackagesAction,
+  saveServicePackageAction,
+  sellPackageAction,
+} from "@/lib/actions/admin/packages";
+import { PackageSessionsForm, PackageSessionsModal, freeSessions } from "@/components/admin/PackageSessionsScheduler";
 import { listCustomersAction } from "@/lib/actions/admin/customers";
 import { formatBRL } from "@/lib/utils/money";
 import { formatShortDatePtBR, todayDateStr } from "@/lib/utils/date-format";
@@ -40,6 +46,7 @@ export function PackagesManager({
   const [editing, setEditing] = useState<ServicePackage | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
+  const [scheduling, setScheduling] = useState<CustomerPackage | null>(null);
 
   const visible = customerPackages.filter((p) => p.status === status);
   const pendingValue = customerPackages
@@ -136,7 +143,7 @@ export function PackagesManager({
             <ul data-cascata className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {visible.map((p) => (
                 <li key={p.id}>
-                  <CustomerPackageCard pkg={p} />
+                  <CustomerPackageCard pkg={p} onSchedule={() => setScheduling(p)} />
                 </li>
               ))}
             </ul>
@@ -186,6 +193,15 @@ export function PackagesManager({
           router.refresh();
         }}
       />
+      <PackageSessionsModal
+        open={!!scheduling}
+        pkg={scheduling}
+        onClose={() => setScheduling(null)}
+        onDone={() => {
+          setScheduling(null);
+          router.refresh();
+        }}
+      />
       <SellPackageModal
         open={sellOpen}
         onClose={() => setSellOpen(false)}
@@ -200,8 +216,18 @@ export function PackagesManager({
   );
 }
 
-export function CustomerPackageCard({ pkg, compact }: { pkg: CustomerPackage; compact?: boolean }) {
+export function CustomerPackageCard({
+  pkg,
+  compact,
+  onSchedule,
+}: {
+  pkg: CustomerPackage;
+  compact?: boolean;
+  /** Mostra "Agendar sessões" quando sobra sessão sem data. */
+  onSchedule?: () => void;
+}) {
   const remaining = pkg.sessionsTotal - pkg.sessionsUsed;
+  const free = freeSessions(pkg);
   const today = todayDateStr();
   const expired = pkg.status === "active" && pkg.expiresOn !== null && pkg.expiresOn < today;
   return (
@@ -226,14 +252,26 @@ export function CustomerPackageCard({ pkg, compact }: { pkg: CustomerPackage; co
       </div>
       <div className="mt-3 flex gap-1" aria-hidden="true">
         {Array.from({ length: pkg.sessionsTotal }, (_, i) => (
-          <span key={i} className={cn("h-2 flex-1 rounded-full", i < pkg.sessionsUsed ? "bg-brand-forest" : "bg-brand-beige")} />
+          <span
+            key={i}
+            className={cn(
+              "h-2 flex-1 rounded-full",
+              i < pkg.sessionsUsed ? "bg-brand-forest" : i < pkg.sessionsUsed + pkg.sessionsScheduled ? "bg-brand-sage" : "bg-brand-beige"
+            )}
+          />
         ))}
       </div>
       <p className="mt-2 text-xs text-brand-graphite/70">
-        <strong className="text-brand-graphite">{pkg.sessionsUsed}</strong> de {pkg.sessionsTotal} sessões
+        <strong className="text-brand-graphite">{pkg.sessionsUsed}</strong> de {pkg.sessionsTotal} feitas
         {pkg.status === "active" ? ` · faltam ${remaining}` : ""}
+        {pkg.status === "active" && pkg.sessionsScheduled ? ` (${pkg.sessionsScheduled} agendada${pkg.sessionsScheduled > 1 ? "s" : ""})` : ""}
         {pkg.expiresOn ? ` · vale até ${formatShortDatePtBR(pkg.expiresOn)}` : ""}
       </p>
+      {onSchedule && pkg.status === "active" && free > 0 && !expired ? (
+        <Button variant="secondary" className="mt-3 !px-3 !py-1.5 text-xs" onClick={onSchedule}>
+          <CalendarPlus size={14} /> Agendar {free === 1 ? "1 sessão" : `${free} sessões`}
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -375,9 +413,11 @@ export function SellPackageModal({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sold, setSold] = useState<CustomerPackage | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    setSold(null);
     setCustomerId(fixedCustomerId ?? "");
     setDiscountCents(0);
     setPaymentMode("full");
@@ -416,9 +456,23 @@ export function SellPackageModal({
       notes: notes || undefined,
       payment: paidNow > 0 ? { amountCents: paidNow, method } : undefined,
     });
+    if (!result.ok) {
+      setSubmitting(false);
+      return setError(result.error);
+    }
+    const created = result.customerPackageId ? await getCustomerPackageAction(result.customerPackageId) : null;
     setSubmitting(false);
-    if (!result.ok) return setError(result.error);
-    onCompleted();
+    if (created) setSold(created);
+    else onCompleted();
+  }
+
+  if (sold) {
+    return (
+      <Modal open={open} onClose={onCompleted} title="Agendar as sessões" widthClassName="max-w-lg">
+        <p className="mb-4 rounded-xl bg-brand-sage/15 px-4 py-2.5 text-sm text-brand-graphite">Pacote vendido. Agora marque os dias das sessões.</p>
+        <PackageSessionsForm pkg={sold} onDone={onCompleted} onSkip={onCompleted} skipLabel="Agendar depois" />
+      </Modal>
+    );
   }
 
   return (
@@ -522,8 +576,8 @@ export function SellPackageModal({
         </div>
 
         <p className="text-xs text-brand-graphite/60">
-          O dinheiro entra no caixa agora (ou fica em Contas a receber). Cada sessão é descontada ao concluir o atendimento com
-          “Usar sessão do pacote”, sem novo lançamento.
+          O dinheiro entra no caixa agora (ou fica em Contas a receber). Em seguida você marca os dias das sessões; cada uma é
+          descontada quando acontece, sem novo lançamento.
         </p>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

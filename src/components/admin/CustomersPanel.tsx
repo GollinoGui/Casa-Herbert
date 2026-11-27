@@ -6,6 +6,7 @@ import { CalendarPlus, HandCoins, Layers, ListChecks, MessageCircle, Pencil, Plu
 import { CustomerRecordsCard } from "@/components/admin/CustomerRecordsCard";
 import { CustomerTimeline } from "@/components/admin/CustomerTimeline";
 import { CustomerPackageCard, SellPackageModal } from "@/components/admin/PackagesManager";
+import { PackageSessionsModal } from "@/components/admin/PackageSessionsScheduler";
 import { WaitlistModal } from "@/components/admin/WaitlistManager";
 import { listCustomerPackagesAction } from "@/lib/actions/admin/packages";
 import { listCustomerRecordsAction } from "@/lib/actions/admin/customer-records";
@@ -59,6 +60,7 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
   const [packages, setPackages] = useState<CustomerPackage[]>([]);
   const [records, setRecords] = useState<CustomerRecord[]>([]);
   const [sellOpen, setSellOpen] = useState(false);
+  const [scheduling, setScheduling] = useState<CustomerPackage | null>(null);
   const [waitOpen, setWaitOpen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
 
@@ -277,7 +279,7 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
               <ul className="grid gap-2 sm:grid-cols-2">
                 {packages.map((p) => (
                   <li key={p.id}>
-                    <CustomerPackageCard pkg={p} compact />
+                    <CustomerPackageCard pkg={p} compact onSchedule={() => setScheduling(p)} />
                   </li>
                 ))}
               </ul>
@@ -306,6 +308,19 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
           if (selectedId) {
             loadExtras(selectedId);
             listSalesAction({ customerId: selectedId }).then(setCustomerSales);
+            getCustomerAppointmentsAction(selectedId).then(setHistory);
+          }
+        }}
+      />
+      <PackageSessionsModal
+        open={!!scheduling}
+        pkg={scheduling}
+        onClose={() => setScheduling(null)}
+        onDone={() => {
+          setScheduling(null);
+          if (selectedId) {
+            loadExtras(selectedId);
+            getCustomerAppointmentsAction(selectedId).then(setHistory);
           }
         }}
       />

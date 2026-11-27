@@ -22,11 +22,15 @@ export default async function PacotesPage() {
           <>Em <strong>Pacotes oferecidos</strong>, cadastre o protocolo: serviço, número de sessões e preço fechado.</>,
           <>
             <strong>Vender pacote</strong> registra a venda uma vez só: o dinheiro entra no caixa (ou fica a receber, se for pago
-            depois).
+            depois). Em seguida, marque os dias: primeira data, horário e frequência (ex.: toda terça às 10h).
           </>,
           <>
-            No dia de cada sessão, abra o atendimento confirmado e toque em <strong>Usar sessão do pacote</strong>. O atendimento é
-            concluído sem cobrar de novo.
+            No dia de cada sessão, abra o atendimento e toque em <strong>Concluir sessão</strong>. Para mudar o dia, use{" "}
+            <strong>Remarcar</strong>.
+          </>,
+          <>
+            Se a cliente desmarcar ou faltar, toque em <strong>Desmarcou ou faltou</strong> e escolha: a sessão conta ou volta para o
+            pacote (aí é só marcar a reposição).
           </>,
           <>Venda de pacote com sessão já usada não pode ser cancelada. Para devolver parte, lance um ajuste em Saldo e extrato.</>,
         ]}

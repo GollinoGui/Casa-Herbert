@@ -92,6 +92,8 @@ export function toAppointment(r: Row): Appointment {
     professionalId: r.professional_id ?? null,
     reminderSentAt: r.reminder_sent_at ?? null,
     customerPackageId: r.customer_package_id ?? null,
+    packageOutcome: r.package_outcome ?? null,
+    noShow: r.no_show ?? false,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     confirmedAt: r.confirmed_at,

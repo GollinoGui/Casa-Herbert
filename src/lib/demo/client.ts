@@ -60,7 +60,7 @@ const PRIMARY_KEY: Record<string, string> = {
 const pk = (table: string) => PRIMARY_KEY[table] ?? "id";
 
 const DEFAULTS: Record<string, () => Row> = {
-  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, customer_package_id: null, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null }),
+  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, customer_package_id: null, package_outcome: null, no_show: false, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null }),
   customers: () => ({ email: null, notes: null, birth_date: null, photo_consent_at: null }),
   services: () => ({ description: null, price_cents: null, is_active: true, display_order: 0, image_id: null, image_position: null, show_on_home: true, barcode: null, return_days: null }),
   products: () => ({ stock_quantity: 0, open_usage: 0, min_stock: null, is_active: true, barcode: null, cost_cents: null, description: null, image_id: null, image_position: null, show_on_site: false }),
@@ -570,7 +570,9 @@ export function createDemoClient() {
         const data = runRpc(name, args);
         return { data, error: null, count: null, status: 200, statusText: "OK" };
       } catch (e) {
-        return { data: null, error: { message: e instanceof Error ? e.message : String(e), code: "P0001" }, count: null, status: 400, statusText: "Bad Request" };
+        // Erro de constraint (ex.: EXCLUDE 23P01) sai com o código dele, como no Postgres.
+        const code = (e as { pgError?: PgError })?.pgError?.code ?? "P0001";
+        return { data: null, error: { message: e instanceof Error ? e.message : String(e), code }, count: null, status: 400, statusText: "Bad Request" };
       }
     },
     storage: {

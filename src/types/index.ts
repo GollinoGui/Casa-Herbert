@@ -88,8 +88,12 @@ export interface Appointment {
   professionalId: string | null;
   /** Quando o painel abriu o WhatsApp com o lembrete de véspera; remarcar zera. */
   reminderSentAt: string | null;
-  /** Pacote de onde saiu a sessão; null = atendimento avulso. */
+  /** Pacote de onde saiu a sessão; null = atendimento avulso. Ligada e ainda marcada = sessão reservada. */
   customerPackageId: string | null;
+  /** Sessão de pacote desmarcada: "counted" = descontada do pacote, "returned" = voltou para o pacote. */
+  packageOutcome: PackageOutcome | null;
+  /** Cancelado porque a cliente não compareceu. */
+  noShow: boolean;
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
@@ -358,6 +362,8 @@ export interface ServicePackage {
 
 export type CustomerPackageStatus = "active" | "finished" | "cancelled";
 
+export type PackageOutcome = "counted" | "returned";
+
 export interface CustomerPackage {
   id: string;
   customerId: string;
@@ -366,7 +372,10 @@ export interface CustomerPackage {
   serviceName: string;
   name: string;
   sessionsTotal: number;
+  /** Concluídas + desmarcadas que contaram. */
   sessionsUsed: number;
+  /** Agendadas e ainda por acontecer. Livres = total − usadas − agendadas. */
+  sessionsScheduled: number;
   /** Valor de cada sessão fixado na venda (preço do pacote menos desconto, dividido pelas sessões). */
   sessionValueCents: number;
   saleId: string;

@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { AlertCircle, Layers, MessageCircle, Phone, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarClock, Layers, MessageCircle, Phone, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
-import { Textarea, FieldLabel } from "@/components/ui/Field";
+import { Textarea, FieldLabel, Input } from "@/components/ui/Field";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { SaleModal, ProductSearch } from "@/components/admin/SaleModal";
 import { SaleStatusBadge } from "@/components/admin/FinanceBadges";
-import { formatShortDatePtBR, formatWeekdayPtBR } from "@/lib/utils/date-format";
+import { addDaysToDateStr, formatShortDatePtBR, formatWeekdayPtBR, todayDateStr } from "@/lib/utils/date-format";
 import { formatPhoneDisplay, toWhatsAppDigits } from "@/lib/utils/phone";
 import { formatServicePrice } from "@/lib/utils/service-format";
 import { formatBRL } from "@/lib/utils/money";
@@ -27,13 +27,20 @@ import {
   updateAppointmentDiscountAction,
   getAppointmentProductsAction,
   setAppointmentProductsAction,
+  adminRescheduleAppointmentAction,
 } from "@/lib/actions/admin/appointments";
 import { getCustomerAppointmentsAction } from "@/lib/actions/admin/customers";
 import { listOpenSalesAction, listSalesAction } from "@/lib/actions/admin/sales";
 import { listActiveProductsAction } from "@/lib/actions/admin/products";
 import { getSettingsAction } from "@/lib/actions/admin/settings";
-import { listCustomerPackagesAction, consumePackageSessionAction } from "@/lib/actions/admin/packages";
-import type { AppointmentProduct, AppointmentWithRelations, CustomerPackage, Product, Sale, Settings } from "@/types";
+import {
+  listCustomerPackagesAction,
+  consumePackageSessionAction,
+  cancelPackageSessionAction,
+  reopenPackageSessionAction,
+} from "@/lib/actions/admin/packages";
+import { PackageSessionsModal, freeSessions } from "@/components/admin/PackageSessionsScheduler";
+import type { AppointmentProduct, AppointmentWithRelations, CustomerPackage, PackageOutcome, Product, Sale, Settings } from "@/types";
 
 interface AppointmentDetailModalProps {
   appointmentId: string | null;
@@ -66,6 +73,15 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
   const [openSales, setOpenSales] = useState<Sale[]>([]);
   const [packages, setPackages] = useState<CustomerPackage[]>([]);
   const [packageError, setPackageError] = useState<string | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("");
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+  const [unbooking, setUnbooking] = useState(false);
+  const [noShow, setNoShow] = useState(false);
+  const [outcome, setOutcome] = useState<PackageOutcome | null>(null);
+  const [unbookReason, setUnbookReason] = useState("");
+  const [makeupOpen, setMakeupOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function loadRelated(appt: AppointmentWithRelations) {
@@ -99,6 +115,12 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
     setOpenSales([]);
     setPackages([]);
     setPackageError(null);
+    setRescheduling(false);
+    setRescheduleError(null);
+    setUnbooking(false);
+    setNoShow(false);
+    setOutcome(null);
+    setUnbookReason("");
     Promise.all([getAppointmentAction(appointmentId), getSettingsAction()]).then(([appt, sett]) => {
       if (cancelled) return;
       applyAppointment(appt);
@@ -172,6 +194,70 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
     });
   }
 
+  function startReschedule() {
+    if (!appointment) return;
+    setNewDate(appointment.date);
+    setNewTime(appointment.startTime);
+    setRescheduleError(null);
+    setRescheduling(true);
+  }
+
+  function handleReschedule() {
+    if (!appointment || !newDate || !newTime) return;
+    setRescheduleError(null);
+    startTransition(async () => {
+      const result = await adminRescheduleAppointmentAction(appointment.id, newDate, newTime);
+      if (!result.ok) {
+        setRescheduleError(
+          result.error === "SLOT_NO_LONGER_AVAILABLE" ? "Esse horário não está livre (ocupado, fechado ou fora do expediente)." : result.error
+        );
+        return;
+      }
+      setRescheduling(false);
+      refresh();
+    });
+  }
+
+  function handleUnbook() {
+    if (!appointment || !outcome) return;
+    setPackageError(null);
+    startTransition(async () => {
+      const result = await cancelPackageSessionAction(appointment.id, outcome, noShow, unbookReason);
+      if (!result.ok) {
+        setPackageError(result.error);
+        return;
+      }
+      setUnbooking(false);
+      refresh();
+    });
+  }
+
+  function handleChangeOutcome(next: PackageOutcome) {
+    if (!appointment) return;
+    setPackageError(null);
+    startTransition(async () => {
+      const result = await cancelPackageSessionAction(appointment.id, next, appointment.noShow);
+      if (!result.ok) {
+        setPackageError(result.error);
+        return;
+      }
+      refresh();
+    });
+  }
+
+  function handleReopen() {
+    if (!appointment) return;
+    setPackageError(null);
+    startTransition(async () => {
+      const result = await reopenPackageSessionAction(appointment.id);
+      if (!result.ok) {
+        setPackageError(result.error);
+        return;
+      }
+      refresh();
+    });
+  }
+
   function handleSaveNotes() {
     if (!appointment) return;
     startTransition(async () => {
@@ -213,11 +299,15 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
     return buildWhatsAppLink(appointment.customer.phone, message);
   }
 
-  const editable = appointment?.status === "PENDING" || appointment?.status === "CONFIRMED";
+  const active = appointment?.status === "PENDING" || appointment?.status === "CONFIRMED";
+  const linkedPackage = appointment?.customerPackageId ? packages.find((p) => p.id === appointment.customerPackageId) ?? null : null;
+  const isPackageSession = !!appointment?.customerPackageId;
+  // Sessão de pacote já foi paga na venda: valor, produtos e checkout não se aplicam.
+  const editable = active && !isPackageSession;
+  const today = todayDateStr();
   const usablePackages = packages.filter(
-    (p) => p.status === "active" && p.sessionsUsed < p.sessionsTotal && (!p.expiresOn || !appointment || appointment.date <= p.expiresOn)
+    (p) => p.status === "active" && freeSessions(p) > 0 && (!p.expiresOn || !appointment || appointment.date <= p.expiresOn)
   );
-  const usedPackage = appointment?.customerPackageId ? packages.find((p) => p.id === appointment.customerPackageId) : null;
   const productsTotal = apptProducts.reduce((s, p) => s + p.priceCents * p.quantity, 0);
   const totalOpen = openSales.reduce((s, sale) => s + openAmount(sale), 0);
 
@@ -291,7 +381,36 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
               <p className="font-medium text-brand-graphite">
                 {formatWeekdayPtBR(appointment.date)}, {formatShortDatePtBR(appointment.date)} · {appointment.startTime}–{appointment.endTime}
               </p>
+              {active && !rescheduling ? (
+                <button
+                  type="button"
+                  onClick={startReschedule}
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-moss hover:underline"
+                >
+                  <CalendarClock size={13} aria-hidden="true" /> Remarcar
+                </button>
+              ) : null}
             </div>
+            {active && rescheduling ? (
+              <div className="space-y-2 rounded-xl border border-brand-beige bg-white p-3 sm:col-span-2">
+                <p className="text-xs font-medium text-brand-graphite">Novo dia e horário</p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <Input type="date" aria-label="Nova data" className="!w-auto flex-1" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+                  <Input type="time" aria-label="Novo horário" className="!w-28" value={newTime} onChange={(e) => setNewTime(e.target.value)} />
+                </div>
+                {newDate ? <p className="text-xs capitalize text-brand-graphite/60">{formatWeekdayPtBR(newDate)}</p> : null}
+                {rescheduleError ? <p className="text-sm text-red-600">{rescheduleError}</p> : null}
+                <div className="flex gap-2">
+                  <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => setRescheduling(false)} disabled={isPending}>
+                    Voltar
+                  </Button>
+                  <Button className="!px-3 !py-1.5 text-xs" onClick={handleReschedule} disabled={isPending || !newDate || !newTime}>
+                    Salvar novo horário
+                  </Button>
+                </div>
+                {isPackageSession ? <p className="text-xs text-brand-graphite/60">Continua sendo a mesma sessão do pacote.</p> : null}
+              </div>
+            ) : null}
             {editable ? (
               <div className="grid gap-3 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                 <div>
@@ -327,6 +446,11 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                 <Button variant="secondary" className="!px-4 !py-2 text-xs" onClick={handleSaveValues} disabled={!valuesDirty || isPending}>
                   Salvar
                 </Button>
+              </div>
+            ) : isPackageSession ? (
+              <div className="sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-brand-graphite/50">Valor</p>
+                <p className="font-medium text-brand-graphite">Pago no pacote{linkedPackage ? ` “${linkedPackage.name}”` : ""}</p>
               </div>
             ) : (
               <div className="sm:col-span-2">
@@ -440,7 +564,159 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
           </div>
 
           <div className="border-t border-brand-beige pt-4">
-            {appointment.status === "PENDING" ? (
+            {active && isPackageSession ? (
+              <div className="space-y-3">
+                <p className="flex items-start gap-2 rounded-xl border border-brand-sage/50 bg-brand-sage/10 p-3 text-sm text-brand-graphite">
+                  <Layers size={16} className="mt-0.5 shrink-0 text-brand-moss" aria-hidden="true" />
+                  <span>
+                    Sessão do pacote <strong className="font-medium">{linkedPackage?.name ?? ""}</strong>
+                    {linkedPackage ? (
+                      <span className="text-brand-graphite/70">
+                        {" "}
+                        · {linkedPackage.sessionsUsed} de {linkedPackage.sessionsTotal} feitas, {linkedPackage.sessionsScheduled}{" "}
+                        {linkedPackage.sessionsScheduled === 1 ? "agendada" : "agendadas"}
+                      </span>
+                    ) : null}
+                  </span>
+                </p>
+                {!unbooking ? (
+                  <div className="flex flex-wrap gap-3">
+                    {appointment.status === "PENDING" ? (
+                      <Button onClick={handleConfirm} disabled={isPending}>
+                        Confirmar
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => linkedPackage && handleUsePackage(linkedPackage)}
+                        disabled={isPending || !linkedPackage || appointment.date > today}
+                      >
+                        Concluir sessão
+                      </Button>
+                    )}
+                    <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
+                      Enviar confirmação
+                    </LinkButton>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setOutcome(null);
+                        setNoShow(appointment.date < today);
+                        setUnbookReason("");
+                        setUnbooking(true);
+                      }}
+                      disabled={isPending}
+                    >
+                      Desmarcou ou faltou
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 rounded-xl border border-brand-beige p-3">
+                    <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-brand-cream/60 p-1">
+                      {(
+                        [
+                          [false, "Desmarcou"],
+                          [true, "Não compareceu"],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <button
+                          key={label}
+                          type="button"
+                          aria-pressed={noShow === value}
+                          onClick={() => setNoShow(value)}
+                          className={
+                            noShow === value
+                              ? "rounded-lg bg-white px-2 py-2 text-sm font-medium text-brand-forest shadow-softer"
+                              : "rounded-lg px-2 py-2 text-sm font-medium text-brand-graphite/70"
+                          }
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <fieldset className="space-y-2">
+                      <legend className="mb-1 text-sm font-medium text-brand-graphite">E a sessão?</legend>
+                      {(
+                        [
+                          ["counted", "Conta a sessão", "Desconta do pacote, como se tivesse acontecido."],
+                          ["returned", "Devolve ao pacote", "A sessão volta e você marca uma reposição."],
+                        ] as const
+                      ).map(([value, label, hint]) => (
+                        <label
+                          key={value}
+                          className={
+                            outcome === value
+                              ? "flex cursor-pointer gap-3 rounded-xl border border-brand-forest bg-brand-forest/10 p-3"
+                              : "flex cursor-pointer gap-3 rounded-xl border border-brand-beige p-3 hover:border-brand-sage"
+                          }
+                        >
+                          <input
+                            type="radio"
+                            name="package-outcome"
+                            value={value}
+                            checked={outcome === value}
+                            onChange={() => setOutcome(value)}
+                            className="mt-1 h-4 w-4"
+                          />
+                          <span>
+                            <span className="block text-sm font-medium text-brand-graphite">{label}</span>
+                            <span className="block text-xs text-brand-graphite/60">{hint}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </fieldset>
+                    <div>
+                      <FieldLabel htmlFor="unbook-reason">Motivo (opcional)</FieldLabel>
+                      <Textarea id="unbook-reason" rows={2} value={unbookReason} onChange={(e) => setUnbookReason(e.target.value)} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" onClick={() => setUnbooking(false)} disabled={isPending}>
+                        Voltar
+                      </Button>
+                      <Button onClick={handleUnbook} disabled={isPending || !outcome}>
+                        Confirmar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {appointment.status === "CONFIRMED" && appointment.date > today && !unbooking ? (
+                  <p className="text-xs text-brand-graphite/60">
+                    A sessão fica reservada no pacote e só é concluída no dia. Se a cliente não puder vir, use Remarcar (lá em cima) ou
+                    “Desmarcou ou faltou”.
+                  </p>
+                ) : null}
+                {packageError ? <p className="text-sm text-red-600">{packageError}</p> : null}
+              </div>
+            ) : null}
+
+            {appointment.status === "CANCELLED" && isPackageSession ? (
+              <div className="mb-3 space-y-2 rounded-xl border border-brand-beige p-3 text-sm text-brand-graphite">
+                <p>
+                  {appointment.noShow ? "A cliente não compareceu" : "A cliente desmarcou"} ·{" "}
+                  <strong className="font-medium">
+                    {appointment.packageOutcome === "counted" ? "a sessão contou no pacote" : "a sessão voltou para o pacote"}
+                  </strong>
+                  {linkedPackage ? <span className="text-brand-graphite/60"> ({linkedPackage.name})</span> : null}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {appointment.packageOutcome === "returned" && linkedPackage?.status === "active" && freeSessions(linkedPackage) > 0 ? (
+                    <Button className="!px-3 !py-1.5 text-xs" onClick={() => setMakeupOpen(true)} disabled={isPending}>
+                      <Plus size={14} /> Marcar reposição
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="ghost"
+                    className="!px-3 !py-1.5 text-xs"
+                    onClick={() => handleChangeOutcome(appointment.packageOutcome === "counted" ? "returned" : "counted")}
+                    disabled={isPending || !linkedPackage || linkedPackage.status === "cancelled"}
+                  >
+                    {appointment.packageOutcome === "counted" ? "Mudar: devolver a sessão" : "Mudar: contar a sessão"}
+                  </Button>
+                </div>
+                {packageError ? <p className="text-sm text-red-600">{packageError}</p> : null}
+              </div>
+            ) : null}
+
+            {appointment.status === "PENDING" && !isPackageSession ? (
               <div className="space-y-3">
                 {!showRejectForm ? (
                   <div className="flex flex-wrap gap-3">
@@ -468,7 +744,7 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
               </div>
             ) : null}
 
-            {appointment.status === "CONFIRMED" ? (
+            {appointment.status === "CONFIRMED" && !isPackageSession ? (
               <div className="space-y-3">
                 {usablePackages.length ? (
                   <div className="space-y-2 rounded-xl border border-brand-sage/50 bg-brand-sage/10 p-3">
@@ -478,15 +754,19 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                           <Layers size={16} className="shrink-0 text-brand-moss" aria-hidden="true" />
                           <span className="min-w-0">
                             <strong className="font-medium">{pkg.name}</strong>
-                            <span className="text-brand-graphite/70"> · faltam {pkg.sessionsTotal - pkg.sessionsUsed} de {pkg.sessionsTotal}</span>
+                            <span className="text-brand-graphite/70"> · {freeSessions(pkg)} livre{freeSessions(pkg) === 1 ? "" : "s"} de {pkg.sessionsTotal}</span>
                           </span>
                         </p>
-                        <Button onClick={() => handleUsePackage(pkg)} disabled={isPending} className="!px-4 !py-2 text-xs">
+                        <Button onClick={() => handleUsePackage(pkg)} disabled={isPending || appointment.date > today} className="!px-4 !py-2 text-xs">
                           Usar sessão do pacote
                         </Button>
                       </div>
                     ))}
-                    <p className="text-xs text-brand-graphite/60">Conclui o atendimento sem cobrar: o pacote já foi pago na venda.</p>
+                    <p className="text-xs text-brand-graphite/60">
+                      {appointment.date > today
+                        ? "Dá para usar o pacote no dia do atendimento. Para reservar sessões com antecedência, agende pelo pacote."
+                        : "Conclui o atendimento sem cobrar: o pacote já foi pago na venda."}
+                    </p>
                     {packageError ? <p className="text-sm text-red-600">{packageError}</p> : null}
                   </div>
                 ) : null}
@@ -540,9 +820,18 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
               <div className="space-y-2">
                 <p className="text-sm text-brand-graphite/60">
                   {appointment.customerPackageId
-                    ? `Atendimento concluído com uma sessão do pacote${usedPackage ? ` “${usedPackage.name}” (${usedPackage.sessionsUsed} de ${usedPackage.sessionsTotal} usadas)` : ""}.`
+                    ? `Atendimento concluído com uma sessão do pacote${linkedPackage ? ` “${linkedPackage.name}” (${linkedPackage.sessionsUsed} de ${linkedPackage.sessionsTotal} usadas)` : ""}.`
                     : "Atendimento concluído."}
                 </p>
+                {isPackageSession && appointment.date > today ? (
+                  <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    <p>Esta sessão foi concluída antes do dia. Reabra para poder remarcar ou desmarcar.</p>
+                    <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={handleReopen} disabled={isPending}>
+                      Reabrir sessão
+                    </Button>
+                    {packageError ? <p className="text-sm text-red-600">{packageError}</p> : null}
+                  </div>
+                ) : null}
                 <Button variant="secondary" onClick={() => setPendingOpen(true)}>
                   <Plus size={16} /> Lançar algo que ficou sem pagar
                 </Button>
@@ -554,6 +843,18 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
           </div>
         </div>
       )}
+      <PackageSessionsModal
+        open={makeupOpen}
+        pkg={linkedPackage}
+        count={1}
+        initialDate={appointment ? addDaysToDateStr(appointment.date < today ? today : appointment.date, 7) : undefined}
+        initialTime={appointment?.startTime}
+        onClose={() => setMakeupOpen(false)}
+        onDone={() => {
+          setMakeupOpen(false);
+          refresh();
+        }}
+      />
       <SaleModal
         open={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
