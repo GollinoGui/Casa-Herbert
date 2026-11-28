@@ -18,12 +18,13 @@ export async function adminLoginAction(
   const next = String(formData.get("next") ?? "");
   const remember = formData.get("remember") === "on";
 
-  if (!(await verifyAdminCredentials(email, password))) {
+  const session = await verifyAdminCredentials(email, password);
+  if (!session) {
     return { error: "E-mail ou senha inválidos." };
   }
 
   // Sem "lembrar", o cookie é de sessão (some ao fechar o navegador) e o token vale 8h.
-  const token = await createSessionToken(email, remember ? REMEMBER_TTL_SECONDS : SESSION_TTL_SECONDS);
+  const token = await createSessionToken(session, remember ? REMEMBER_TTL_SECONDS : SESSION_TTL_SECONDS);
   cookies().set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

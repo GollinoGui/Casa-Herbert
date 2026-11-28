@@ -38,6 +38,8 @@ import { ThemeToggle } from "@/components/admin/ThemeToggle";
 import { HideMoneyToggle } from "@/components/admin/HideMoneyToggle";
 import { NotificationsBell } from "@/components/admin/NotificationsBell";
 import { SearchButton } from "@/components/admin/SearchButton";
+import { usePanelUser } from "@/components/admin/PanelUserProvider";
+import { canAccessPath, ROLE_LABELS, type PanelRole } from "@/lib/auth/permissions";
 
 export interface NavItem {
   href: string;
@@ -108,9 +110,17 @@ function isActive(href: string, pathname: string | null) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** Grupos do menu que a pessoa pode abrir (grupo sem nenhum item liberado some). */
+export function visibleNavGroups(siteEnabled: boolean, role: PanelRole): NavGroup[] {
+  return NAV_GROUPS.filter((g) => siteEnabled || !g.siteOnly)
+    .map((g) => ({ ...g, items: g.items.filter((item) => canAccessPath(role, item.href)) }))
+    .filter((g) => g.items.length > 0);
+}
+
 export function Sidebar({ siteEnabled }: { siteEnabled: boolean }) {
   const pathname = usePathname();
-  const groups = siteEnabled ? NAV_GROUPS : NAV_GROUPS.filter((g) => !g.siteOnly);
+  const user = usePanelUser();
+  const groups = visibleNavGroups(siteEnabled, user.role);
 
   return (
     <>
@@ -173,7 +183,14 @@ export function Sidebar({ siteEnabled }: { siteEnabled: boolean }) {
         </nav>
 
         <div className="relative space-y-0.5 border-t border-brand-onPine/10 px-3 py-4">
-          <HideMoneyToggle withLabel className="w-full px-3 py-2.5 text-brand-onPine/80 hover:bg-brand-onPine/[0.07] hover:text-brand-onPine" />
+          {user.name ? (
+            <p className="truncate px-3 pb-2 text-xs text-brand-onPine/60">
+              <span className="font-medium text-brand-onPine/85">{user.name}</span> · {ROLE_LABELS[user.role]}
+            </p>
+          ) : null}
+          {user.role === "admin" ? (
+            <HideMoneyToggle withLabel className="w-full px-3 py-2.5 text-brand-onPine/80 hover:bg-brand-onPine/[0.07] hover:text-brand-onPine" />
+          ) : null}
           <form action={adminLogoutAction}>
             <button
               type="submit"
@@ -195,6 +212,7 @@ export function Sidebar({ siteEnabled }: { siteEnabled: boolean }) {
  * celulares e fica ao alcance do polegar mais cedo que uma gaveta lateral).
  */
 function MobileNav({ pathname, groups }: { pathname: string | null; groups: NavGroup[] }) {
+  const isAdmin = usePanelUser().role === "admin";
   const [open, setOpen] = useState(false);
   const items = groups.flatMap((g) => g.items);
   const current = items.find((item) => isActive(item.href, pathname)) ?? items[0];
@@ -232,7 +250,9 @@ function MobileNav({ pathname, groups }: { pathname: string | null; groups: NavG
 
         <div className="flex min-w-0 items-center gap-1.5">
           <SearchButton className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
-          <HideMoneyToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
+          {isAdmin ? (
+            <HideMoneyToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
+          ) : null}
           <NotificationsBell className="h-10 w-10 shrink-0 rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
           <ThemeToggle className="h-10 w-10 shrink-0 justify-center rounded-full text-brand-onPine/85 hover:bg-brand-onPine/10" />
           <button

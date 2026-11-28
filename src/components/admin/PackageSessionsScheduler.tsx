@@ -5,10 +5,15 @@ import { AlertCircle, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { FieldLabel, Input, Select } from "@/components/ui/Field";
-import { checkPackageSessionSlotsAction, schedulePackageSessionsAction } from "@/lib/actions/admin/packages";
+import {
+  checkPackageSessionSlotsAction,
+  recordPastPackageSessionAction,
+  schedulePackageSessionsAction,
+} from "@/lib/actions/admin/packages";
+import { listProfessionalsAction } from "@/lib/actions/admin/appointments";
 import { addDaysToDateStr, formatShortDatePtBR, formatWeekdayPtBR, todayDateStr } from "@/lib/utils/date-format";
 import { cn } from "@/lib/utils/cn";
-import type { CustomerPackage } from "@/types";
+import type { CustomerPackage, Professional } from "@/types";
 
 type Problem = "PAST_DATE" | "CLOSED" | "TAKEN" | "EXPIRED";
 
@@ -265,6 +270,142 @@ export function PackageSessionsForm({
             {checking ? "Conferindo..." : problems ? "Conferir de novo" : "Conferir datas na agenda"}
           </Button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Exceção: sessão que aconteceu e não foi lançada no dia (ex.: antes de o sistema
+ * estar pronto). Entra concluída, ocupando uma vaga livre do pacote.
+ */
+export function PastPackageSessionModal({
+  pkg,
+  onClose,
+  onDone,
+}: {
+  pkg: CustomerPackage | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  return (
+    <Modal open={!!pkg} onClose={onClose} title="Registrar sessão já feita" widthClassName="max-w-lg">
+      {pkg ? <PastPackageSessionForm key={pkg.id} pkg={pkg} onClose={onClose} onDone={onDone} /> : null}
+    </Modal>
+  );
+}
+
+function PastPackageSessionForm({ pkg, onClose, onDone }: { pkg: CustomerPackage; onClose: () => void; onDone: () => void }) {
+  const today = todayDateStr();
+  const [date, setDate] = useState(addDaysToDateStr(today, -1));
+  const [time, setTime] = useState("10:00");
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [professionalId, setProfessionalId] = useState("");
+  const [consumeStock, setConsumeStock] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listProfessionalsAction().then((list) => {
+      setProfessionals(list);
+      setProfessionalId((current) => current || list[0]?.id || "");
+    });
+  }, []);
+
+  const free = freeSessions(pkg);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const result = await recordPastPackageSessionAction(pkg.id, {
+      date,
+      startTime: time,
+      professionalId: professionalId || null,
+      consumeStock,
+      notes: notes.trim() || undefined,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onDone();
+  }
+
+  if (free === 0) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-brand-graphite/70">
+          Não sobra sessão livre neste pacote. Se a sessão já estava agendada, abra ela na agenda e conclua por lá.
+        </p>
+        <div className="flex justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            Fechar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-brand-graphite/70">
+        <strong className="text-brand-graphite">{pkg.name}</strong> · {pkg.sessionsUsed} de {pkg.sessionsTotal} feitas. Use para
+        uma sessão que já aconteceu e não foi lançada no dia: ela entra como concluída e conta no pacote.
+      </p>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <FieldLabel htmlFor="pps-date">Data da sessão</FieldLabel>
+          <Input id="pps-date" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} />
+          {date ? <p className="mt-1 text-xs capitalize text-brand-graphite/60">{formatWeekdayPtBR(date)}</p> : null}
+        </div>
+        <div>
+          <FieldLabel htmlFor="pps-time">Horário</FieldLabel>
+          <Input id="pps-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </div>
+        {professionals.length > 1 ? (
+          <div className="sm:col-span-2">
+            <FieldLabel htmlFor="pps-professional">Quem atendeu</FieldLabel>
+            <Select id="pps-professional" value={professionalId} onChange={(e) => setProfessionalId(e.target.value)}>
+              {professionals.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
+        <div className="sm:col-span-2">
+          <FieldLabel htmlFor="pps-notes">Observação (opcional)</FieldLabel>
+          <Input id="pps-notes" value={notes} maxLength={500} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      </div>
+
+      <label className="flex items-start gap-2 text-sm text-brand-graphite">
+        <input
+          type="checkbox"
+          checked={consumeStock}
+          onChange={(e) => setConsumeStock(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-brand-beige"
+        />
+        <span>
+          Baixar do estoque os produtos usados no serviço
+          <span className="block text-xs text-brand-graphite/50">
+            Deixe desmarcado se o estoque foi contado depois dessa sessão: ele já está sem o que foi usado.
+          </span>
+        </span>
+      </label>
+
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      <div className="flex flex-wrap justify-end gap-3">
+        <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+          Cancelar
+        </Button>
+        <Button type="button" onClick={save} disabled={saving || !date || !time || date > today}>
+          {saving ? "Registrando..." : "Registrar sessão"}
+        </Button>
       </div>
     </div>
   );

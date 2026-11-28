@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireStaff } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
 import {
   createCustomer,
@@ -13,19 +13,19 @@ import {
 import { customerFormSchema } from "@/lib/booking/validators";
 
 export async function updateCustomerNotesAction(id: string, notes: string) {
-  await requireAdmin();
+  await requireStaff();
   const customer = await updateCustomerNotes(id, notes);
   revalidatePath("/admin/clientes");
   return customer;
 }
 
 export async function listCustomersAction() {
-  await requireAdmin();
+  await requireStaff();
   return getCustomers();
 }
 
 export async function getCustomerAppointmentsAction(customerId: string) {
-  await requireAdmin();
+  await requireStaff();
   return getCustomerAppointments(customerId);
 }
 
@@ -33,7 +33,7 @@ export async function saveCustomerAction(
   id: string | null,
   input: { fullName: string; phone: string; email: string; birthDate?: string }
 ): Promise<SaveCustomerResult> {
-  await requireAdmin();
+  await requireStaff();
   const parsed = customerFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
 

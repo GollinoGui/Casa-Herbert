@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { CornerDownLeft, Package, Search, Sparkles, User, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { NAV_GROUPS } from "@/components/admin/Sidebar";
+import { visibleNavGroups } from "@/components/admin/Sidebar";
+import { usePanelUser } from "@/components/admin/PanelUserProvider";
 import { searchPanelAction, type SearchHit } from "@/lib/actions/admin/search";
 import { OPEN_SEARCH_EVENT } from "@/components/admin/SearchButton";
 
@@ -32,6 +33,7 @@ function normalize(text: string) {
  * filtram na hora; clientes, produtos e serviços vêm do servidor.
  */
 export function CommandPalette({ siteEnabled }: { siteEnabled: boolean }) {
+  const { role } = usePanelUser();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -110,7 +112,7 @@ export function CommandPalette({ siteEnabled }: { siteEnabled: boolean }) {
 
   const rows = useMemo<Row[]>(() => {
     const q = normalize(query.trim());
-    const pages = NAV_GROUPS.filter((g) => siteEnabled || !g.siteOnly)
+    const pages = visibleNavGroups(siteEnabled, role)
       .flatMap((g) => g.items.map((item) => ({ ...item, groupTitle: g.title ?? "Painel" })))
       .filter((item) => !q || normalize(`${item.label} ${item.groupTitle}`).includes(q))
       .slice(0, q ? 6 : 8)
@@ -119,7 +121,7 @@ export function CommandPalette({ siteEnabled }: { siteEnabled: boolean }) {
       (h): Row => ({ key: `${h.kind}-${h.id}`, group: HIT_GROUP[h.kind], title: h.title, detail: h.detail, href: h.href, icon: HIT_ICON[h.kind] })
     );
     return q ? [...data, ...pages] : pages;
-  }, [query, hits, siteEnabled]);
+  }, [query, hits, siteEnabled, role]);
 
   useEffect(() => setActive(0), [rows.length]);
 

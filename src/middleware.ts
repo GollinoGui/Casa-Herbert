@@ -1,6 +1,30 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
+import { SESSION_COOKIE_NAME, verifySessionToken, type SessionPayload } from "@/lib/auth/session";
+import { canAccessPath, type PanelRole } from "@/lib/auth/permissions";
 import { isSiteEnabled, SITE_ONLY_ADMIN_PATHS } from "@/lib/site";
+import { isDemoMode } from "@/lib/demo/mode";
+
+/**
+ * Papel atual da pessoa, direto do banco (REST do Supabase, sem o supabase-js no
+ * bundle do middleware). null = sem ficha em admin_profiles: acesso removido.
+ * No modo demonstração o banco em memória não existe aqui (o middleware roda
+ * num sandbox à parte), então vale o papel gravado no cookie.
+ */
+async function currentRole(session: SessionPayload): Promise<PanelRole | null> {
+  if (isDemoMode()) return session.role;
+
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  const res = await fetch(`${url}/rest/v1/admin_profiles?select=role&id=eq.${encodeURIComponent(session.uid)}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`admin_profiles: ${res.status}`);
+  const rows = (await res.json()) as { role: string }[];
+  if (!rows.length) return null;
+  return rows[0].role === "admin" ? "admin" : "staff";
+}
 
 /**
  * Também propaga o pathname atual como header (`x-pathname`) para que o root
@@ -31,10 +55,19 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = await verifySessionToken(token);
 
-  if (!session) {
+  const role = session ? await currentRole(session) : null;
+
+  if (!session || !role) {
     const loginUrl = new URL("/admin/login", request.url);
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(loginUrl);
+    if (session) redirect.cookies.set(SESSION_COOKIE_NAME, "", { path: "/", maxAge: 0 });
+    return redirect;
+  }
+
+  // Secretária fora das páginas dela volta para a agenda (inclui as requisições RSC, que pulam o layout).
+  if (!canAccessPath(role, pathname)) {
+    return NextResponse.redirect(new URL("/admin/agenda", request.url));
   }
 
   return response;

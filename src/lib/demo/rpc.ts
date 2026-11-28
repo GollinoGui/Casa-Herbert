@@ -1,5 +1,5 @@
 import { addDaysToDateStr, addMinutesToTime, todayDateStr } from "@/lib/utils/date-format";
-import { db, insertRow, resolveCommissionBps, updateRow, type PgError } from "@/lib/demo/client";
+import { consumeServiceProducts, db, insertRow, resolveCommissionBps, updateRow, type PgError } from "@/lib/demo/client";
 import type { Row } from "@/lib/demo/seed";
 
 /**
@@ -526,6 +526,53 @@ function schedulePackageSessions({ p }: Json) {
   return { ok: true, appointmentIds: created.map((r) => r.id) };
 }
 
+/** Espelho de record_past_package_session (0021): sessão já feita entra concluída. */
+function recordPastPackageSession({ p }: Json) {
+  const pkg = find("customer_packages", p?.customerPackageId);
+  if (!pkg) return fail("Pacote não encontrado.");
+  if (pkg.status !== "active") return fail("Este pacote não está em andamento.");
+  const date = String(p?.date ?? "");
+  const startTime = String(p?.startTime ?? "");
+  if (!date || !startTime) return fail("Informe a data e o horário da sessão.");
+  if (date > todayDateStr()) return fail('Essa data ainda não chegou. Para sessão futura, use "Agendar sessões".');
+  if (pkg.expires_on && date > pkg.expires_on) {
+    return fail(`O pacote vale até ${ddmm(pkg.expires_on)}: a data ${ddmm(date)} passa disso.`);
+  }
+  const { used, reserved } = sessionCounts(pkg.id);
+  if (used + reserved >= pkg.sessions_total) {
+    return fail("Não sobra sessão livre neste pacote. Se a sessão já estava agendada, abra ela na agenda e conclua por lá.");
+  }
+  const service = find("services", pkg.service_id);
+  const professionalId =
+    p?.professionalId ||
+    db()
+      .professionals.filter((r) => r.is_active)
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))[0]?.id ||
+    null;
+  const notes = String(p?.notes ?? "").trim();
+  const appt = must(
+    insertRow("appointments", {
+      customer_id: pkg.customer_id,
+      service_id: pkg.service_id,
+      appointment_date: date,
+      start_time: startTime,
+      end_time: addMinutesToTime(startTime, service?.duration_minutes ?? 60),
+      status: "COMPLETED",
+      price_cents: pkg.session_value_cents,
+      professional_id: professionalId,
+      confirmed_at: now(),
+      customer_package_id: pkg.id,
+      admin_notes: ["Sessão registrada depois de feita.", notes].filter(Boolean).join("\n"),
+      commission_cents: Math.round(
+        (Number(pkg.session_value_cents) * resolveCommissionBps(professionalId, "service", pkg.service_id, null)) / 10000
+      ),
+    })
+  );
+  if (p?.consumeStock === true) consumeServiceProducts(pkg.service_id);
+  refreshPackageStatus(pkg);
+  return { ok: true, appointmentId: appt.id, remaining: pkg.sessions_total - used - 1 };
+}
+
 /** Espelho de cancel_package_session (0018). */
 function cancelPackageSession({ p_appointment_id, p_outcome, p_no_show, p_reason }: Json) {
   if (p_outcome !== "counted" && p_outcome !== "returned") return fail("Escolha se a sessão conta ou volta para o pacote.");
@@ -775,6 +822,7 @@ const RPCS: Record<string, (args: Json) => unknown> = {
   sell_package: sellPackage,
   use_package_session: consumePackageSession,
   schedule_package_sessions: schedulePackageSessions,
+  record_past_package_session: recordPastPackageSession,
   cancel_package_session: cancelPackageSession,
   reopen_package_session: reopenPackageSession,
   cash_drawer_preview: cashDrawerPreview,

@@ -83,7 +83,9 @@ export function SaleModal({ open, onClose, onCompleted, appointment, mode = "sal
     setNotes("");
     setAdding(null);
     setReceiptNote(null);
-    setSaleDate(prefill?.payment?.date ?? todayDateStr());
+    // Atendimento de dia passado (lançado depois): a venda vai para o dia em que aconteceu.
+    const pastVisitDate = isCheckout && appointment!.date < todayDateStr() ? appointment!.date : null;
+    setSaleDate(prefill?.payment?.date ?? pastVisitDate ?? todayDateStr());
     setDueDate(todayDateStr());
     setCustomerId(appointment?.customerId ?? prefill?.customerId ?? "");
     setDiscountCents(isCheckout ? appointment!.discountCents : 0);

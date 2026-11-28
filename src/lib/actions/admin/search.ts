@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireStaff } from "@/lib/auth/require-admin";
 import { getCustomers } from "@/lib/data/customers";
 import { getAllProducts } from "@/lib/data/products";
 import { getAllServices } from "@/lib/data/services";
@@ -20,10 +20,16 @@ const PER_KIND = 6;
 
 /** Busca do Ctrl+K: clientes (nome, telefone, e-mail), produtos (nome, código) e serviços. */
 export async function searchPanelAction(query: string): Promise<SearchHit[]> {
-  await requireAdmin();
+  const user = await requireStaff();
   const q = String(query ?? "").trim().slice(0, 80);
   if (q.length < 2) return [];
-  const [customers, products, services] = await Promise.all([getCustomers(), getAllProducts(), getAllServices()]);
+  // Estoque e serviços levam a páginas que a secretária não abre: ela busca só clientes.
+  const isAdmin = user.role === "admin";
+  const [customers, products, services] = await Promise.all([
+    getCustomers(),
+    isAdmin ? getAllProducts() : Promise.resolve([]),
+    isAdmin ? getAllServices() : Promise.resolve([]),
+  ]);
   return [
     ...customers
       .filter((c) => matchesCustomerSearch(c, q))

@@ -231,7 +231,7 @@ function packageSessionCommission(row: Row, next: Row) {
 }
 
 /** Espelho de fn_consume_service_products (0016): baixa a receita, acumulando a fração da unidade aberta. */
-function consumeServiceProducts(serviceId: unknown) {
+export function consumeServiceProducts(serviceId: unknown) {
   for (const line of db().service_products.filter((l) => l.service_id === serviceId)) {
     const product = db().products.find((p) => p.id === line.product_id);
     if (!product) continue;
@@ -593,9 +593,43 @@ class DemoQuery implements PromiseLike<Result> {
 
 const UPLOAD_OFF: PgError = { message: "Envio de fotos indisponível no modo demonstração." };
 
+/** Login do demo: confere a conta em memória e devolve o id (como o signInWithPassword do Auth). */
+export function demoSignIn(email: string, password: string): string | null {
+  const wanted = email.trim().toLowerCase();
+  const user = db().demo_auth_users.find((u) => u.email === wanted && u.password === password);
+  return user ? (user.id as string) : null;
+}
+
+type AuthResult = { data: { user: { id: string } | null }; error: PgError | null };
+
+// Espelha o pedaço de auth.admin que src/lib/data/team.ts usa; apagar a conta leva a ficha junto (cascade).
+const demoAuthAdmin = {
+  createUser: async ({ email, password }: { email: string; password: string }): Promise<AuthResult> => {
+    const users = db().demo_auth_users;
+    if (users.some((u) => u.email === email)) return { data: { user: null }, error: { message: "User already registered" } };
+    if (!password || password.length < 6) return { data: { user: null }, error: { message: "Password should be at least 6 characters" } };
+    const id = crypto.randomUUID();
+    users.push({ id, email, password });
+    return { data: { user: { id } }, error: null };
+  },
+  updateUserById: async (id: string, patch: { password?: string }): Promise<AuthResult> => {
+    const user = db().demo_auth_users.find((u) => u.id === id);
+    if (!user) return { data: { user: null }, error: { message: "User not found" } };
+    if (patch.password) user.password = patch.password;
+    return { data: { user: { id } }, error: null };
+  },
+  deleteUser: async (id: string): Promise<AuthResult> => {
+    const tables = db();
+    tables.demo_auth_users = tables.demo_auth_users.filter((u) => u.id !== id);
+    tables.admin_profiles = tables.admin_profiles.filter((p) => p.id !== id);
+    return { data: { user: null }, error: null };
+  },
+};
+
 export function createDemoClient() {
   return {
     from: (table: string) => new DemoQuery(table),
+    auth: { admin: demoAuthAdmin },
     rpc: async (name: string, args: Record<string, any> = {}): Promise<Result> => {
       try {
         const data = runRpc(name, args);

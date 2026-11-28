@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireAdmin, requireStaff } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
 import {
   listAppointments,
@@ -34,31 +34,31 @@ function revalidateAppointmentPaths() {
 export async function listAppointmentsAction(
   filters?: AppointmentFilters
 ): Promise<AppointmentWithRelations[]> {
-  await requireAdmin();
+  await requireStaff();
   return listAppointments(filters);
 }
 
 export async function getAppointmentAction(id: string): Promise<AppointmentWithRelations | null> {
-  await requireAdmin();
+  await requireStaff();
   return getAppointmentById(id);
 }
 
 export async function confirmAppointmentAction(id: string) {
-  await requireAdmin();
+  await requireStaff();
   const result = await confirmAppointment(id);
   revalidateAppointmentPaths();
   return result;
 }
 
 export async function rejectAppointmentAction(id: string, reason?: string) {
-  await requireAdmin();
+  await requireStaff();
   const result = await rejectAppointment(id, reason);
   revalidateAppointmentPaths();
   return result;
 }
 
 export async function cancelAppointmentAction(id: string, reason?: string) {
-  await requireAdmin();
+  await requireStaff();
   const result = await cancelAppointment(id, reason);
   revalidateAppointmentPaths();
   return result;
@@ -75,7 +75,7 @@ export async function updateAdminNotesAction(
   id: string,
   notes: string
 ): Promise<AppointmentWithRelations | null> {
-  await requireAdmin();
+  await requireStaff();
   const updated = await updateAppointmentAdminNotes(id, notes);
   revalidateAppointmentPaths();
   return updated;
@@ -92,14 +92,19 @@ export async function updateAppointmentPriceAction(
 }
 
 export async function adminCreateAppointmentAction(input: AdminCreateAppointmentInput) {
-  await requireAdmin();
-  const result = await adminCreateAppointment(input);
+  const user = await requireStaff();
+  // Valor, desconto e produtos são do administrador: a secretária marca com o preço do serviço.
+  const allowed: AdminCreateAppointmentInput =
+    user.role === "admin"
+      ? input
+      : { ...input, priceCentsOverride: undefined, discountCents: 0, products: [], pastVisit: false };
+  const result = await adminCreateAppointment(allowed);
   revalidateAppointmentPaths();
   return result;
 }
 
 export async function adminRescheduleAppointmentAction(id: string, newDate: string, newStartTime: string) {
-  await requireAdmin();
+  await requireStaff();
   const result = await adminRescheduleAppointment(id, newDate, newStartTime);
   revalidateAppointmentPaths();
   return result;
@@ -130,19 +135,19 @@ export async function setAppointmentProductsAction(
 }
 
 export async function listProfessionalsAction() {
-  await requireAdmin();
+  await requireStaff();
   return getActiveProfessionals();
 }
 
 export async function setReminderSentAction(id: string, sent: boolean) {
-  await requireAdmin();
+  await requireStaff();
   const updated = await setReminderSent(id, sent);
   revalidatePath("/admin");
   return updated;
 }
 
 export async function getDayRouteAction(date: string) {
-  await requireAdmin();
+  await requireStaff();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Data inválida.");
   return getDayRoute(date);
 }

@@ -13,6 +13,7 @@ import {
   schedulePackageSessions,
   cancelPackageSession,
   reopenPackageSession,
+  recordPastPackageSession,
   extendPackageValidity,
   type CustomerPackageFilters,
   type SellPackageInput,
@@ -120,7 +121,27 @@ export async function schedulePackageSessionsAction(customerPackageId: string, s
   return result;
 }
 
-const outcomeSchema = z.enum(["counted", "returned"], { message: "Escolha se a sessão conta ou volta para o pacote." });
+const pastSessionSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Horário inválido."),
+  professionalId: z.string().min(1).max(64, "Profissional inválido.").nullable().optional(),
+  consumeStock: z.boolean(),
+  notes: z.string().trim().max(500, "Observação muito longa.").optional(),
+});
+
+export async function recordPastPackageSessionAction(customerPackageId: string, input: z.infer<typeof pastSessionSchema>) {
+  await requireAdmin();
+  const parsed = pastSessionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  if (parsed.data.date > todayDateStr()) {
+    return { ok: false as const, error: 'Essa data ainda não chegou. Para sessão futura, use "Agendar sessões".' };
+  }
+  const result = await recordPastPackageSession(customerPackageId, parsed.data);
+  if (result.ok) revalidatePackagePaths();
+  return result;
+}
+
+const outcomeSchema =z.enum(["counted", "returned"], { message: "Escolha se a sessão conta ou volta para o pacote." });
 
 export async function cancelPackageSessionAction(appointmentId: string, outcome: "counted" | "returned", noShow: boolean, reason?: string) {
   await requireAdmin();

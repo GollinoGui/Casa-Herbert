@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireStaff } from "@/lib/auth/require-admin";
 import { addToWaitlist, getWaitlistOpenings, setWaitlistStatus } from "@/lib/data/waitlist";
 import { todayDateStr } from "@/lib/utils/date-format";
 
@@ -23,7 +23,7 @@ function revalidateWaitlist() {
 }
 
 export async function addToWaitlistAction(input: z.infer<typeof entrySchema>) {
-  await requireAdmin();
+  await requireStaff();
   const parsed = entrySchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   await addToWaitlist({ ...parsed.data, notes: parsed.data.notes || null });
@@ -32,7 +32,7 @@ export async function addToWaitlistAction(input: z.infer<typeof entrySchema>) {
 }
 
 export async function setWaitlistStatusAction(id: string, status: "scheduled" | "cancelled") {
-  await requireAdmin();
+  await requireStaff();
   if (!z.string().uuid().safeParse(id).success || !["scheduled", "cancelled"].includes(status)) {
     return { ok: false as const, error: "Pedido inválido." };
   }
@@ -42,6 +42,6 @@ export async function setWaitlistStatusAction(id: string, status: "scheduled" | 
 }
 
 export async function getWaitlistOpeningsAction() {
-  await requireAdmin();
+  await requireStaff();
   return getWaitlistOpenings();
 }

@@ -7,6 +7,7 @@ import { getWaitlistOpenings } from "@/lib/data/waitlist";
 import { getCashDrawerPreview } from "@/lib/data/cash-closings";
 import { listCustomerPackages } from "@/lib/data/packages";
 import { nowTimeStr } from "@/lib/utils/date-format";
+import type { PanelRole } from "@/lib/auth/permissions";
 
 export type NotificationKind =
   | "pending"
@@ -44,12 +45,21 @@ async function safe<T>(label: string, run: () => Promise<T>, empty: T): Promise<
   }
 }
 
-export async function getPanelNotifications(): Promise<PanelNotification[]> {
+/** Avisos que levam a páginas da secretária; os de dinheiro, estoque e pacotes nem são consultados para ela. */
+const STAFF_KINDS: NotificationKind[] = ["pending", "reminders", "birthdays", "returns", "waitlist"];
+
+export async function getPanelNotifications(role: PanelRole): Promise<PanelNotification[]> {
+  if (role !== "admin") return (await getAdminOrStaffNotifications(false)).filter((n) => STAFF_KINDS.includes(n.kind));
+  return getAdminOrStaffNotifications(true);
+}
+
+async function getAdminOrStaffNotifications(isAdmin: boolean): Promise<PanelNotification[]> {
   const supabase = getSupabase();
   const today = todayDateStr();
   const tomorrow = addDaysToDateStr(today, 1);
   const prefs = await safe("preferências", getPanelPreferences, null);
   const dueDays = prefs?.payableDueDays ?? 7;
+  const onlyAdmin = <T,>(run: () => Promise<T>, empty: T) => (isAdmin ? run() : Promise.resolve(empty));
 
   const [pending, reminders, payables, lowStock, birthdays, returns, openings, drawer, packages] = await Promise.all([
     safe(
@@ -70,21 +80,25 @@ export async function getPanelNotifications(): Promise<PanelNotification[]> {
         ).filter((r) => !r.reminder_sent_at).length,
       0
     ),
-    safe(
-      "contas",
-      async () =>
-        unwrap(
-          await supabase.from("payables").select("due_date").eq("status", "open").lte("due_date", addDaysToDateStr(today, dueDays))
+    onlyAdmin(
+      () =>
+        safe(
+          "contas",
+          async () =>
+            unwrap(
+              await supabase.from("payables").select("due_date").eq("status", "open").lte("due_date", addDaysToDateStr(today, dueDays))
+            ),
+          [] as { due_date: string }[]
         ),
       [] as { due_date: string }[]
     ),
-    safe("estoque", getLowStockProducts, []),
+    onlyAdmin(() => safe("estoque", getLowStockProducts, []), []),
     safe("aniversários", () => getUpcomingBirthdays(1), []),
     safe("retornos", async () => (await getReturnDueCustomers(0, 3)).total, 0),
     safe("lista de espera", getWaitlistOpenings, []),
     // Depois das 18h, caixa com movimento em dinheiro desde o último fechamento.
-    nowTimeStr() >= "18:00" ? safe("fechamento", () => getCashDrawerPreview(), null) : Promise.resolve(null),
-    safe("pacotes", () => listCustomerPackages({ status: ["active"] }), []),
+    isAdmin && nowTimeStr() >= "18:00" ? safe("fechamento", () => getCashDrawerPreview(), null) : Promise.resolve(null),
+    onlyAdmin(() => safe("pacotes", () => listCustomerPackages({ status: ["active"] }), []), []),
   ]);
   // Sessão livre sem data num pacote perto de vencer se perde se ninguém marcar.
   const expiringPackages = packages.filter(

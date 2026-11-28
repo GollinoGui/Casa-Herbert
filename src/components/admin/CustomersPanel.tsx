@@ -6,7 +6,7 @@ import { CalendarPlus, HandCoins, Layers, ListChecks, MessageCircle, Pencil, Plu
 import { CustomerRecordsCard } from "@/components/admin/CustomerRecordsCard";
 import { CustomerTimeline } from "@/components/admin/CustomerTimeline";
 import { CustomerPackageCard, SellPackageModal } from "@/components/admin/PackagesManager";
-import { PackageSessionsModal } from "@/components/admin/PackageSessionsScheduler";
+import { PackageSessionsModal, PastPackageSessionModal } from "@/components/admin/PackageSessionsScheduler";
 import { WaitlistModal } from "@/components/admin/WaitlistManager";
 import { listCustomerPackagesAction } from "@/lib/actions/admin/packages";
 import { listCustomerRecordsAction } from "@/lib/actions/admin/customer-records";
@@ -16,6 +16,7 @@ import { Input, Textarea, FieldLabel, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { NewAppointmentModal } from "@/components/admin/NewAppointmentModal";
+import { useIsAdmin } from "@/components/admin/PanelUserProvider";
 import { SaleModal } from "@/components/admin/SaleModal";
 import { AppointmentDetailModal } from "@/components/admin/AppointmentDetailModal";
 import { ReceivePaymentModal } from "@/components/admin/ReceivePaymentModal";
@@ -42,6 +43,8 @@ interface CustomersPanelProps {
 
 export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelProps) {
   const router = useRouter();
+  // Secretária: dados, observações, agendamentos e lista de espera. Compras, pacotes e fotos ficam com o administrador.
+  const isAdmin = useIsAdmin();
   const [selectedId, setSelectedId] = useState<string | null>(
     customers.find((c) => c.id === initialCustomerId)?.id ?? customers[0]?.id ?? null
   );
@@ -61,10 +64,16 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
   const [records, setRecords] = useState<CustomerRecord[]>([]);
   const [sellOpen, setSellOpen] = useState(false);
   const [scheduling, setScheduling] = useState<CustomerPackage | null>(null);
+  const [recordingPast, setRecordingPast] = useState<CustomerPackage | null>(null);
   const [waitOpen, setWaitOpen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
 
+  function loadSales(customerId: string) {
+    if (isAdmin) listSalesAction({ customerId }).then(setCustomerSales);
+  }
+
   function loadExtras(customerId: string) {
+    if (!isAdmin) return;
     listCustomerPackagesAction({ customerId }).then(setPackages);
     listCustomerRecordsAction(customerId).then(setRecords);
   }
@@ -86,7 +95,7 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
     setNotesDraft(customer?.notes ?? "");
     setDirty(false);
     getCustomerAppointmentsAction(selectedId).then(setHistory);
-    listSalesAction({ customerId: selectedId }).then(setCustomerSales);
+    loadSales(selectedId);
     setPackages([]);
     setRecords([]);
     loadExtras(selectedId);
@@ -211,119 +220,143 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
             </div>
           </Card>
 
-          <Card className="p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="font-serif text-lg text-brand-forest">Pendências e compras</h3>
-              <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setPendingOpen(true)}>
-                <Plus size={14} /> Lançar pendência
-              </Button>
-            </div>
-            {(() => {
-              const open = customerSales.filter((s) => s.status === "open");
-              const totalOpen = open.reduce((sum, s) => sum + openAmount(s), 0);
-              return totalOpen > 0 ? (
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                  <p>
-                    Em aberto: <strong className="tabular-nums">{formatBRL(totalOpen)}</strong>
-                  </p>
-                  <a
-                    href={buildChargeLink(selected.phone, selected.fullName, open)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-brand-graphite"
-                  >
-                    <MessageCircle size={14} /> Cobrar no WhatsApp
-                  </a>
+          {isAdmin ? (
+            <>
+              <Card className="p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-serif text-lg text-brand-forest">Pendências e compras</h3>
+                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setPendingOpen(true)}>
+                    <Plus size={14} /> Lançar pendência
+                  </Button>
                 </div>
-              ) : null;
-            })()}
-            {customerSales.length === 0 ? (
-              <p className="text-sm text-brand-graphite/60">Nenhuma compra registrada.</p>
-            ) : (
-              <ul className="space-y-2">
-                {customerSales.slice(0, 15).map((sale) => (
-                  <li key={sale.id} className="rounded-xl border border-brand-beige px-4 py-3 text-sm">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-brand-graphite">{sale.items.map((i) => `${i.description}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ")}</p>
-                        <p className="text-xs text-brand-graphite/60">{formatShortDatePtBR(sale.saleDate)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <SaleStatusBadge status={sale.status} partial={sale.paidCents > 0} />
-                        <span className="font-medium tabular-nums">{formatBRL(sale.totalCents)}</span>
-                      </div>
+                {(() => {
+                  const open = customerSales.filter((s) => s.status === "open");
+                  const totalOpen = open.reduce((sum, s) => sum + openAmount(s), 0);
+                  return totalOpen > 0 ? (
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      <p>
+                        Em aberto: <strong className="tabular-nums">{formatBRL(totalOpen)}</strong>
+                      </p>
+                      <a
+                        href={buildChargeLink(selected.phone, selected.fullName, open)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-brand-graphite"
+                      >
+                        <MessageCircle size={14} /> Cobrar no WhatsApp
+                      </a>
                     </div>
-                    {sale.status === "open" ? (
-                      <Button className="mt-2 !px-3 !py-1.5 text-xs" onClick={() => setReceiving(sale)}>
-                        <HandCoins size={14} /> Receber {formatBRL(openAmount(sale))}
-                      </Button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+                  ) : null;
+                })()}
+                {customerSales.length === 0 ? (
+                  <p className="text-sm text-brand-graphite/60">Nenhuma compra registrada.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {customerSales.slice(0, 15).map((sale) => (
+                      <li key={sale.id} className="rounded-xl border border-brand-beige px-4 py-3 text-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-brand-graphite">{sale.items.map((i) => `${i.description}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ")}</p>
+                            <p className="text-xs text-brand-graphite/60">{formatShortDatePtBR(sale.saleDate)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <SaleStatusBadge status={sale.status} partial={sale.paidCents > 0} />
+                            <span className="font-medium tabular-nums">{formatBRL(sale.totalCents)}</span>
+                          </div>
+                        </div>
+                        {sale.status === "open" ? (
+                          <Button className="mt-2 !px-3 !py-1.5 text-xs" onClick={() => setReceiving(sale)}>
+                            <HandCoins size={14} /> Receber {formatBRL(openAmount(sale))}
+                          </Button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
 
-          <Card className="p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="flex items-center gap-2 font-serif text-lg text-brand-forest">
-                <Layers size={18} strokeWidth={1.75} className="text-brand-moss" aria-hidden="true" /> Pacotes
-              </h3>
-              <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setSellOpen(true)}>
-                <Plus size={14} /> Vender pacote
-              </Button>
-            </div>
-            {packages.length === 0 ? (
-              <p className="text-sm text-brand-graphite/60">Nenhum pacote vendido para esta cliente.</p>
-            ) : (
-              <ul className="grid gap-2 sm:grid-cols-2">
-                {packages.map((p) => (
-                  <li key={p.id}>
-                    <CustomerPackageCard pkg={p} compact onSchedule={() => setScheduling(p)} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+              <Card className="p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="flex items-center gap-2 font-serif text-lg text-brand-forest">
+                    <Layers size={18} strokeWidth={1.75} className="text-brand-moss" aria-hidden="true" /> Pacotes
+                  </h3>
+                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setSellOpen(true)}>
+                    <Plus size={14} /> Vender pacote
+                  </Button>
+                </div>
+                {packages.length === 0 ? (
+                  <p className="text-sm text-brand-graphite/60">Nenhum pacote vendido para esta cliente.</p>
+                ) : (
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {packages.map((p) => (
+                      <li key={p.id}>
+                        <CustomerPackageCard
+                          pkg={p}
+                          compact
+                          onSchedule={() => setScheduling(p)}
+                          onRecordPast={() => setRecordingPast(p)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
 
-          <CustomerRecordsCard
-            customer={selected}
-            records={records}
-            onChanged={() => {
-              loadExtras(selected.id);
-              router.refresh();
-            }}
-          />
+              <CustomerRecordsCard
+                customer={selected}
+                records={records}
+                onChanged={() => {
+                  loadExtras(selected.id);
+                  router.refresh();
+                }}
+              />
+            </>
+          ) : null}
 
           <CustomerTimeline appointments={history} sales={customerSales} records={records} onOpenAppointment={setDetailId} />
         </div>
       ) : null}
 
-      <SellPackageModal
-        open={sellOpen}
-        customerId={selected?.id}
-        onClose={() => setSellOpen(false)}
-        onCompleted={() => {
-          setSellOpen(false);
-          if (selectedId) {
-            loadExtras(selectedId);
-            listSalesAction({ customerId: selectedId }).then(setCustomerSales);
-            getCustomerAppointmentsAction(selectedId).then(setHistory);
-          }
-        }}
-      />
-      <PackageSessionsModal
-        open={!!scheduling}
-        pkg={scheduling}
-        onClose={() => setScheduling(null)}
-        onDone={() => {
-          setScheduling(null);
-          if (selectedId) {
-            loadExtras(selectedId);
-            getCustomerAppointmentsAction(selectedId).then(setHistory);
-          }
-        }}
-      />
+      {isAdmin ? (
+        <>
+          <SellPackageModal
+            open={sellOpen}
+            customerId={selected?.id}
+            onClose={() => setSellOpen(false)}
+            onCompleted={() => {
+              setSellOpen(false);
+              if (selectedId) {
+                loadExtras(selectedId);
+                loadSales(selectedId);
+                getCustomerAppointmentsAction(selectedId).then(setHistory);
+              }
+            }}
+          />
+          <PackageSessionsModal
+            open={!!scheduling}
+            pkg={scheduling}
+            onClose={() => setScheduling(null)}
+            onDone={() => {
+              setScheduling(null);
+              if (selectedId) {
+                loadExtras(selectedId);
+                getCustomerAppointmentsAction(selectedId).then(setHistory);
+              }
+            }}
+          />
+          <PastPackageSessionModal
+            pkg={recordingPast}
+            onClose={() => setRecordingPast(null)}
+            onDone={() => {
+              setRecordingPast(null);
+              if (selectedId) {
+                loadExtras(selectedId);
+                getCustomerAppointmentsAction(selectedId).then(setHistory);
+              }
+            }}
+          />
+        </>
+      ) : null}
       <WaitlistModal open={waitOpen} customerId={selected?.id} onClose={() => setWaitOpen(false)} onSaved={() => setWaitOpen(false)} />
 
       <CustomerFormModal
@@ -337,16 +370,18 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
         }}
       />
 
-      <SaleModal
-        open={pendingOpen}
-        mode="pending"
-        prefill={selected ? { customerId: selected.id } : null}
-        onClose={() => setPendingOpen(false)}
-        onCompleted={() => {
-          setPendingOpen(false);
-          if (selectedId) listSalesAction({ customerId: selectedId }).then(setCustomerSales);
-        }}
-      />
+      {isAdmin ? (
+        <SaleModal
+          open={pendingOpen}
+          mode="pending"
+          prefill={selected ? { customerId: selected.id } : null}
+          onClose={() => setPendingOpen(false)}
+          onCompleted={() => {
+            setPendingOpen(false);
+            if (selectedId) loadSales(selectedId);
+          }}
+        />
+      ) : null}
       <AppointmentDetailModal
         appointmentId={detailId}
         open={!!detailId}
@@ -354,18 +389,20 @@ export function CustomersPanel({ customers, initialCustomerId }: CustomersPanelP
         onMutated={() => {
           if (!selectedId) return;
           getCustomerAppointmentsAction(selectedId).then(setHistory);
-          listSalesAction({ customerId: selectedId }).then(setCustomerSales);
+          loadSales(selectedId);
           loadExtras(selectedId);
         }}
       />
-      <ReceivePaymentModal
-        sale={receiving}
-        onClose={() => setReceiving(null)}
-        onCompleted={() => {
-          setReceiving(null);
-          if (selectedId) listSalesAction({ customerId: selectedId }).then(setCustomerSales);
-        }}
-      />
+      {isAdmin ? (
+        <ReceivePaymentModal
+          sale={receiving}
+          onClose={() => setReceiving(null)}
+          onCompleted={() => {
+            setReceiving(null);
+            if (selectedId) loadSales(selectedId);
+          }}
+        />
+      ) : null}
 
       <NewAppointmentModal
         open={bookingOpen}

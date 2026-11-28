@@ -32,11 +32,24 @@ async function getSigningKey(secret: string) {
   );
 }
 
-export async function createSessionToken(email: string, ttlSeconds = SESSION_TTL_SECONDS): Promise<string> {
+export type PanelRole = "admin" | "staff";
+
+/**
+ * `role` vai no cookie só para o modo demonstração: lá o middleware roda num
+ * sandbox separado e não enxerga o banco em memória. Fora dele, o papel sempre
+ * vem de admin_profiles (middleware e requireAdmin/requireStaff).
+ */
+export interface SessionPayload {
+  uid: string;
+  email: string;
+  role: PanelRole;
+}
+
+export async function createSessionToken(session: SessionPayload, ttlSeconds = SESSION_TTL_SECONDS): Promise<string> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) throw new Error("AUTH_SECRET não configurado no .env");
 
-  const payload = JSON.stringify({ email, exp: Date.now() + ttlSeconds * 1000 });
+  const payload = JSON.stringify({ ...session, exp: Date.now() + ttlSeconds * 1000 });
   const payloadB64 = base64UrlEncode(new TextEncoder().encode(payload));
   const key = await getSigningKey(secret);
   const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payloadB64));
@@ -44,7 +57,7 @@ export async function createSessionToken(email: string, ttlSeconds = SESSION_TTL
   return `${payloadB64}.${sigB64}`;
 }
 
-export async function verifySessionToken(token: string | undefined | null): Promise<{ email: string } | null> {
+export async function verifySessionToken(token: string | undefined | null): Promise<SessionPayload | null> {
   if (!token) return null;
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;
@@ -62,12 +75,13 @@ export async function verifySessionToken(token: string | undefined | null): Prom
     );
     if (!valid) return null;
 
-    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64))) as {
-      email: string;
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64))) as Partial<SessionPayload> & {
       exp: number;
     };
     if (typeof payload.exp !== "number" || payload.exp < Date.now()) return null;
-    return { email: payload.email };
+    // Cookie de antes dos papéis (só e-mail): recusado de propósito, a pessoa entra de novo.
+    if (typeof payload.uid !== "string" || !payload.uid) return null;
+    return { uid: payload.uid, email: String(payload.email ?? ""), role: payload.role === "admin" ? "admin" : "staff" };
   } catch {
     return null;
   }

@@ -3,7 +3,7 @@ import { TiltCard } from "@/components/admin/TiltCard";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { LoginBackdrop } from "@/components/admin/LoginBackdrop";
 import { Leaf } from "lucide-react";
-import { DEMO_LOGIN, isDemoMode } from "@/lib/demo/mode";
+import { DEMO_LOGIN, DEMO_STAFF_LOGIN, isDemoMode } from "@/lib/demo/mode";
 
 export const metadata: Metadata = {
   title: "Entrar",
@@ -32,7 +32,8 @@ export default function AdminLoginPage({
         </TiltCard>
         {isDemoMode() ? (
           <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-center text-sm text-brand-graphite">
-            Modo demonstração: entre com <strong>{DEMO_LOGIN.email}</strong> e a senha <strong>{DEMO_LOGIN.password}</strong>.
+            Modo demonstração: entre com <strong>{DEMO_LOGIN.email}</strong> e a senha <strong>{DEMO_LOGIN.password}</strong>. Para ver
+            o painel da secretária, use <strong>{DEMO_STAFF_LOGIN.email}</strong> com a mesma senha.
           </p>
         ) : null}
       </div>

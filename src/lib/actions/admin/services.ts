@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireAdmin, requireStaff } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
 import {
   createService,
@@ -41,7 +41,7 @@ export async function moveServiceAction(id: string, direction: "up" | "down") {
 }
 
 export async function listActiveServicesAction() {
-  await requireAdmin();
+  await requireStaff();
   return getActiveServices();
 }
 

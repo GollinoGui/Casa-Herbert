@@ -165,6 +165,24 @@ export async function schedulePackageSessions(
   return rpcResult(unwrap(result) as RpcResult, "Não foi possível agendar as sessões.");
 }
 
+export interface PastPackageSessionInput {
+  date: string;
+  startTime: string;
+  professionalId?: string | null;
+  consumeStock: boolean;
+  notes?: string;
+}
+
+/** Sessão que já aconteceu e não foi lançada no dia: entra concluída (0021). */
+export async function recordPastPackageSession(customerPackageId: string, input: PastPackageSessionInput): Promise<PackageActionResult> {
+  const result = unwrap(
+    await getSupabase().rpc("record_past_package_session", {
+      p: { customerPackageId, ...input, professionalId: input.professionalId || null },
+    })
+  ) as { ok: boolean; error?: string; remaining?: number };
+  return result.ok ? { ok: true, remaining: result.remaining } : { ok: false, error: result.error ?? "Não foi possível registrar a sessão." };
+}
+
 export async function cancelPackageSession(
   appointmentId: string,
   outcome: PackageOutcome,

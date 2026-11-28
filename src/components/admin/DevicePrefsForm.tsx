@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FieldLabel, Select } from "@/components/ui/Field";
 import { Switch } from "@/components/ui/Switch";
-import { SHORTCUT_TARGETS } from "@/components/admin/ShortcutBar";
+import { SHORTCUT_TARGETS, canUseShortcut } from "@/components/admin/ShortcutBar";
+import { usePanelUser } from "@/components/admin/PanelUserProvider";
 import { cn } from "@/lib/utils/cn";
 import {
   AGENDA_VIEWS,
@@ -25,7 +26,8 @@ import {
 export function DevicePrefsForm() {
   const prefs = useDevicePrefs();
   const ready = useDevicePrefsReady();
-  const all = Object.keys(SHORTCUTS) as ShortcutId[];
+  const { role } = usePanelUser();
+  const all = (Object.keys(SHORTCUTS) as ShortcutId[]).filter((id) => canUseShortcut(id, role));
   const full = prefs.shortcuts.length >= MAX_SHORTCUTS;
 
   function toggleShortcut(id: ShortcutId) {

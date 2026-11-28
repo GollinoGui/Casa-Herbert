@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Minus, Plus, Search, Trash2 } from "lucide-react";
+import { History, Minus, Plus, Search, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
@@ -14,10 +14,13 @@ import { adminAppointmentFormSchema } from "@/lib/booking/validators";
 import { adminCreateAppointmentAction, listProfessionalsAction } from "@/lib/actions/admin/appointments";
 import { listActiveProductsAction } from "@/lib/actions/admin/products";
 import { formatBRL } from "@/lib/utils/money";
+import { useIsAdmin } from "@/components/admin/PanelUserProvider";
 import { listActiveServicesAction } from "@/lib/actions/admin/services";
 import { listCustomersAction } from "@/lib/actions/admin/customers";
 import { canonicalPhone, formatPhoneDisplay } from "@/lib/utils/phone";
 import { matchesCustomerSearch } from "@/lib/utils/customer-search";
+import { formatLongDatePtBR, nowTimeStr, todayDateStr } from "@/lib/utils/date-format";
+import { AppointmentDetailModal } from "@/components/admin/AppointmentDetailModal";
 import type { Customer, Product, Professional, Service } from "@/types";
 
 type FormValues = z.infer<typeof adminAppointmentFormSchema>;
@@ -54,6 +57,8 @@ export function NewAppointmentModal({
   initialStartTime,
   initialCustomerId,
 }: NewAppointmentModalProps) {
+  // Secretária marca com o preço do serviço; valor, desconto e produtos ficam com o administrador.
+  const isAdmin = useIsAdmin();
   const [services, setServices] = useState<Service[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerQuery, setCustomerQuery] = useState("");
@@ -64,6 +69,11 @@ export function NewAppointmentModal({
   const [productLines, setProductLines] = useState<{ product: Product; quantity: number }[]>([]);
   const [addingProduct, setAddingProduct] = useState(false);
   const [discountCents, setDiscountCents] = useState(0);
+  /** Atendimento passado recém-criado: abre o detalhe para concluir (receber ou sem venda). */
+  const [finishingId, setFinishingId] = useState<string | null>(null);
+  /** Dados prontos para gravar, esperando o "sim" do aviso de atendimento antigo. */
+  const [confirmPast, setConfirmPast] = useState<FormValues | null>(null);
+  const [savingPast, setSavingPast] = useState(false);
 
   const {
     register,
@@ -80,7 +90,12 @@ export function NewAppointmentModal({
   useEffect(() => {
     if (!open) return;
     setSubmitError(null);
-    Promise.all([listActiveServicesAction(), listCustomersAction(), listProfessionalsAction(), listActiveProductsAction()]).then(
+    Promise.all([
+      listActiveServicesAction(),
+      listCustomersAction(),
+      listProfessionalsAction(),
+      isAdmin ? listActiveProductsAction() : Promise.resolve([] as Product[]),
+    ]).then(
       ([svc, cust, pros, prods]) => {
         setServices(svc);
         setCustomers(cust);
@@ -95,7 +110,7 @@ export function NewAppointmentModal({
     setDiscountCents(0);
     setCustomerQuery("");
     reset(EMPTY_VALUES(initialDate ?? "", initialStartTime ?? "", initialCustomerId));
-  }, [open, initialDate, initialStartTime, initialCustomerId, reset]);
+  }, [open, initialDate, initialStartTime, initialCustomerId, reset, isAdmin]);
 
   const customerMode = watch("customerMode");
   const priceCents = watch("priceCents") ?? null;
@@ -114,6 +129,10 @@ export function NewAppointmentModal({
   }
   const customerId = watch("customerId");
   const serviceId = watch("serviceId");
+  const date = watch("date");
+  const startTime = watch("startTime");
+  const today = todayDateStr();
+  const pastVisit = isAdmin && !!date && !!startTime && (date < today || (date === today && startTime <= nowTimeStr()));
   const newCustomerPhone = watch("newCustomerPhone") ?? "";
 
   const selectedCustomer = customers.find((c) => c.id === customerId) ?? null;
@@ -142,7 +161,15 @@ export function NewAppointmentModal({
     }
   }
 
-  async function onSubmit(values: FormValues) {
+  function onSubmit(values: FormValues) {
+    if (pastVisit) {
+      setConfirmPast(values);
+      return;
+    }
+    return save(values);
+  }
+
+  async function save(values: FormValues) {
     setSubmitError(null);
     const result = await adminCreateAppointmentAction({
       serviceId: values.serviceId,
@@ -163,20 +190,25 @@ export function NewAppointmentModal({
       professionalId: professionalId || null,
       discountCents,
       products: productLines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+      pastVisit,
     });
 
     if (!result.ok) {
       setSubmitError(
         result.error === "SLOT_NO_LONGER_AVAILABLE"
-          ? "Esse horário não está mais disponível. Escolha outro."
+          ? pastVisit
+            ? "Há outro atendimento em aberto nesse horário. Conclua ou cancele aquele antes, ou mude o horário."
+            : "Esse horário não está mais disponível. Escolha outro."
           : result.error
       );
       return;
     }
+    if (pastVisit) setFinishingId(result.appointment.id);
     onCreated();
   }
 
   return (
+    <>
     <Modal open={open} onClose={onClose} title="Novo agendamento" widthClassName="max-w-xl">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
@@ -313,90 +345,106 @@ export function NewAppointmentModal({
               ))}
             </Select>
           </div>
-          <div>
-            <FieldLabel htmlFor="status">Status inicial</FieldLabel>
-            <Select id="status" {...register("status")}>
-              <option value="CONFIRMED">Confirmado</option>
-              <option value="PENDING">Pendente</option>
-            </Select>
-          </div>
+          {!pastVisit ? (
+            <div>
+              <FieldLabel htmlFor="status">Status inicial</FieldLabel>
+              <Select id="status" {...register("status")}>
+                <option value="CONFIRMED">Confirmado</option>
+                <option value="PENDING">Pendente</option>
+              </Select>
+            </div>
+          ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FieldLabel htmlFor="priceCents">Valor do serviço</FieldLabel>
-            <MoneyInput
-              id="priceCents"
-              value={priceCents}
-              allowEmpty
-              placeholder="Sob consulta"
-              onChange={(v) => setValue("priceCents", v, { shouldValidate: true })}
-            />
-            <FieldError>{errors.priceCents?.message}</FieldError>
+        {pastVisit ? (
+          <div className="flex gap-2 rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-3 text-sm text-brand-graphite">
+            <History size={16} className="mt-0.5 shrink-0 text-brand-moss" aria-hidden="true" />
+            <p>
+              Esse horário já passou: vai ser registrado como um atendimento que já aconteceu, sem conferir a agenda. Depois de
+              salvar, você conclui ali mesmo (receber, concluir sem venda ou usar sessão de pacote).
+            </p>
           </div>
-          <div>
-            <FieldLabel htmlFor="discountCents">Desconto</FieldLabel>
-            <MoneyInput id="discountCents" value={discountCents} onChange={(v) => setDiscountCents(v ?? 0)} />
-          </div>
-        </div>
+        ) : null}
 
-        <div>
-          <FieldLabel>Produtos que o cliente vai levar (opcional)</FieldLabel>
-          {productLines.length > 0 ? (
-            <ul className="mb-2 space-y-1.5">
-              {productLines.map((line) => (
-                <li key={line.product.id} className="flex items-center gap-2 rounded-xl border border-brand-beige px-3 py-2 text-sm">
-                  <span className="min-w-0 flex-1 truncate">{line.product.name}</span>
-                  <div className="flex items-center rounded-full border border-brand-beige">
+        {isAdmin ? (
+          <>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <FieldLabel htmlFor="priceCents">Valor do serviço</FieldLabel>
+              <MoneyInput
+                id="priceCents"
+                value={priceCents}
+                allowEmpty
+                placeholder="Sob consulta"
+                onChange={(v) => setValue("priceCents", v, { shouldValidate: true })}
+              />
+              <FieldError>{errors.priceCents?.message}</FieldError>
+            </div>
+            <div>
+              <FieldLabel htmlFor="discountCents">Desconto</FieldLabel>
+              <MoneyInput id="discountCents" value={discountCents} onChange={(v) => setDiscountCents(v ?? 0)} />
+            </div>
+          </div>
+
+          <div>
+            <FieldLabel>Produtos que o cliente vai levar (opcional)</FieldLabel>
+            {productLines.length > 0 ? (
+              <ul className="mb-2 space-y-1.5">
+                {productLines.map((line) => (
+                  <li key={line.product.id} className="flex items-center gap-2 rounded-xl border border-brand-beige px-3 py-2 text-sm">
+                    <span className="min-w-0 flex-1 truncate">{line.product.name}</span>
+                    <div className="flex items-center rounded-full border border-brand-beige">
+                      <button
+                        type="button"
+                        aria-label="Diminuir"
+                        className="p-1.5"
+                        onClick={() =>
+                          setProductLines((prev) => prev.map((l) => (l === line ? { ...l, quantity: Math.max(1, l.quantity - 1) } : l)))
+                        }
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <span className="w-5 text-center tabular-nums">{line.quantity}</span>
+                      <button type="button" aria-label="Aumentar" className="p-1.5" onClick={() => addProductLine(line.product)}>
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                    <span className="w-20 text-right tabular-nums">{formatBRL(line.product.priceCents * line.quantity)}</span>
                     <button
                       type="button"
-                      aria-label="Diminuir"
-                      className="p-1.5"
-                      onClick={() =>
-                        setProductLines((prev) => prev.map((l) => (l === line ? { ...l, quantity: Math.max(1, l.quantity - 1) } : l)))
-                      }
+                      aria-label={`Remover ${line.product.name}`}
+                      className="p-1 text-brand-graphite/50 hover:text-red-600"
+                      onClick={() => setProductLines((prev) => prev.filter((l) => l !== line))}
                     >
-                      <Minus size={12} />
+                      <Trash2 size={15} />
                     </button>
-                    <span className="w-5 text-center tabular-nums">{line.quantity}</span>
-                    <button type="button" aria-label="Aumentar" className="p-1.5" onClick={() => addProductLine(line.product)}>
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                  <span className="w-20 text-right tabular-nums">{formatBRL(line.product.priceCents * line.quantity)}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remover ${line.product.name}`}
-                    className="p-1 text-brand-graphite/50 hover:text-red-600"
-                    onClick={() => setProductLines((prev) => prev.filter((l) => l !== line))}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {addingProduct ? (
-            <ProductSearch
-              products={products}
-              stockLeft={(id) =>
-                (products.find((p) => p.id === id)?.stockQuantity ?? 0) - (productLines.find((l) => l.product.id === id)?.quantity ?? 0)
-              }
-              onPick={addProductLine}
-              onCancel={() => setAddingProduct(false)}
-            />
-          ) : (
-            <Button type="button" variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setAddingProduct(true)}>
-              <Plus size={14} /> Adicionar produto
-            </Button>
-          )}
-          <p className="mt-1.5 text-xs text-brand-graphite/50">O estoque só baixa quando você finalizar o atendimento.</p>
-        </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {addingProduct ? (
+              <ProductSearch
+                products={products}
+                stockLeft={(id) =>
+                  (products.find((p) => p.id === id)?.stockQuantity ?? 0) - (productLines.find((l) => l.product.id === id)?.quantity ?? 0)
+                }
+                onPick={addProductLine}
+                onCancel={() => setAddingProduct(false)}
+              />
+            ) : (
+              <Button type="button" variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setAddingProduct(true)}>
+                <Plus size={14} /> Adicionar produto
+              </Button>
+            )}
+            <p className="mt-1.5 text-xs text-brand-graphite/50">O estoque só baixa quando você finalizar o atendimento.</p>
+          </div>
 
-        {priceCents != null || productLines.length > 0 ? (
-          <p className="rounded-xl bg-brand-cream/60 px-4 py-3 text-sm text-brand-graphite">
-            Total previsto: <strong className="tabular-nums">{formatBRL(estimatedTotal)}</strong>
-          </p>
+          {priceCents != null || productLines.length > 0 ? (
+            <p className="rounded-xl bg-brand-cream/60 px-4 py-3 text-sm text-brand-graphite">
+              Total previsto: <strong className="tabular-nums">{formatBRL(estimatedTotal)}</strong>
+            </p>
+        ) : null}
+        </>
         ) : null}
 
         <div>
@@ -411,10 +459,52 @@ export function NewAppointmentModal({
             Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Criando..." : "Criar agendamento"}
+            {isSubmitting ? "Criando..." : pastVisit ? "Registrar atendimento" : "Criar agendamento"}
           </Button>
         </div>
       </form>
     </Modal>
+    <Modal open={!!confirmPast} onClose={() => !savingPast && setConfirmPast(null)} title="Cadastrar atendimento antigo?" widthClassName="max-w-md">
+      {confirmPast ? (
+        <div className="space-y-4">
+          <p className="text-sm text-brand-graphite">
+            <strong>
+              {formatLongDatePtBR(confirmPast.date)} às {confirmPast.startTime}
+            </strong>{" "}
+            já passou. O atendimento vai entrar como algo que já aconteceu, sem conferir a agenda daquele dia.
+          </p>
+          <p className="text-sm text-brand-graphite/70">
+            Depois de salvar, abre o atendimento para você concluir: receber, concluir sem venda ou usar sessão de pacote.
+          </p>
+          <p className="text-xs text-brand-graphite/60">Se a data foi digitada errada, volte e corrija.</p>
+          <div className="flex flex-wrap justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={() => setConfirmPast(null)} disabled={savingPast}>
+              Voltar e corrigir
+            </Button>
+            <Button
+              type="button"
+              disabled={savingPast}
+              onClick={async () => {
+                setSavingPast(true);
+                await save(confirmPast);
+                setSavingPast(false);
+                setConfirmPast(null);
+              }}
+            >
+              {savingPast ? "Registrando..." : "Sim, cadastrar"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </Modal>
+    {isAdmin ? (
+      <AppointmentDetailModal
+        appointmentId={finishingId}
+        open={!!finishingId}
+        onClose={() => setFinishingId(null)}
+        onMutated={onCreated}
+      />
+    ) : null}
+    </>
   );
 }

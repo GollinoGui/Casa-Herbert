@@ -1,5 +1,6 @@
 import { getDashboardStats, getMonthScheduledCents, getTomorrowAppointments } from "@/lib/data/appointments";
-import { getDashboardFinance } from "@/lib/data/financials";
+import { getDashboardFinance, type DashboardFinance } from "@/lib/data/financials";
+import { getPanelUser } from "@/lib/auth/require-admin";
 import { getPanelPreferences, getSettings } from "@/lib/data/settings";
 import { getBusinessHours } from "@/lib/data/business-hours";
 import { getLapsedCustomers, getReturnDueCustomers, getUpcomingBirthdays } from "@/lib/data/customers";
@@ -17,14 +18,30 @@ async function orEmpty<T>(label: string, run: () => Promise<T>, empty: T): Promi
   }
 }
 
+const NO_FINANCE: DashboardFinance = {
+  balanceCents: 0,
+  todayInCents: 0,
+  monthInCents: 0,
+  monthOutCents: 0,
+  receivableCents: 0,
+  receivableCount: 0,
+  payableDueCents: 0,
+  payableDueCount: 0,
+  overduePayables: 0,
+};
+
 export default async function AdminDashboardPage() {
-  const prefs = await getPanelPreferences();
-  const show = prefs.dashboard;
+  const [prefs, user] = await Promise.all([getPanelPreferences(), getPanelUser()]);
+  const isAdmin = user?.role === "admin";
+  // Secretária: sem dinheiro, meta, atalhos de venda e estoque. Desligado aqui, nem é consultado.
+  const show = isAdmin
+    ? prefs.dashboard
+    : { ...prefs.dashboard, quickActions: false, goal: false, balance: false, todayIn: false, receivable: false, payableDue: false, lowStock: false };
   // Aviso desligado não consulta nada.
   const noReturns = { total: 0, list: [] };
   const [stats, finance, hours, settings, birthdays, lapsed, lowStock, tomorrow, returns, scheduledCents] = await Promise.all([
     getDashboardStats(),
-    getDashboardFinance(prefs.payableDueDays),
+    isAdmin ? getDashboardFinance(prefs.payableDueDays) : Promise.resolve(NO_FINANCE),
     show.calendar ? getBusinessHours() : Promise.resolve([]),
     show.birthdays || show.lapsed || show.reminders || show.returns ? getSettings() : Promise.resolve(null),
     show.birthdays ? orEmpty("aniversários", getUpcomingBirthdays, []) : Promise.resolve([]),
@@ -49,7 +66,7 @@ export default async function AdminDashboardPage() {
       lowStock={lowStock}
       tomorrow={tomorrow}
       returns={returns}
-      goal={{ goalCents: prefs.monthlyGoalCents, scheduledCents }}
+      goal={isAdmin ? { goalCents: prefs.monthlyGoalCents, scheduledCents } : { goalCents: 0, scheduledCents: 0 }}
     />
   );
 }

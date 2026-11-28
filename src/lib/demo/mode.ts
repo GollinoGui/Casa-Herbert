@@ -15,3 +15,5 @@ export function isDemoMode(): boolean {
 }
 
 export const DEMO_LOGIN = { email: "demo@casaherbert.com.br", password: "demo1234" };
+/** Conta de secretária do demo, para testar o que ela vê e o que fica escondido. */
+export const DEMO_STAFF_LOGIN = { email: "secretaria@casaherbert.com.br", password: "demo1234" };

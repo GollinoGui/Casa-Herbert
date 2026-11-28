@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireAdmin, requireStaff } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
 import { getSettings, savePanelPreferences, updateSettings } from "@/lib/data/settings";
 import { announcementFormSchema } from "@/lib/booking/validators";
@@ -18,7 +18,7 @@ import {
 } from "@/lib/finance/options";
 
 export async function getSettingsAction(): Promise<Settings> {
-  await requireAdmin();
+  await requireStaff();
   return getSettings();
 }
 

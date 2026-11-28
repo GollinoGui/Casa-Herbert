@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireStaff } from "@/lib/auth/require-admin";
 import { revalidatePath } from "next/cache";
 import { upsertSpecialHours, deleteSpecialHours } from "@/lib/data/special-hours";
 import type { TimeRange } from "@/types";
@@ -11,14 +11,14 @@ export async function upsertSpecialHoursAction(input: {
   reason?: string;
   ranges: TimeRange[];
 }) {
-  await requireAdmin();
+  await requireStaff();
   const result = await upsertSpecialHours(input);
   revalidatePath("/admin/horarios-especiais");
   return result;
 }
 
 export async function deleteSpecialHoursAction(id: string) {
-  await requireAdmin();
+  await requireStaff();
   await deleteSpecialHours(id);
   revalidatePath("/admin/horarios-especiais");
 }

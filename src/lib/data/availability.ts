@@ -10,7 +10,7 @@ import type {
 } from "@/types";
 import { bookingRequestSchema, type BookingRequestInput } from "@/lib/booking/validators";
 import { getAvailableSlots as computeAvailableSlots, type BusyInterval } from "@/lib/booking/engine";
-import { addDaysToDateStr, addMinutesToTime } from "@/lib/utils/date-format";
+import { addDaysToDateStr, addMinutesToTime, nowTimeStr, todayDateStr } from "@/lib/utils/date-format";
 import { getSupabase, PG_EXCLUSION_VIOLATION, unwrap } from "@/lib/supabase/server";
 import {
   APPOINTMENT_WITH_RELATIONS,
@@ -258,6 +258,11 @@ export async function rescheduleAppointment(
  * lib/booking/engine.ts inalterado).
  */
 
+/** Data e horário já passaram no fuso do salão. */
+export function isPastMoment(date: string, startTime: string, today = todayDateStr(), nowTime = nowTimeStr()): boolean {
+  return date < today || (date === today && startTime <= nowTime);
+}
+
 export interface AdminCreateAppointmentInput {
   serviceId: string;
   date: string;
@@ -271,6 +276,12 @@ export interface AdminCreateAppointmentInput {
   discountCents?: number;
   /** Produtos que o cliente já vai levar — viram itens da venda ao finalizar o atendimento. */
   products?: { productId: string; quantity: number }[];
+  /**
+   * Atendimento que já aconteceu e não foi lançado no dia (só o administrador). Não passa
+   * pelo engine: é registro do que houve, não reserva de horário. Entra CONFIRMED para ser
+   * concluído pelo fluxo normal (venda, "Concluir sem venda" ou sessão de pacote).
+   */
+  pastVisit?: boolean;
 }
 
 /**
@@ -297,11 +308,17 @@ export async function adminCreateAppointment(input: AdminCreateAppointmentInput)
   if (!unwrap(customer)) return { ok: false, error: "Cliente não encontrado." };
   if (!service) return { ok: false, error: "Serviço indisponível." };
 
-  const availability = computeForDate(ctx, input.date, service.durationMinutes, { ignoreMinAdvance: true });
-  if (!availability.slots.some((s) => s.startTime === input.startTime)) return SLOT_TAKEN;
+  if (input.pastVisit) {
+    if (!isPastMoment(input.date, input.startTime)) {
+      return { ok: false, error: "Esse horário ainda não passou. Para um atendimento futuro, agende normalmente." };
+    }
+  } else {
+    const availability = computeForDate(ctx, input.date, service.durationMinutes, { ignoreMinAdvance: true });
+    if (!availability.slots.some((s) => s.startTime === input.startTime)) return SLOT_TAKEN;
+  }
 
   const now = new Date().toISOString();
-  const status = input.status ?? "CONFIRMED";
+  const status = input.pastVisit ? "CONFIRMED" : input.status ?? "CONFIRMED";
   const result = await insertAppointment({
     customer_id: customerId,
     service_id: service.id,

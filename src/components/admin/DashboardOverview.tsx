@@ -32,6 +32,7 @@ import { CountUp } from "@/components/admin/CountUp";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { BotanicalBranch } from "@/components/admin/BotanicalBranch";
 import { NowNextCard } from "@/components/admin/NowNextCard";
+import { useIsAdmin } from "@/components/admin/PanelUserProvider";
 import { cn } from "@/lib/utils/cn";
 import { AppointmentDetailModal } from "@/components/admin/AppointmentDetailModal";
 import { CalendarView } from "@/components/admin/CalendarView";
@@ -90,6 +91,7 @@ export function DashboardOverview({
   goal: { goalCents: number; scheduledCents: number };
 }) {
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [saleOpen, setSaleOpen] = useState(false);
@@ -287,12 +289,14 @@ export function DashboardOverview({
               : `${stats.todayCount} atendimento(s) hoje${stats.pendingCount ? ` · ${stats.pendingCount} aguardando confirmação` : ""}.`}
           </p>
         </div>
-        <Link
-          href="/admin/configuracoes?aba=painel"
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-brand-moss transition hover:bg-brand-sage/15"
-        >
-          <Settings2 size={15} aria-hidden="true" /> Escolher o que aparece aqui
-        </Link>
+        {isAdmin ? (
+          <Link
+            href="/admin/configuracoes?aba=painel"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-brand-moss transition hover:bg-brand-sage/15"
+          >
+            <Settings2 size={15} aria-hidden="true" /> Escolher o que aparece aqui
+          </Link>
+        ) : null}
       </div>
 
       {order.map((key) => (sections[key] ? <div key={key}>{sections[key]}</div> : null))}
@@ -303,22 +307,26 @@ export function DashboardOverview({
         onClose={() => setOpen(false)}
         onMutated={() => router.refresh()}
       />
-      <SaleModal
-        open={saleOpen}
-        onClose={() => setSaleOpen(false)}
-        onCompleted={() => {
-          setSaleOpen(false);
-          router.refresh();
-        }}
-      />
-      <ReceiptSaleModal
-        open={receiptOpen}
-        onClose={() => setReceiptOpen(false)}
-        onCompleted={() => {
-          setReceiptOpen(false);
-          router.refresh();
-        }}
-      />
+      {isAdmin ? (
+        <>
+          <SaleModal
+            open={saleOpen}
+            onClose={() => setSaleOpen(false)}
+            onCompleted={() => {
+              setSaleOpen(false);
+              router.refresh();
+            }}
+          />
+          <ReceiptSaleModal
+            open={receiptOpen}
+            onClose={() => setReceiptOpen(false)}
+            onCompleted={() => {
+              setReceiptOpen(false);
+              router.refresh();
+            }}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

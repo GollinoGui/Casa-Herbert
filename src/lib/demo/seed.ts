@@ -1,6 +1,7 @@
 import { canonicalPhone } from "@/lib/utils/phone";
 import { addDaysToDateStr, todayDateStr, weekdayOf } from "@/lib/utils/date-format";
 import { PAYABLE_CATEGORIES } from "@/lib/finance/constants";
+import { DEMO_LOGIN, DEMO_STAFF_LOGIN } from "@/lib/demo/mode";
 
 /**
  * Dados de exemplo do modo demonstração, com datas relativas a hoje. Nomes e
@@ -140,7 +141,15 @@ export function buildSeed(): Tables {
   }));
 
   const professionals: Row[] = [{ id: id("pro"), name: "Herbert", is_active: true, created_at: now }];
-  const admin_profiles: Row[] = [{ id: "demo-admin", full_name: "Herbert (demonstração)", role: "admin", created_at: now }];
+  const admin_profiles: Row[] = [
+    { id: "demo-admin", full_name: "Herbert (demonstração)", email: DEMO_LOGIN.email, role: "admin", created_at: now },
+    { id: "demo-staff", full_name: "Secretária (demonstração)", email: DEMO_STAFF_LOGIN.email, role: "staff", created_at: now },
+  ];
+  // Faz o papel de auth.users: só o demo guarda senha, e em texto puro.
+  const demo_auth_users: Row[] = [
+    { id: "demo-admin", email: DEMO_LOGIN.email, password: DEMO_LOGIN.password },
+    { id: "demo-staff", email: DEMO_STAFF_LOGIN.email, password: DEMO_STAFF_LOGIN.password },
+  ];
 
   const productDefs: [string, number, number, number][] = [
     ["Shampoo Equilíbrio 300ml", 8900, 4200, 14],
@@ -533,6 +542,7 @@ export function buildSeed(): Tables {
     brands: [],
     commission_rules: [],
     admin_profiles,
+    demo_auth_users,
     products,
     appointments: appointments.filter(
       (a) => !(a.appointment_date === holiday && (a.status === "PENDING" || a.status === "CONFIRMED"))

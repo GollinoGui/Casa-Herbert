@@ -40,6 +40,7 @@ import {
   reopenPackageSessionAction,
 } from "@/lib/actions/admin/packages";
 import { PackageSessionsModal, freeSessions } from "@/components/admin/PackageSessionsScheduler";
+import { useIsAdmin } from "@/components/admin/PanelUserProvider";
 import type { AppointmentProduct, AppointmentWithRelations, CustomerPackage, PackageOutcome, Product, Sale, Settings } from "@/types";
 
 interface AppointmentDetailModalProps {
@@ -51,6 +52,8 @@ interface AppointmentDetailModalProps {
 }
 
 export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated }: AppointmentDetailModalProps) {
+  // Secretária: confirma, recusa, remarca e cancela. Valores, produtos, vendas, pacotes e conclusão ficam com o administrador.
+  const isAdmin = useIsAdmin();
   const [appointment, setAppointment] = useState<AppointmentWithRelations | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,7 +129,7 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
       applyAppointment(appt);
       setSettings(sett);
       if (appt) {
-        loadRelated(appt);
+        if (isAdmin) loadRelated(appt);
         getCustomerAppointmentsAction(appt.customerId).then((history) => {
           if (!cancelled) setOtherVisits(history.filter((a) => a.id !== appt.id).length);
         });
@@ -136,13 +139,13 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
     return () => {
       cancelled = true;
     };
-  }, [open, appointmentId]);
+  }, [open, appointmentId, isAdmin]);
 
   function refresh() {
     if (!appointmentId) return;
     getAppointmentAction(appointmentId).then((appt) => {
       applyAppointment(appt);
-      if (appt) loadRelated(appt);
+      if (appt && isAdmin) loadRelated(appt);
     });
     onMutated?.();
   }
@@ -303,7 +306,7 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
   const linkedPackage = appointment?.customerPackageId ? packages.find((p) => p.id === appointment.customerPackageId) ?? null : null;
   const isPackageSession = !!appointment?.customerPackageId;
   // Sessão de pacote já foi paga na venda: valor, produtos e checkout não se aplicam.
-  const editable = active && !isPackageSession;
+  const editable = active && !isPackageSession && isAdmin;
   const today = todayDateStr();
   const usablePackages = packages.filter(
     (p) => p.status === "active" && freeSessions(p) > 0 && (!p.expiresOn || !appointment || appointment.date <= p.expiresOn)
@@ -585,29 +588,31 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                       <Button onClick={handleConfirm} disabled={isPending}>
                         Confirmar
                       </Button>
-                    ) : (
+                    ) : isAdmin ? (
                       <Button
                         onClick={() => linkedPackage && handleUsePackage(linkedPackage)}
                         disabled={isPending || !linkedPackage || appointment.date > today}
                       >
                         Concluir sessão
                       </Button>
-                    )}
+                    ) : null}
                     <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
                       Enviar confirmação
                     </LinkButton>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setOutcome(null);
-                        setNoShow(appointment.date < today);
-                        setUnbookReason("");
-                        setUnbooking(true);
-                      }}
-                      disabled={isPending}
-                    >
-                      Desmarcou ou faltou
-                    </Button>
+                    {isAdmin ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setOutcome(null);
+                          setNoShow(appointment.date < today);
+                          setUnbookReason("");
+                          setUnbooking(true);
+                        }}
+                        disabled={isPending}
+                      >
+                        Desmarcou ou faltou
+                      </Button>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="space-y-3 rounded-xl border border-brand-beige p-3">
@@ -678,7 +683,13 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                     </div>
                   </div>
                 )}
-                {appointment.status === "CONFIRMED" && appointment.date > today && !unbooking ? (
+                {!isAdmin ? (
+                  <p className="text-xs text-brand-graphite/60">
+                    Sessão de pacote: para concluir, desmarcar ou registrar falta, fale com o administrador. Para mudar o dia, use
+                    Remarcar, lá em cima.
+                  </p>
+                ) : null}
+                {isAdmin && appointment.status === "CONFIRMED" && appointment.date > today && !unbooking ? (
                   <p className="text-xs text-brand-graphite/60">
                     A sessão fica reservada no pacote e só é concluída no dia. Se a cliente não puder vir, use Remarcar (lá em cima) ou
                     “Desmarcou ou faltou”.
@@ -688,7 +699,7 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
               </div>
             ) : null}
 
-            {appointment.status === "CANCELLED" && isPackageSession ? (
+            {appointment.status === "CANCELLED" && isPackageSession && isAdmin ? (
               <div className="mb-3 space-y-2 rounded-xl border border-brand-beige p-3 text-sm text-brand-graphite">
                 <p>
                   {appointment.noShow ? "A cliente não compareceu" : "A cliente desmarcou"} ·{" "}
@@ -771,15 +782,19 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                   </div>
                 ) : null}
                 <div className="flex flex-wrap gap-3">
-                  <Button onClick={() => setCheckoutOpen(true)} disabled={isPending || valuesDirty}>
-                    Finalizar e receber
-                  </Button>
+                  {isAdmin ? (
+                    <Button onClick={() => setCheckoutOpen(true)} disabled={isPending || valuesDirty}>
+                      Finalizar e receber
+                    </Button>
+                  ) : null}
                   <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
                     Enviar confirmação
                   </LinkButton>
-                  <Button variant="secondary" onClick={handleComplete} disabled={isPending}>
-                    Concluir sem venda
-                  </Button>
+                  {isAdmin ? (
+                    <Button variant="secondary" onClick={handleComplete} disabled={isPending}>
+                      Concluir sem venda
+                    </Button>
+                  ) : null}
                   {!showCancelForm ? (
                     <Button variant="ghost" onClick={() => setShowCancelForm(true)} disabled={isPending}>
                       Cancelar
@@ -823,7 +838,7 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                     ? `Atendimento concluído com uma sessão do pacote${linkedPackage ? ` “${linkedPackage.name}” (${linkedPackage.sessionsUsed} de ${linkedPackage.sessionsTotal} usadas)` : ""}.`
                     : "Atendimento concluído."}
                 </p>
-                {isPackageSession && appointment.date > today ? (
+                {isAdmin && isPackageSession && appointment.date > today ? (
                   <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                     <p>Esta sessão foi concluída antes do dia. Reabra para poder remarcar ou desmarcar.</p>
                     <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={handleReopen} disabled={isPending}>
@@ -832,48 +847,56 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                     {packageError ? <p className="text-sm text-red-600">{packageError}</p> : null}
                   </div>
                 ) : null}
-                <Button variant="secondary" onClick={() => setPendingOpen(true)}>
-                  <Plus size={16} /> Lançar algo que ficou sem pagar
-                </Button>
-                <p className="text-xs text-brand-graphite/50">
-                  Ex.: o cliente levou um produto e não foi cobrado. Fica em Contas a receber e dá para cobrar pelo WhatsApp.
-                </p>
+                {isAdmin ? (
+                  <>
+                    <Button variant="secondary" onClick={() => setPendingOpen(true)}>
+                      <Plus size={16} /> Lançar algo que ficou sem pagar
+                    </Button>
+                    <p className="text-xs text-brand-graphite/50">
+                      Ex.: o cliente levou um produto e não foi cobrado. Fica em Contas a receber e dá para cobrar pelo WhatsApp.
+                    </p>
+                  </>
+                ) : null}
               </div>
             ) : null}
           </div>
         </div>
       )}
-      <PackageSessionsModal
-        open={makeupOpen}
-        pkg={linkedPackage}
-        count={1}
-        initialDate={appointment ? addDaysToDateStr(appointment.date < today ? today : appointment.date, 7) : undefined}
-        initialTime={appointment?.startTime}
-        onClose={() => setMakeupOpen(false)}
-        onDone={() => {
-          setMakeupOpen(false);
-          refresh();
-        }}
-      />
-      <SaleModal
-        open={checkoutOpen}
-        onClose={() => setCheckoutOpen(false)}
-        appointment={appointment}
-        onCompleted={() => {
-          setCheckoutOpen(false);
-          refresh();
-        }}
-      />
-      <SaleModal
-        open={pendingOpen}
-        mode="pending"
-        onClose={() => setPendingOpen(false)}
-        appointment={appointment}
-        onCompleted={() => {
-          setPendingOpen(false);
-          refresh();
-        }}
-      />
+      {isAdmin ? (
+        <>
+          <PackageSessionsModal
+            open={makeupOpen}
+            pkg={linkedPackage}
+            count={1}
+            initialDate={appointment ? addDaysToDateStr(appointment.date < today ? today : appointment.date, 7) : undefined}
+            initialTime={appointment?.startTime}
+            onClose={() => setMakeupOpen(false)}
+            onDone={() => {
+              setMakeupOpen(false);
+              refresh();
+            }}
+          />
+          <SaleModal
+            open={checkoutOpen}
+            onClose={() => setCheckoutOpen(false)}
+            appointment={appointment}
+            onCompleted={() => {
+              setCheckoutOpen(false);
+              refresh();
+            }}
+          />
+          <SaleModal
+            open={pendingOpen}
+            mode="pending"
+            onClose={() => setPendingOpen(false)}
+            appointment={appointment}
+            onCompleted={() => {
+              setPendingOpen(false);
+              refresh();
+            }}
+          />
+        </>
+      ) : null}
     </Modal>
   );
 }

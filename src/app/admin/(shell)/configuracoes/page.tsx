@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BarChart3, Globe, MessageSquareText, Smartphone, Store, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, Globe, MessageSquareText, Smartphone, Store, Users, Wallet, type LucideIcon } from "lucide-react";
 import { getPanelPreferences, getSettings } from "@/lib/data/settings";
 import { getBusinessHours } from "@/lib/data/business-hours";
 import { getFinanceOptions, getPayableCategoryUsage } from "@/lib/data/finance-options";
@@ -11,19 +11,26 @@ import { PayableCategoriesForm, PaymentMethodsForm } from "@/components/admin/Fi
 import { SalonSettings, SiteSettings } from "@/components/admin/SettingsManager";
 import { cn } from "@/lib/utils/cn";
 import { isSiteEnabled } from "@/lib/site";
+import { getPanelUser } from "@/lib/auth/require-admin";
+import { STAFF_SETTINGS_TABS, type PanelRole } from "@/lib/auth/permissions";
+import { listAllProfessionals, listPanelUsers } from "@/lib/data/team";
+import { PanelAccessManager, ProfessionalsForm } from "@/components/admin/TeamSettings";
 
 export const metadata: Metadata = { title: "Configurações" };
 
-function getTabs(siteEnabled: boolean): { id: string; label: string; icon: LucideIcon }[] {
-  return [
+function getTabs(siteEnabled: boolean, role: PanelRole): { id: string; label: string; icon: LucideIcon }[] {
+  const tabs = [
     { id: "painel", label: "Painel e gráficos", icon: BarChart3 },
     { id: "aparelho", label: "Este aparelho", icon: Smartphone },
+    { id: "equipe", label: "Equipe e acessos", icon: Users },
     { id: "financeiro", label: "Financeiro", icon: Wallet },
     { id: "salao", label: "Salão e agenda", icon: Store },
     siteEnabled
       ? { id: "site", label: "Site e mensagens", icon: Globe }
       : { id: "site", label: "Mensagens", icon: MessageSquareText },
   ];
+  // A aba que a página abre é escolhida desta lista: aba de fora nem chega a consultar os dados.
+  return role === "admin" ? tabs : tabs.filter((t) => (STAFF_SETTINGS_TABS as readonly string[]).includes(t.id));
 }
 
 function getGuides(siteEnabled: boolean): Record<string, React.ReactNode[]> {
@@ -33,6 +40,14 @@ function getGuides(siteEnabled: boolean): Record<string, React.ReactNode[]> {
       <>Aqui também ficam os prazos dos avisos, as linhas da agenda e a forma de pagamento que já vem marcada.</>,
       <>Esconder não apaga nada: os números continuam sendo calculados e voltam quando você liga de novo.</>,
       <>Clique em <strong>Salvar preferências</strong>. “Mostrar tudo de novo” volta ao padrão.</>,
+    ],
+    equipe: [
+      <>Em <strong>Profissionais</strong> ficam quem atende e vende: eles aparecem na agenda, na venda e nas comissões.</>,
+      <>
+        Em <strong>Acessos ao painel</strong>, crie um login para cada pessoa. A <strong>secretária</strong> marca, confirma, remarca
+        e cancela horários e cuida de clientes e lista de espera, mas não vê saldo, vendas, valores recebidos, estoque nem relatórios.
+      </>,
+      <>Mudar o nível ou remover alguém vale na hora. Sempre fica pelo menos um administrador.</>,
     ],
     aparelho: [
       <>Escolha até 5 atalhos para a barra de baixo do celular, o tamanho do texto e como a agenda abre.</>,
@@ -56,8 +71,9 @@ function getGuides(siteEnabled: boolean): Record<string, React.ReactNode[]> {
 
 export default async function ConfiguracoesPage({ searchParams }: { searchParams: { aba?: string } }) {
   const siteEnabled = isSiteEnabled();
-  const tabs = getTabs(siteEnabled);
-  const tab = tabs.some((t) => t.id === searchParams.aba) ? searchParams.aba! : "painel";
+  const user = await getPanelUser();
+  const tabs = getTabs(siteEnabled, user?.role ?? "staff");
+  const tab = tabs.some((t) => t.id === searchParams.aba) ? searchParams.aba! : tabs[0].id;
 
   return (
     <div className="space-y-6">
@@ -87,13 +103,22 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
         </ul>
       </nav>
 
-      <TabContent tab={tab} siteEnabled={siteEnabled} />
+      <TabContent tab={tab} siteEnabled={siteEnabled} currentUserId={user?.id ?? ""} />
     </div>
   );
 }
 
-async function TabContent({ tab, siteEnabled }: { tab: string; siteEnabled: boolean }) {
+async function TabContent({ tab, siteEnabled, currentUserId }: { tab: string; siteEnabled: boolean; currentUserId: string }) {
   if (tab === "aparelho") return <DevicePrefsForm />;
+  if (tab === "equipe") {
+    const [users, professionals] = await Promise.all([listPanelUsers(), listAllProfessionals()]);
+    return (
+      <div className="grid gap-6 xl:grid-cols-2">
+        <PanelAccessManager users={users} currentUserId={currentUserId} />
+        <ProfessionalsForm professionals={professionals} />
+      </div>
+    );
+  }
   if (tab === "financeiro") {
     const options = await getFinanceOptions();
     const usage = await getPayableCategoryUsage(options.categories.map((c) => c.slug));

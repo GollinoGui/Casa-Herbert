@@ -25,6 +25,8 @@ import { SHORTCUTS, useDevicePrefs, useDevicePrefsReady, type ShortcutId } from 
 import { SaleModal } from "@/components/admin/SaleModal";
 import { ReceiptSaleModal } from "@/components/admin/ReceiptSaleModal";
 import { NewAppointmentModal } from "@/components/admin/NewAppointmentModal";
+import { usePanelUser } from "@/components/admin/PanelUserProvider";
+import { canAccessPath, type PanelRole } from "@/lib/auth/permissions";
 
 type ActionId = "sale" | "receipt" | "appointment";
 
@@ -44,6 +46,13 @@ export const SHORTCUT_TARGETS: Record<ShortcutId, { icon: LucideIcon; href?: str
   relatorios: { icon: BarChart3, href: "/admin/relatorios" },
 };
 
+/** Venda e comprovante são do administrador; páginas seguem a mesma regra do menu. */
+export function canUseShortcut(id: ShortcutId, role: PanelRole): boolean {
+  const target = SHORTCUT_TARGETS[id];
+  if (target.href) return canAccessPath(role, target.href);
+  return role === "admin" || target.action === "appointment";
+}
+
 function isActive(href: string, pathname: string | null) {
   if (!pathname) return false;
   if (href === "/admin") return pathname === href;
@@ -62,7 +71,8 @@ export function ShortcutBar() {
   const ready = useDevicePrefsReady();
   const [action, setAction] = useState<ActionId | null>(null);
 
-  const ids = prefs.shortcutBar ? prefs.shortcuts : [];
+  const { role } = usePanelUser();
+  const ids = prefs.shortcutBar ? prefs.shortcuts.filter((id) => canUseShortcut(id, role)) : [];
   const done = () => {
     setAction(null);
     router.refresh();
@@ -122,8 +132,12 @@ export function ShortcutBar() {
         </ul>
       </nav>
 
-      <SaleModal open={action === "sale"} onClose={() => setAction(null)} onCompleted={done} />
-      <ReceiptSaleModal open={action === "receipt"} onClose={() => setAction(null)} onCompleted={done} />
+      {role === "admin" ? (
+        <>
+          <SaleModal open={action === "sale"} onClose={() => setAction(null)} onCompleted={done} />
+          <ReceiptSaleModal open={action === "receipt"} onClose={() => setAction(null)} onCompleted={done} />
+        </>
+      ) : null}
       <NewAppointmentModal open={action === "appointment"} onClose={() => setAction(null)} onCreated={done} />
     </>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarClock, CalendarPlus, Layers, Pencil, Plus } from "lucide-react";
+import { CalendarClock, CalendarPlus, History, Layers, Pencil, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -19,7 +19,12 @@ import {
   saveServicePackageAction,
   sellPackageAction,
 } from "@/lib/actions/admin/packages";
-import { PackageSessionsForm, PackageSessionsModal, freeSessions } from "@/components/admin/PackageSessionsScheduler";
+import {
+  PackageSessionsForm,
+  PackageSessionsModal,
+  PastPackageSessionModal,
+  freeSessions,
+} from "@/components/admin/PackageSessionsScheduler";
 import { listCustomersAction } from "@/lib/actions/admin/customers";
 import { formatBRL } from "@/lib/utils/money";
 import { addDaysToDateStr, diffInCalendarDays, formatShortDatePtBR, todayDateStr } from "@/lib/utils/date-format";
@@ -49,6 +54,7 @@ export function PackagesManager({
   const [sellOpen, setSellOpen] = useState(false);
   const [scheduling, setScheduling] = useState<CustomerPackage | null>(null);
   const [extending, setExtending] = useState<CustomerPackage | null>(null);
+  const [recordingPast, setRecordingPast] = useState<CustomerPackage | null>(null);
 
   const visible = customerPackages.filter((p) => p.status === status);
   const pendingValue = customerPackages
@@ -145,7 +151,12 @@ export function PackagesManager({
             <ul data-cascata className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {visible.map((p) => (
                 <li key={p.id}>
-                  <CustomerPackageCard pkg={p} onSchedule={() => setScheduling(p)} onExtend={() => setExtending(p)} />
+                  <CustomerPackageCard
+                    pkg={p}
+                    onSchedule={() => setScheduling(p)}
+                    onExtend={() => setExtending(p)}
+                    onRecordPast={() => setRecordingPast(p)}
+                  />
                 </li>
               ))}
             </ul>
@@ -204,6 +215,14 @@ export function PackagesManager({
           router.refresh();
         }}
       />
+      <PastPackageSessionModal
+        pkg={recordingPast}
+        onClose={() => setRecordingPast(null)}
+        onDone={() => {
+          setRecordingPast(null);
+          router.refresh();
+        }}
+      />
       <ExtendValidityModal
         pkg={extending}
         onClose={() => setExtending(null)}
@@ -231,6 +250,7 @@ export function CustomerPackageCard({
   compact,
   onSchedule,
   onExtend,
+  onRecordPast,
 }: {
   pkg: CustomerPackage;
   compact?: boolean;
@@ -238,6 +258,8 @@ export function CustomerPackageCard({
   onSchedule?: () => void;
   /** Mostra "Mudar validade" em pacote em andamento com prazo. */
   onExtend?: () => void;
+  /** Mostra "Registrar sessão já feita" quando sobra sessão sem data. */
+  onRecordPast?: () => void;
 }) {
   const remaining = pkg.sessionsTotal - pkg.sessionsUsed;
   const free = freeSessions(pkg);
@@ -292,11 +314,18 @@ export function CustomerPackageCard({
         {pkg.status === "active" && pkg.sessionsScheduled ? ` (${pkg.sessionsScheduled} agendada${pkg.sessionsScheduled > 1 ? "s" : ""})` : ""}
         {pkg.expiresOn ? ` · vale até ${formatShortDatePtBR(pkg.expiresOn)}` : ""}
       </p>
-      {(onSchedule && pkg.status === "active" && free > 0 && !expired) || (onExtend && pkg.status === "active" && pkg.expiresOn) ? (
+      {(onSchedule && pkg.status === "active" && free > 0 && !expired) ||
+      (onRecordPast && pkg.status === "active" && free > 0) ||
+      (onExtend && pkg.status === "active" && pkg.expiresOn) ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {onSchedule && pkg.status === "active" && free > 0 && !expired ? (
             <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onSchedule}>
               <CalendarPlus size={14} /> Agendar {free === 1 ? "1 sessão" : `${free} sessões`}
+            </Button>
+          ) : null}
+          {onRecordPast && pkg.status === "active" && free > 0 ? (
+            <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={onRecordPast}>
+              <History size={14} /> Registrar sessão já feita
             </Button>
           ) : null}
           {onExtend && pkg.status === "active" && pkg.expiresOn ? (
