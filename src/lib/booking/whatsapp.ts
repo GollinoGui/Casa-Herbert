@@ -1,6 +1,7 @@
 import type { Appointment, Customer, Service, Settings } from "@/types";
 import { formatLongDatePtBR } from "@/lib/utils/date-format";
 import { toWhatsAppDigits } from "@/lib/utils/phone";
+import { greetingFor } from "@/lib/reminders/rules";
 
 function fillTemplate(template: string, vars: Record<string, string>) {
   return Object.entries(vars).reduce(
@@ -17,6 +18,23 @@ export function buildAppointmentMessage(
   templates: Settings["messageTemplates"]
 ) {
   return fillTemplate(templates[kind], {
+    nome: customer.fullName.split(" ")[0],
+    servico: service.name,
+    data: formatLongDatePtBR(appointment.date),
+    horario: appointment.startTime,
+  });
+}
+
+/** Mensagem de uma regra de lembrete. A saudação sai da hora em que o botão é clicado ("HH:mm" do salão). */
+export function buildReminderMessage(
+  template: string,
+  appointment: Pick<Appointment, "date" | "startTime">,
+  customer: Pick<Customer, "fullName">,
+  service: Pick<Service, "name">,
+  nowTime: string
+) {
+  return fillTemplate(template, {
+    saudacao: greetingFor(nowTime),
     nome: customer.fullName.split(" ")[0],
     servico: service.name,
     data: formatLongDatePtBR(appointment.date),

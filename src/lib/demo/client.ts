@@ -60,7 +60,7 @@ const PRIMARY_KEY: Record<string, string> = {
 const pk = (table: string) => PRIMARY_KEY[table] ?? "id";
 
 const DEFAULTS: Record<string, () => Row> = {
-  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, customer_package_id: null, package_outcome: null, no_show: false, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null, commission_cents: 0 }),
+  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, messages_sent: {}, customer_package_id: null, package_outcome: null, no_show: false, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null, commission_cents: 0 }),
   customers: () => ({ email: null, notes: null, birth_date: null, photo_consent_at: null }),
   services: () => ({ description: null, price_cents: null, is_active: true, display_order: 0, image_id: null, image_position: null, show_on_home: true, barcode: null, return_days: null }),
   products: () => ({ stock_quantity: 0, open_usage: 0, min_stock: null, is_active: true, barcode: null, cost_cents: null, description: null, image_id: null, image_position: null, show_on_site: false, brand_id: null }),
@@ -191,9 +191,10 @@ export function insertRow(table: string, input: Row): { row?: Row; error?: PgErr
 export function updateRow(table: string, row: Row, patch: Row): PgError | null {
   const next = normalizeRow(table, { ...row, ...clone(patch) });
   if (HAS_UPDATED_AT.has(table) && !("updated_at" in patch)) next.updated_at = nowIso();
-  // Espelho de trg_appointments_reset_reminder (0016): remarcar zera o lembrete.
+  // Espelho de trg_appointments_reset_reminder (0016, 0022): remarcar zera os lembretes.
   if (table === "appointments" && (next.appointment_date !== row.appointment_date || next.start_time !== row.start_time)) {
     next.reminder_sent_at = null;
+    next.messages_sent = {};
   }
   const error = constraintError(table, next, row[pk(table)]);
   if (error) return error;

@@ -41,6 +41,12 @@ export function salonDateOf(isoTimestamp: string): string {
   return salonParts(new Date(isoTimestamp)).date;
 }
 
+/** "YYYY-MM-DD HH:mm" no fuso do salão de um timestamp ISO; compara como texto. */
+export function salonDateTimeOf(isoTimestamp: string): string {
+  const { date, time } = salonParts(new Date(isoTimestamp));
+  return `${date} ${time}`;
+}
+
 export function addDaysToDateStr(dateStr: string, days: number): string {
   return formatDateOnly(addDays(parseDateOnly(dateStr), days));
 }

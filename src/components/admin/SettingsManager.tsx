@@ -11,6 +11,8 @@ import { Input, Textarea, FieldLabel, FieldError } from "@/components/ui/Field";
 import { settingsFormSchema } from "@/lib/booking/validators";
 import { updateAnnouncementAction, updateSettingsAction } from "@/lib/actions/admin/settings";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
+import { ReminderRulesForm } from "@/components/admin/ReminderRulesForm";
+import type { ReminderRule } from "@/lib/reminders/rules";
 import type { BusinessHourRule, Settings } from "@/types";
 
 type GeneralFormValues = z.infer<typeof settingsFormSchema>;
@@ -33,11 +35,20 @@ export function SalonSettings({ settings, businessHours }: { settings: Settings;
   );
 }
 
-/** Aba "Site e mensagens": faixa de aviso do site e modelos do WhatsApp. */
-export function SiteSettings({ settings, siteEnabled }: { settings: Settings; siteEnabled: boolean }) {
+/** Aba "Site e mensagens": faixa de aviso do site, lembretes e modelos do WhatsApp. */
+export function SiteSettings({
+  settings,
+  siteEnabled,
+  reminderRules,
+}: {
+  settings: Settings;
+  siteEnabled: boolean;
+  reminderRules: ReminderRule[];
+}) {
   return (
     <div className="space-y-8">
       {siteEnabled ? <AnnouncementForm settings={settings} /> : null}
+      <ReminderRulesForm rules={reminderRules} />
       <MessageTemplatesForm settings={settings} />
     </div>
   );
@@ -257,14 +268,13 @@ function MessageTemplatesForm({ settings }: { settings: Settings }) {
   const [cancelled, setCancelled] = useState(settings.messageTemplates.cancelled);
   const [birthday, setBirthday] = useState(settings.messageTemplates.birthday);
   const [comeback, setComeback] = useState(settings.messageTemplates.comeback);
-  const [reminder, setReminder] = useState(settings.messageTemplates.reminder);
   const [returnDue, setReturnDue] = useState(settings.messageTemplates.returnDue);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   async function handleSave() {
     setSaving(true);
-    await updateSettingsAction({ messageTemplates: { confirmed, rejected, cancelled, birthday, comeback, reminder, returnDue } });
+    await updateSettingsAction({ messageTemplates: { ...settings.messageTemplates, confirmed, rejected, cancelled, birthday, comeback, returnDue } });
     setSaving(false);
     setSaved(true);
     router.refresh();
@@ -284,6 +294,7 @@ function MessageTemplatesForm({ settings }: { settings: Settings }) {
       <div className="space-y-4">
         <div>
           <FieldLabel htmlFor="tpl-confirmed">Confirmação</FieldLabel>
+          <p className="mb-1.5 text-xs text-brand-graphite/50">Botão “Enviar confirmação” do detalhe do agendamento.</p>
           <Textarea id="tpl-confirmed" rows={5} value={confirmed} onChange={(e) => setConfirmed(e.target.value)} />
         </div>
         <div>
@@ -293,11 +304,6 @@ function MessageTemplatesForm({ settings }: { settings: Settings }) {
         <div>
           <FieldLabel htmlFor="tpl-cancelled">Cancelamento</FieldLabel>
           <Textarea id="tpl-cancelled" rows={5} value={cancelled} onChange={(e) => setCancelled(e.target.value)} />
-        </div>
-        <div>
-          <FieldLabel htmlFor="tpl-reminder">Lembrete de véspera</FieldLabel>
-          <p className="mb-1.5 text-xs text-brand-graphite/50">Bloco “Lembretes de amanhã” do Início.</p>
-          <Textarea id="tpl-reminder" rows={4} value={reminder} onChange={(e) => setReminder(e.target.value)} />
         </div>
         <div>
           <FieldLabel htmlFor="tpl-birthday">Aniversário</FieldLabel>

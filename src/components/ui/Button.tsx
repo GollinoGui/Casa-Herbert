@@ -21,12 +21,13 @@ interface LinkButtonProps extends StyleProps {
   href: string;
   target?: string;
   rel?: string;
+  onClick?: () => void;
   children: ReactNode;
 }
 
-export function LinkButton({ href, variant = "primary", className, children, target, rel }: LinkButtonProps) {
+export function LinkButton({ href, variant = "primary", className, children, target, rel, onClick }: LinkButtonProps) {
   return (
-    <Link href={href} target={target} rel={rel} className={cn(variantClass[variant], className)}>
+    <Link href={href} target={target} rel={rel} onClick={onClick} className={cn(variantClass[variant], className)}>
       {children}
     </Link>
   );

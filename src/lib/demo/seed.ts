@@ -2,6 +2,7 @@ import { canonicalPhone } from "@/lib/utils/phone";
 import { addDaysToDateStr, todayDateStr, weekdayOf } from "@/lib/utils/date-format";
 import { PAYABLE_CATEGORIES } from "@/lib/finance/constants";
 import { DEMO_LOGIN, DEMO_STAFF_LOGIN } from "@/lib/demo/mode";
+import { DEFAULT_REMINDER_RULES } from "@/lib/reminders/rules";
 
 /**
  * Dados de exemplo do modo demonstração, com datas relativas a hoje. Nomes e
@@ -72,6 +73,7 @@ export function buildSeed(): Tables {
     announcement_link: null,
     announcement_until: null,
     panel_preferences: {},
+    reminder_rules: DEFAULT_REMINDER_RULES.map((r) => ({ ...r, since: now })),
     payment_method_options: {},
     updated_at: now,
   };

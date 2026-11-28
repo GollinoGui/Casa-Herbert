@@ -526,6 +526,20 @@ function schedulePackageSessions({ p }: Json) {
   return { ok: true, appointmentIds: created.map((r) => r.id) };
 }
 
+/** Espelho de mark_appointment_messages (0022). */
+function markAppointmentMessages({ p_appointment_id, p_rule_ids, p_sent }: Json) {
+  const row = find("appointments", p_appointment_id);
+  const ids: string[] = Array.isArray(p_rule_ids) ? p_rule_ids : [];
+  if (!row || !ids.length) return null;
+  const sent: Record<string, string> = { ...(row.messages_sent ?? {}) };
+  for (const id of ids) {
+    if (p_sent) sent[id] = now();
+    else delete sent[id];
+  }
+  mustUpdate("appointments", row, { messages_sent: sent });
+  return null;
+}
+
 /** Espelho de record_past_package_session (0021): sessão já feita entra concluída. */
 function recordPastPackageSession({ p }: Json) {
   const pkg = find("customer_packages", p?.customerPackageId);
@@ -823,6 +837,7 @@ const RPCS: Record<string, (args: Json) => unknown> = {
   use_package_session: consumePackageSession,
   schedule_package_sessions: schedulePackageSessions,
   record_past_package_session: recordPastPackageSession,
+  mark_appointment_messages: markAppointmentMessages,
   cancel_package_session: cancelPackageSession,
   reopen_package_session: reopenPackageSession,
   cash_drawer_preview: cashDrawerPreview,

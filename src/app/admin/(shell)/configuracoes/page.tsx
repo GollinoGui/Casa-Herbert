@@ -4,6 +4,7 @@ import { BarChart3, Globe, MessageSquareText, Smartphone, Store, Users, Wallet, 
 import { getPanelPreferences, getSettings } from "@/lib/data/settings";
 import { getBusinessHours } from "@/lib/data/business-hours";
 import { getFinanceOptions, getPayableCategoryUsage } from "@/lib/data/finance-options";
+import { getReminderRules } from "@/lib/data/reminders";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { PanelPreferencesForm } from "@/components/admin/PanelPreferencesForm";
 import { DevicePrefsForm } from "@/components/admin/DevicePrefsForm";
@@ -64,7 +65,9 @@ function getGuides(siteEnabled: boolean): Record<string, React.ReactNode[]> {
     ],
     site: [
       ...(siteEnabled ? [<>O aviso aparece numa faixa no topo de todas as páginas do site.</>] : []),
-      <>Os modelos de mensagem são usados ao confirmar, recusar ou cancelar um agendamento pelo WhatsApp.</>,
+      <>Em <strong>Confirmações e lembretes</strong>, escolha quando cada mensagem aparece para enviar: assim que confirmar, dias antes, no dia ou horas antes.</>,
+      <>Na hora, ela aparece em <strong>Mensagens para enviar</strong> no Início. Um clique abre o WhatsApp com o texto pronto.</>,
+      <>Os modelos de baixo são usados ao confirmar, recusar ou cancelar um agendamento pelo detalhe dele.</>,
     ],
   };
 }
@@ -134,7 +137,8 @@ async function TabContent({ tab, siteEnabled, currentUserId }: { tab: string; si
     return <SalonSettings settings={settings} businessHours={businessHours} />;
   }
   if (tab === "site") {
-    return <SiteSettings settings={await getSettings()} siteEnabled={siteEnabled} />;
+    const [settings, reminderRules] = await Promise.all([getSettings(), getReminderRules()]);
+    return <SiteSettings settings={settings} siteEnabled={siteEnabled} reminderRules={reminderRules} />;
   }
   const preferences = await getPanelPreferences();
   return <PanelPreferencesForm preferences={preferences} />;

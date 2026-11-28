@@ -12,7 +12,6 @@ import {
   updateAppointmentAdminNotes,
   updateAppointmentPrice,
   updateAppointmentDiscount,
-  setReminderSent,
   type AppointmentFilters,
 } from "@/lib/data/appointments";
 import { getActiveProfessionals, getAppointmentProducts, setAppointmentProducts } from "@/lib/data/professionals";
@@ -137,13 +136,6 @@ export async function setAppointmentProductsAction(
 export async function listProfessionalsAction() {
   await requireStaff();
   return getActiveProfessionals();
-}
-
-export async function setReminderSentAction(id: string, sent: boolean) {
-  await requireStaff();
-  const updated = await setReminderSent(id, sent);
-  revalidatePath("/admin");
-  return updated;
 }
 
 export async function getDayRouteAction(date: string) {

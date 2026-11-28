@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "painel",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
   "compatibility_date": "2026-06-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
@@ -10,6 +10,8 @@
   },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "painel" }],
   "observability": { "enabled": true },
+  // Ping diário no Supabase (worker.ts) para o projeto grátis não pausar por inatividade.
+  "triggers": { "crons": ["0 12 * * *"] },
   "workers_dev": true,
   "preview_urls": false,
   // Segredos (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AUTH_SECRET) vão por `npx wrangler secret put`, nunca aqui.

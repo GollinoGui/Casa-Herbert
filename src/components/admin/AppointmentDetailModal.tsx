@@ -33,6 +33,7 @@ import { getCustomerAppointmentsAction } from "@/lib/actions/admin/customers";
 import { listOpenSalesAction, listSalesAction } from "@/lib/actions/admin/sales";
 import { listActiveProductsAction } from "@/lib/actions/admin/products";
 import { getSettingsAction } from "@/lib/actions/admin/settings";
+import { markBookingConfirmationSentAction } from "@/lib/actions/admin/reminders";
 import {
   listCustomerPackagesAction,
   consumePackageSessionAction,
@@ -596,7 +597,13 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                         Concluir sessão
                       </Button>
                     ) : null}
-                    <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
+                    <LinkButton
+                    href={templatedWhatsAppHref("confirmed")}
+                    onClick={() => void markBookingConfirmationSentAction(appointment.id)}
+                    variant="gold"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                       Enviar confirmação
                     </LinkButton>
                     {isAdmin ? (
@@ -787,7 +794,13 @@ export function AppointmentDetailModal({ appointmentId, open, onClose, onMutated
                       Finalizar e receber
                     </Button>
                   ) : null}
-                  <LinkButton href={templatedWhatsAppHref("confirmed")} variant="gold" target="_blank" rel="noreferrer">
+                  <LinkButton
+                    href={templatedWhatsAppHref("confirmed")}
+                    onClick={() => void markBookingConfirmationSentAction(appointment.id)}
+                    variant="gold"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     Enviar confirmação
                   </LinkButton>
                   {isAdmin ? (

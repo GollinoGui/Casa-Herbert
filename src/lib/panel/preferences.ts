@@ -26,7 +26,7 @@ export const DASHBOARD_BLOCKS = {
   calendar: "Calendário",
   todayList: "Lista de agendamentos de hoje",
   upcomingList: "Lista de próximos agendamentos",
-  reminders: "Lembretes de amanhã",
+  reminders: "Mensagens para enviar (confirmações e lembretes)",
   birthdays: "Aniversariantes da semana",
   returns: "Retornos para chamar",
   lapsed: "Clientes que não voltam há um tempo",

@@ -86,8 +86,8 @@ export interface Appointment {
   priceCents: number | null; // valor combinado para este agendamento; null = ainda não definido
   discountCents: number;
   professionalId: string | null;
-  /** Quando o painel abriu o WhatsApp com o lembrete de véspera; remarcar zera. */
-  reminderSentAt: string | null;
+  /** Regra de lembrete (id) → quando o painel abriu o WhatsApp com ela; remarcar zera. */
+  messagesSent: Record<string, string>;
   /** Pacote de onde saiu a sessão; null = atendimento avulso. Ligada e ainda marcada = sessão reservada. */
   customerPackageId: string | null;
   /** Sessão de pacote desmarcada: "counted" = descontada do pacote, "returned" = voltou para o pacote. */
@@ -330,7 +330,7 @@ export interface Settings {
     birthday: string;
     /** Convite para voltar, para quem não vem há um tempo. */
     comeback: string;
-    /** Lembrete de véspera (bloco "Lembretes de amanhã" do Início). */
+    /** Antigo lembrete de véspera; virou a regra "vespera" de settings.reminder_rules (0022). */
     reminder: string;
     /** Hora do retorno sugerido pelo serviço. Aceita {servico}. */
     returnDue: string;

@@ -6,6 +6,7 @@ import { getPanelPreferences } from "@/lib/data/settings";
 import { getWaitlistOpenings } from "@/lib/data/waitlist";
 import { getCashDrawerPreview } from "@/lib/data/cash-closings";
 import { listCustomerPackages } from "@/lib/data/packages";
+import { getReminderQueue } from "@/lib/data/reminders";
 import { nowTimeStr } from "@/lib/utils/date-format";
 import type { PanelRole } from "@/lib/auth/permissions";
 
@@ -56,7 +57,6 @@ export async function getPanelNotifications(role: PanelRole): Promise<PanelNotif
 async function getAdminOrStaffNotifications(isAdmin: boolean): Promise<PanelNotification[]> {
   const supabase = getSupabase();
   const today = todayDateStr();
-  const tomorrow = addDaysToDateStr(today, 1);
   const prefs = await safe("preferências", getPanelPreferences, null);
   const dueDays = prefs?.payableDueDays ?? 7;
   const onlyAdmin = <T,>(run: () => Promise<T>, empty: T) => (isAdmin ? run() : Promise.resolve(empty));
@@ -68,18 +68,7 @@ async function getAdminOrStaffNotifications(isAdmin: boolean): Promise<PanelNoti
         (await supabase.from("appointments").select("id", { count: "exact", head: true }).eq("status", "PENDING")).count ?? 0,
       0
     ),
-    safe(
-      "lembretes",
-      async () =>
-        unwrap(
-          await supabase
-            .from("appointments")
-            .select("id, reminder_sent_at")
-            .eq("appointment_date", tomorrow)
-            .in("status", ["PENDING", "CONFIRMED"])
-        ).filter((r) => !r.reminder_sent_at).length,
-      0
-    ),
+    safe("lembretes", async () => (await getReminderQueue()).length, 0),
     onlyAdmin(
       () =>
         safe(
@@ -137,8 +126,8 @@ async function getAdminOrStaffNotifications(isAdmin: boolean): Promise<PanelNoti
     list.push({
       kind: "reminders",
       tone: "aviso",
-      title: plural(reminders, "lembrete para amanhã", "lembretes para amanhã"),
-      detail: "Ainda não enviados pelo WhatsApp.",
+      title: plural(reminders, "mensagem para enviar", "mensagens para enviar"),
+      detail: "Confirmações e lembretes de horário pelo WhatsApp.",
       href: "/admin",
       count: reminders,
     });

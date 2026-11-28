@@ -42,8 +42,10 @@ import { Button } from "@/components/ui/Button";
 import { formatBRL } from "@/lib/utils/money";
 import type { DashboardFinance } from "@/lib/data/financials";
 import { formatChipDatePtBR, formatLongDatePtBR, formatShortDatePtBR, nowTimeStr, todayDateStr } from "@/lib/utils/date-format";
-import { buildAppointmentMessage, buildCustomerMessage, buildWhatsAppLink } from "@/lib/booking/whatsapp";
-import { setReminderSentAction } from "@/lib/actions/admin/appointments";
+import { buildCustomerMessage, buildReminderMessage, buildWhatsAppLink } from "@/lib/booking/whatsapp";
+import { markReminderSentAction } from "@/lib/actions/admin/reminders";
+import { shortTimingLabel } from "@/lib/reminders/rules";
+import type { ReminderQueueItem } from "@/lib/data/reminders";
 import type { AppointmentWithRelations, Customer, Product, Settings } from "@/types";
 import type { AgendaGrid, DashboardBlock, DashboardSection } from "@/lib/panel/preferences";
 import type { LapsedCustomer, ReturnDueCustomer, UpcomingBirthday } from "@/lib/data/customers";
@@ -70,7 +72,7 @@ export function DashboardOverview({
   birthdays,
   lapsed,
   lowStock,
-  tomorrow,
+  reminders,
   returns,
   goal,
 }: {
@@ -86,7 +88,7 @@ export function DashboardOverview({
   birthdays: UpcomingBirthday[];
   lapsed: { total: number; list: LapsedCustomer[] };
   lowStock: Product[];
-  tomorrow: AppointmentWithRelations[];
+  reminders: ReminderQueueItem[];
   returns: { total: number; list: ReturnDueCustomer[] };
   goal: { goalCents: number; scheduledCents: number };
 }) {
@@ -221,7 +223,7 @@ export function DashboardOverview({
 
     alerts: showAlerts ? (
       <div data-cascata className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {show.reminders ? <RemindersCard appointments={tomorrow} templates={templates} /> : null}
+        {show.reminders ? <RemindersCard items={reminders} /> : null}
         {show.returns ? <ReturnsCard returns={returns} template={templates?.returnDue ?? ""} /> : null}
         {show.birthdays ? <BirthdaysCard birthdays={birthdays} template={templates?.birthday ?? ""} today={today} /> : null}
         {show.lapsed ? <LapsedCard lapsed={lapsed} lapsedDays={lapsedDays} template={templates?.comeback ?? ""} /> : null}
@@ -388,48 +390,51 @@ function WhatsAppButton({
   );
 }
 
-function RemindersCard({
-  appointments,
-  templates,
-}: {
-  appointments: AppointmentWithRelations[];
-  templates: Settings["messageTemplates"] | null;
-}) {
+function RemindersCard({ items }: { items: ReminderQueueItem[] }) {
   const router = useRouter();
-  // Marca na hora (otimista); o servidor confirma no refresh.
-  const [sent, setSent] = useState<Record<string, boolean>>({});
-  const isSent = (a: AppointmentWithRelations) => sent[a.id] ?? a.reminderSentAt !== null;
-  const pending = appointments.filter((a) => !isSent(a)).length;
+  // O que foi aberto agora continua na lista (com "desfazer") até a página recarregar.
+  const [opened, setOpened] = useState<Record<string, ReminderQueueItem>>({});
+  const keyOf = (item: ReminderQueueItem) => `${item.appointment.id}:${item.rule.id}`;
+  const shown = [...items, ...Object.values(opened).filter((o) => !items.some((i) => keyOf(i) === keyOf(o)))].sort((x, y) =>
+    `${x.appointment.date} ${x.appointment.startTime}`.localeCompare(`${y.appointment.date} ${y.appointment.startTime}`)
+  );
+  const pending = shown.filter((i) => !opened[keyOf(i)]).length;
 
-  async function mark(id: string, value: boolean) {
-    setSent((prev) => ({ ...prev, [id]: value }));
-    await setReminderSentAction(id, value);
+  async function mark(item: ReminderQueueItem, sent: boolean) {
+    setOpened((prev) => {
+      const next = { ...prev };
+      if (sent) next[keyOf(item)] = item;
+      else delete next[keyOf(item)];
+      return next;
+    });
+    await markReminderSentAction(item.appointment.id, item.rule.id, sent);
     router.refresh();
   }
 
   return (
     <AlertCard
       icon={BellRing}
-      title="Lembretes de amanhã"
+      title="Mensagens para enviar"
       count={pending}
       footer={
-        appointments.length ? (
-          <p className="text-xs text-brand-graphite/60">
-            Abrir o WhatsApp marca como aberto. Confira se a mensagem foi enviada.
-          </p>
-        ) : null
+        <p className="text-xs text-brand-graphite/60">
+          Abrir o WhatsApp marca como aberto. Confira se a mensagem foi enviada.{" "}
+          <Link href="/admin/configuracoes?aba=site" className="font-medium text-brand-moss underline-offset-2 hover:underline">
+            Quando cada uma aparece
+          </Link>
+        </p>
       }
     >
-      {appointments.length === 0 ? (
-        <EmptyState compact title="Nada marcado para amanhã" hint="Os agendamentos do dia seguinte aparecem aqui." />
+      {shown.length === 0 ? (
+        <EmptyState compact title="Nenhuma mensagem agora" hint="Confirmações e lembretes aparecem aqui na hora de mandar." />
       ) : (
         <ul className="space-y-2">
-          {appointments.map((a) => {
-            const done = isSent(a);
-            const message = templates?.reminder ? buildAppointmentMessage("reminder", a, a.customer, a.service, templates) : "";
+          {shown.map((item) => {
+            const a = item.appointment;
+            const done = !!opened[keyOf(item)];
             return (
               <li
-                key={a.id}
+                key={keyOf(item)}
                 className={cn(
                   "flex items-center justify-between gap-3 rounded-xl border border-brand-beige bg-white px-3 py-2",
                   done && "opacity-70"
@@ -438,15 +443,16 @@ function RemindersCard({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-brand-graphite">{a.customer.fullName}</p>
                   <p className="truncate text-xs text-brand-graphite/60">
-                    {a.startTime} · {a.service.name}
+                    <span className="font-medium text-brand-moss">{shortTimingLabel(item.rule.timing)}</span> ·{" "}
+                    {formatChipDatePtBR(a.date)} {a.startTime} · {a.service.name}
                   </p>
                 </div>
                 {done ? (
                   <button
                     type="button"
-                    onClick={() => mark(a.id, false)}
+                    onClick={() => mark(item, false)}
                     title="Desmarcar"
-                    aria-label={`Lembrete aberto para ${a.customer.fullName}. Desmarcar`}
+                    aria-label={`Mensagem aberta para ${a.customer.fullName}. Desmarcar`}
                     className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-brand-moss transition hover:bg-brand-sage/10"
                   >
                     <Check size={15} aria-hidden="true" />
@@ -454,15 +460,25 @@ function RemindersCard({
                   </button>
                 ) : (
                   <a
-                    href={buildWhatsAppLink(a.customer.phone, message)}
+                    href={buildWhatsAppLink(
+                      a.customer.phone,
+                      buildReminderMessage(item.rule.template, a, a.customer, a.service, nowTimeStr())
+                    )}
+                    onClick={(e) => {
+                      // A saudação sai da hora do clique: a página pode ter ficado aberta desde a manhã.
+                      e.currentTarget.href = buildWhatsAppLink(
+                        a.customer.phone,
+                        buildReminderMessage(item.rule.template, a, a.customer, a.service, nowTimeStr())
+                      );
+                      void mark(item, true);
+                    }}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => mark(a.id, true)}
-                    aria-label={`Lembrar: ${a.customer.fullName}`}
+                    aria-label={`Enviar mensagem para ${a.customer.fullName}`}
                     className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-brand-beige px-3 text-xs font-medium text-brand-moss transition hover:border-brand-sage hover:bg-brand-sage/10 active:scale-[0.97]"
                   >
                     <MessageCircle size={15} aria-hidden="true" />
-                    <span className="hidden min-[400px]:inline">Lembrar</span>
+                    <span className="hidden min-[400px]:inline">Enviar</span>
                   </a>
                 )}
               </li>
