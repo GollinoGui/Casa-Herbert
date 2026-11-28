@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { getAllProducts, getStockForecast, type StockForecast } from "@/lib/data/products";
+import { listBrands } from "@/lib/data/commissions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { ProductsManager } from "@/components/admin/ProductsManager";
 
 export const metadata: Metadata = { title: "Estoque" };
 
 export default async function EstoquePage() {
-  const [products, forecast] = await Promise.all([
+  const [products, brands, forecast] = await Promise.all([
     getAllProducts(),
+    listBrands(),
     // Previsão é ajuda, não pode derrubar a página.
     getStockForecast().catch((error): Record<string, StockForecast> => {
       console.error("[estoque] previsão:", error instanceof Error ? error.message : error);
@@ -36,7 +38,7 @@ export default async function EstoquePage() {
           </>,
         ]}
       />
-      <ProductsManager products={products} forecast={forecast} />
+      <ProductsManager products={products} brands={brands} forecast={forecast} />
     </div>
   );
 }

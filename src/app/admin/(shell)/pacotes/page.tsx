@@ -32,6 +32,10 @@ export default async function PacotesPage() {
             Se a cliente desmarcar ou faltar, toque em <strong>Desmarcou ou faltou</strong> e escolha: a sessão conta ou volta para o
             pacote (aí é só marcar a reposição).
           </>,
+          <>
+            A cliente pediu mais prazo? Use <strong>Mudar validade</strong> no card. O sino avisa 15 dias antes quando um pacote
+            vai vencer com sessões ainda sem data.
+          </>,
           <>Venda de pacote com sessão já usada não pode ser cancelada. Para devolver parte, lance um ajuste em Saldo e extrato.</>,
         ]}
       />

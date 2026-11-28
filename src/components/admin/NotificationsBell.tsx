@@ -15,6 +15,7 @@ import {
   ChevronRight,
   MessageCircle,
   Package,
+  PackageCheck,
   Receipt,
   type LucideIcon,
 } from "lucide-react";
@@ -32,6 +33,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   returns: Undo2,
   waitlist: ListChecks,
   cashClosing: Banknote,
+  packages: PackageCheck,
 };
 
 const SEEN_KEY = "painel-avisos-vistos";

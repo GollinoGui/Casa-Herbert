@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarPlus, Layers, Pencil, Plus } from "lucide-react";
+import { CalendarClock, CalendarPlus, Layers, Pencil, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/admin/EmptyState";
 import { CustomerPicker } from "@/components/admin/CustomerPicker";
 import { useFinanceOptions } from "@/components/admin/FinanceOptionsProvider";
 import {
+  extendPackageValidityAction,
   getCustomerPackageAction,
   listServicePackagesAction,
   saveServicePackageAction,
@@ -21,7 +22,7 @@ import {
 import { PackageSessionsForm, PackageSessionsModal, freeSessions } from "@/components/admin/PackageSessionsScheduler";
 import { listCustomersAction } from "@/lib/actions/admin/customers";
 import { formatBRL } from "@/lib/utils/money";
-import { formatShortDatePtBR, todayDateStr } from "@/lib/utils/date-format";
+import { addDaysToDateStr, diffInCalendarDays, formatShortDatePtBR, todayDateStr } from "@/lib/utils/date-format";
 import { cn } from "@/lib/utils/cn";
 import type { Customer, CustomerPackage, CustomerPackageStatus, PaymentMethod, Service, ServicePackage } from "@/types";
 
@@ -47,6 +48,7 @@ export function PackagesManager({
   const [formOpen, setFormOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
   const [scheduling, setScheduling] = useState<CustomerPackage | null>(null);
+  const [extending, setExtending] = useState<CustomerPackage | null>(null);
 
   const visible = customerPackages.filter((p) => p.status === status);
   const pendingValue = customerPackages
@@ -143,7 +145,7 @@ export function PackagesManager({
             <ul data-cascata className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {visible.map((p) => (
                 <li key={p.id}>
-                  <CustomerPackageCard pkg={p} onSchedule={() => setScheduling(p)} />
+                  <CustomerPackageCard pkg={p} onSchedule={() => setScheduling(p)} onExtend={() => setExtending(p)} />
                 </li>
               ))}
             </ul>
@@ -202,6 +204,14 @@ export function PackagesManager({
           router.refresh();
         }}
       />
+      <ExtendValidityModal
+        pkg={extending}
+        onClose={() => setExtending(null)}
+        onDone={() => {
+          setExtending(null);
+          router.refresh();
+        }}
+      />
       <SellPackageModal
         open={sellOpen}
         onClose={() => setSellOpen(false)}
@@ -220,16 +230,21 @@ export function CustomerPackageCard({
   pkg,
   compact,
   onSchedule,
+  onExtend,
 }: {
   pkg: CustomerPackage;
   compact?: boolean;
   /** Mostra "Agendar sessões" quando sobra sessão sem data. */
   onSchedule?: () => void;
+  /** Mostra "Mudar validade" em pacote em andamento com prazo. */
+  onExtend?: () => void;
 }) {
   const remaining = pkg.sessionsTotal - pkg.sessionsUsed;
   const free = freeSessions(pkg);
   const today = todayDateStr();
   const expired = pkg.status === "active" && pkg.expiresOn !== null && pkg.expiresOn < today;
+  const daysLeft = pkg.status === "active" && pkg.expiresOn && !expired ? diffInCalendarDays(pkg.expiresOn, today) : null;
+  const expiringSoon = daysLeft !== null && daysLeft <= 15 && free > 0;
   return (
     <div className={cn("rounded-2xl border border-brand-beige bg-white", compact ? "p-3" : "p-4 shadow-softer")}>
       <div className="flex items-start justify-between gap-3">
@@ -244,10 +259,20 @@ export function CustomerPackageCard({
         <span
           className={cn(
             "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-            pkg.status === "active" ? (expired ? "bg-amber-100 text-amber-900" : "bg-brand-sage/20 text-brand-moss") : "bg-brand-cream text-brand-graphite/60"
+            pkg.status === "active"
+              ? expired || expiringSoon
+                ? "bg-amber-100 text-amber-900"
+                : "bg-brand-sage/20 text-brand-moss"
+              : "bg-brand-cream text-brand-graphite/60"
           )}
         >
-          {expired ? "Vencido" : STATUS_LABEL[pkg.status]}
+          {expired
+            ? "Vencido"
+            : expiringSoon
+              ? daysLeft === 0
+                ? "Vence hoje"
+                : `Vence em ${daysLeft} dia${daysLeft === 1 ? "" : "s"}`
+              : STATUS_LABEL[pkg.status]}
         </span>
       </div>
       <div className="mt-3 flex gap-1" aria-hidden="true">
@@ -267,10 +292,19 @@ export function CustomerPackageCard({
         {pkg.status === "active" && pkg.sessionsScheduled ? ` (${pkg.sessionsScheduled} agendada${pkg.sessionsScheduled > 1 ? "s" : ""})` : ""}
         {pkg.expiresOn ? ` · vale até ${formatShortDatePtBR(pkg.expiresOn)}` : ""}
       </p>
-      {onSchedule && pkg.status === "active" && free > 0 && !expired ? (
-        <Button variant="secondary" className="mt-3 !px-3 !py-1.5 text-xs" onClick={onSchedule}>
-          <CalendarPlus size={14} /> Agendar {free === 1 ? "1 sessão" : `${free} sessões`}
-        </Button>
+      {(onSchedule && pkg.status === "active" && free > 0 && !expired) || (onExtend && pkg.status === "active" && pkg.expiresOn) ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {onSchedule && pkg.status === "active" && free > 0 && !expired ? (
+            <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onSchedule}>
+              <CalendarPlus size={14} /> Agendar {free === 1 ? "1 sessão" : `${free} sessões`}
+            </Button>
+          ) : null}
+          {onExtend && pkg.status === "active" && pkg.expiresOn ? (
+            <Button variant={expired ? "secondary" : "ghost"} className="!px-3 !py-1.5 text-xs" onClick={onExtend}>
+              <CalendarClock size={14} /> {expired ? "Estender validade" : "Mudar validade"}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -590,6 +624,73 @@ export function SellPackageModal({
           </Button>
         </div>
       </div>
+    </Modal>
+  );
+}
+
+function ExtendValidityModal({ pkg, onClose, onDone }: { pkg: CustomerPackage | null; onClose: () => void; onDone: () => void }) {
+  const today = todayDateStr();
+  const [date, setDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!pkg) return;
+    const base = pkg.expiresOn && pkg.expiresOn > today ? pkg.expiresOn : today;
+    setDate(addDaysToDateStr(base, 30));
+    setError(null);
+  }, [pkg, today]);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pkg) return;
+    setSaving(true);
+    setError(null);
+    const result = await extendPackageValidityAction(pkg.id, date);
+    setSaving(false);
+    if (!result.ok) return setError(result.error);
+    onDone();
+  }
+
+  return (
+    <Modal open={!!pkg} onClose={onClose} title="Validade do pacote">
+      {pkg ? (
+        <form onSubmit={save} className="space-y-4">
+          <p className="text-sm text-brand-graphite/80">
+            <strong className="text-brand-graphite">{pkg.customerName}</strong> · {pkg.name}
+            <br />
+            {pkg.expiresOn
+              ? `${pkg.expiresOn < today ? "Venceu em" : "Vale até"} ${formatShortDatePtBR(pkg.expiresOn)}.`
+              : "Sem validade."}{" "}
+            Faltam {pkg.sessionsTotal - pkg.sessionsUsed} de {pkg.sessionsTotal} sessões.
+          </p>
+          <div>
+            <FieldLabel htmlFor="pkg-validade">Nova validade</FieldLabel>
+            <Input id="pkg-validade" type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} required />
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[15, 30, 60].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setDate(addDaysToDateStr(pkg.expiresOn && pkg.expiresOn > today ? pkg.expiresOn : today, days))}
+                  className="min-h-9 rounded-full border border-brand-beige px-3 text-xs font-medium text-brand-moss hover:bg-brand-sage/10"
+                >
+                  +{days} dias
+                </button>
+              ))}
+            </div>
+          </div>
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving || !date}>
+              Salvar validade
+            </Button>
+          </div>
+        </form>
+      ) : null}
     </Modal>
   );
 }

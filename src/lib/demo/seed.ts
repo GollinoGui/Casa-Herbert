@@ -530,6 +530,8 @@ export function buildSeed(): Tables {
     services,
     customers,
     professionals,
+    brands: [],
+    commission_rules: [],
     admin_profiles,
     products,
     appointments: appointments.filter(

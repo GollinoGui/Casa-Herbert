@@ -17,6 +17,7 @@ export const DASHBOARD_BLOCKS = {
   todayIn: "Entrou hoje",
   receivable: "A receber",
   payableDue: "Contas a vencer (7 dias)",
+  nowNext: "Atendimento de agora e o próximo",
   apptToday: "Agendamentos hoje",
   apptPending: "Pendentes",
   apptConfirmed: "Confirmados",
@@ -36,7 +37,7 @@ export const DASHBOARD_GROUPS: { title: string; keys: DashboardBlock[] }[] = [
   { title: "Atalhos", keys: ["quickActions"] },
   { title: "Meta", keys: ["goal"] },
   { title: "Cartões de dinheiro", keys: ["balance", "todayIn", "receivable", "payableDue"] },
-  { title: "Cartões da agenda", keys: ["apptToday", "apptPending", "apptConfirmed", "apptWeek", "apptMonth"] },
+  { title: "Cartões da agenda", keys: ["nowNext", "apptToday", "apptPending", "apptConfirmed", "apptWeek", "apptMonth"] },
   { title: "Blocos da página", keys: ["calendar", "todayList", "upcomingList"] },
   { title: "Avisos", keys: ["reminders", "returns", "birthdays", "lapsed", "lowStock"] },
 ];

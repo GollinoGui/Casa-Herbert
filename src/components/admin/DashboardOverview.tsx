@@ -31,6 +31,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { CountUp } from "@/components/admin/CountUp";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { BotanicalBranch } from "@/components/admin/BotanicalBranch";
+import { NowNextCard } from "@/components/admin/NowNextCard";
 import { cn } from "@/lib/utils/cn";
 import { AppointmentDetailModal } from "@/components/admin/AppointmentDetailModal";
 import { CalendarView } from "@/components/admin/CalendarView";
@@ -195,19 +196,24 @@ export function DashboardOverview({
       </div>
     ) : null,
 
-    agenda: statCards.length ? (
-      <div data-cascata className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5">
-        {statCards.map(({ label, value, icon: Icon }) => (
-          <Card key={label} className="cartao-vivo p-4 sm:p-5">
-            <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-sage/20 text-brand-moss">
-              <Icon size={18} strokeWidth={1.75} />
-            </span>
-            <p className="truncate text-2xl font-semibold tabular-nums text-brand-forest">
-              <CountUp value={value} duration={0.8} />
-            </p>
-            <p className="text-xs text-brand-graphite/70">{label}</p>
-          </Card>
-        ))}
+    agenda: statCards.length || show.nowNext ? (
+      <div className="space-y-3 sm:space-y-4">
+        {show.nowNext ? <NowNextCard appointments={stats.todayAppointments} onOpen={openAppointment} /> : null}
+        {statCards.length ? (
+          <div data-cascata className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5">
+            {statCards.map(({ label, value, icon: Icon }) => (
+              <Card key={label} className="cartao-vivo p-4 sm:p-5">
+                <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-sage/20 text-brand-moss">
+                  <Icon size={18} strokeWidth={1.75} />
+                </span>
+                <p className="truncate text-2xl font-semibold tabular-nums text-brand-forest">
+                  <CountUp value={value} duration={0.8} />
+                </p>
+                <p className="text-xs text-brand-graphite/70">{label}</p>
+              </Card>
+            ))}
+          </div>
+        ) : null}
       </div>
     ) : null,
 

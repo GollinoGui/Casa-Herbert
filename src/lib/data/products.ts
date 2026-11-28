@@ -42,6 +42,7 @@ export interface ProductInput {
   barcode?: string | null;
   costCents?: number | null;
   minStock?: number | null;
+  brandId?: string | null;
 }
 
 function toRow(input: Partial<ProductInput>) {
@@ -57,6 +58,7 @@ function toRow(input: Partial<ProductInput>) {
   if (input.barcode !== undefined) row.barcode = input.barcode?.trim() || null;
   if (input.costCents !== undefined) row.cost_cents = input.costCents;
   if (input.minStock !== undefined) row.min_stock = input.minStock;
+  if (input.brandId !== undefined) row.brand_id = input.brandId || null;
   return row;
 }
 

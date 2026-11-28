@@ -7,7 +7,7 @@ import { ChevronDown, Globe, Pencil, Plus, ScanBarcode } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { ActiveBadge } from "@/components/ui/Badge";
-import { Input, Textarea, FieldLabel } from "@/components/ui/Field";
+import { Input, Select, Textarea, FieldLabel } from "@/components/ui/Field";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { ImageField } from "@/components/admin/MediaPicker";
 import { BarcodeScanner } from "@/components/admin/BarcodeScanner";
@@ -17,7 +17,7 @@ import { createProductAction, updateProductAction, setProductActiveAction } from
 import { matchesText, matchesValue, parseListFilters } from "@/lib/utils/list-filters";
 import { formatBRL } from "@/lib/utils/money";
 import { cn } from "@/lib/utils/cn";
-import type { ImagePosition, Product } from "@/types";
+import type { Brand, ImagePosition, Product } from "@/types";
 import type { StockForecast } from "@/lib/data/products";
 
 /** Sem mínimo definido no produto, "estoque baixo" é até 3. Com mínimo, ele manda (e entra no aviso do Início). */
@@ -35,7 +35,15 @@ function forecastLabel(f: StockForecast | undefined, stock: number) {
   return `acaba em ~${f.daysLeft} dia${f.daysLeft === 1 ? "" : "s"}`;
 }
 
-export function ProductsManager({ products, forecast = {} }: { products: Product[]; forecast?: Record<string, StockForecast> }) {
+export function ProductsManager({
+  products,
+  brands = [],
+  forecast = {},
+}: {
+  products: Product[];
+  brands?: Brand[];
+  forecast?: Record<string, StockForecast>;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [editing, setEditing] = useState<Product | "new" | null>(null);
@@ -177,6 +185,7 @@ export function ProductsManager({ products, forecast = {} }: { products: Product
 
       <ProductFormModal
         product={editing}
+        brands={brands}
         initialBarcode={newBarcode}
         notice={notice}
         onClose={() => setEditing(null)}
@@ -192,12 +201,14 @@ export function ProductsManager({ products, forecast = {} }: { products: Product
 
 function ProductFormModal({
   product,
+  brands,
   initialBarcode,
   notice,
   onClose,
   onSaved,
 }: {
   product: Product | "new" | null;
+  brands: Brand[];
   initialBarcode: string | null;
   notice: string | null;
   onClose: () => void;
@@ -210,6 +221,7 @@ function ProductFormModal({
   const [stock, setStock] = useState("0");
   const [minStock, setMinStock] = useState("");
   const [barcode, setBarcode] = useState("");
+  const [brandId, setBrandId] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [siteOpen, setSiteOpen] = useState(false);
   const [showOnSite, setShowOnSite] = useState(false);
@@ -229,6 +241,7 @@ function ProductFormModal({
     setStock(String(editing?.stockQuantity ?? 0));
     setMinStock(editing?.minStock != null ? String(editing.minStock) : "");
     setBarcode(editing?.barcode ?? initialBarcode ?? "");
+    setBrandId(editing?.brandId ?? "");
     setIsActive(editing?.isActive ?? true);
     setShowOnSite(editing?.showOnSite ?? false);
     setDescription(editing?.description ?? "");
@@ -255,6 +268,7 @@ function ProductFormModal({
       stockQuantity,
       minStock: min,
       barcode: barcode.trim() || null,
+      brandId: brandId || null,
       isActive,
       showOnSite,
       description: description.trim(),
@@ -285,6 +299,27 @@ function ProductFormModal({
             </Button>
           </div>
         </div>
+        {brands.length ? (
+          <div>
+            <FieldLabel htmlFor="p-brand">Marca</FieldLabel>
+            <Select id="p-brand" value={brandId} onChange={(e) => setBrandId(e.target.value)}>
+              <option value="">Sem marca / produto do salão</option>
+              {brands
+                .filter((b) => b.isActive || b.id === brandId)
+                .map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                    {b.isConsigned ? " (consignada)" : ""}
+                  </option>
+                ))}
+            </Select>
+            {brands.find((b) => b.id === brandId)?.isConsigned ? (
+              <p className="mt-1 text-xs text-brand-graphite/50">
+                Produto consignado: a venda gera repasse para a marca em Comissões. Não lance em Compras.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
             <FieldLabel htmlFor="p-price">Preço de venda</FieldLabel>

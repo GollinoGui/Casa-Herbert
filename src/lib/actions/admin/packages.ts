@@ -13,11 +13,13 @@ import {
   schedulePackageSessions,
   cancelPackageSession,
   reopenPackageSession,
+  extendPackageValidity,
   type CustomerPackageFilters,
   type SellPackageInput,
 } from "@/lib/data/packages";
 import { checkPackageSessionSlots } from "@/lib/data/availability";
 import { isPaymentMethodEnabled } from "@/lib/data/finance-options";
+import { todayDateStr } from "@/lib/utils/date-format";
 
 const METHOD_OFF = "Esta forma de pagamento está desligada em Configurações. Escolha outra.";
 
@@ -132,6 +134,17 @@ export async function cancelPackageSessionAction(appointmentId: string, outcome:
 export async function reopenPackageSessionAction(appointmentId: string) {
   await requireAdmin();
   const result = await reopenPackageSession(appointmentId);
+  if (result.ok) revalidatePackagePaths();
+  return result;
+}
+
+export async function extendPackageValidityAction(customerPackageId: string, expiresOn: string) {
+  await requireAdmin();
+  const parsed = z
+    .object({ id: z.string().min(1, "Pacote inválido.").max(64), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.") })
+    .safeParse({ id: customerPackageId, date: expiresOn });
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  const result = await extendPackageValidity(parsed.data.id, parsed.data.date, todayDateStr());
   if (result.ok) revalidatePackagePaths();
   return result;
 }

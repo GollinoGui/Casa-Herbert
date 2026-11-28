@@ -5,6 +5,7 @@ import { getReturnDueCustomers, getUpcomingBirthdays } from "@/lib/data/customer
 import { getPanelPreferences } from "@/lib/data/settings";
 import { getWaitlistOpenings } from "@/lib/data/waitlist";
 import { getCashDrawerPreview } from "@/lib/data/cash-closings";
+import { listCustomerPackages } from "@/lib/data/packages";
 import { nowTimeStr } from "@/lib/utils/date-format";
 
 export type NotificationKind =
@@ -16,7 +17,8 @@ export type NotificationKind =
   | "birthdays"
   | "returns"
   | "waitlist"
-  | "cashClosing";
+  | "cashClosing"
+  | "packages";
 
 export interface PanelNotification {
   kind: NotificationKind;
@@ -27,6 +29,8 @@ export interface PanelNotification {
   href: string;
   count: number;
 }
+
+const PACKAGE_EXPIRY_WARNING_DAYS = 15;
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -47,7 +51,7 @@ export async function getPanelNotifications(): Promise<PanelNotification[]> {
   const prefs = await safe("preferências", getPanelPreferences, null);
   const dueDays = prefs?.payableDueDays ?? 7;
 
-  const [pending, reminders, payables, lowStock, birthdays, returns, openings, drawer] = await Promise.all([
+  const [pending, reminders, payables, lowStock, birthdays, returns, openings, drawer, packages] = await Promise.all([
     safe(
       "pedidos",
       async () =>
@@ -80,7 +84,16 @@ export async function getPanelNotifications(): Promise<PanelNotification[]> {
     safe("lista de espera", getWaitlistOpenings, []),
     // Depois das 18h, caixa com movimento em dinheiro desde o último fechamento.
     nowTimeStr() >= "18:00" ? safe("fechamento", () => getCashDrawerPreview(), null) : Promise.resolve(null),
+    safe("pacotes", () => listCustomerPackages({ status: ["active"] }), []),
   ]);
+  // Sessão livre sem data num pacote perto de vencer se perde se ninguém marcar.
+  const expiringPackages = packages.filter(
+    (p) =>
+      p.expiresOn !== null &&
+      p.expiresOn >= today &&
+      p.expiresOn <= addDaysToDateStr(today, PACKAGE_EXPIRY_WARNING_DAYS) &&
+      p.sessionsTotal - p.sessionsUsed - p.sessionsScheduled > 0
+  );
 
   const overdue = payables.filter((p) => p.due_date < today).length;
   const dueSoon = payables.length - overdue;
@@ -147,6 +160,20 @@ export async function getPanelNotifications(): Promise<PanelNotification[]> {
       detail: "Houve movimento em dinheiro desde o último fechamento.",
       href: "/admin/financeiro?aba=fechamento",
       count: 1,
+    });
+  }
+  if (expiringPackages.length) {
+    list.push({
+      kind: "packages",
+      tone: "aviso",
+      title: plural(expiringPackages.length, "pacote perto de vencer", "pacotes perto de vencer"),
+      detail:
+        expiringPackages
+          .slice(0, 3)
+          .map((p) => p.customerName)
+          .join(", ") + (expiringPackages.length > 3 ? "…" : "") + " · com sessões ainda sem data.",
+      href: "/admin/pacotes",
+      count: expiringPackages.length,
     });
   }
   if (dueSoon) {

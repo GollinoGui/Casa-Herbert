@@ -1,9 +1,9 @@
 import { addDaysToDateStr, addMinutesToTime, todayDateStr } from "@/lib/utils/date-format";
-import { db, insertRow, updateRow, type PgError } from "@/lib/demo/client";
+import { db, insertRow, resolveCommissionBps, updateRow, type PgError } from "@/lib/demo/client";
 import type { Row } from "@/lib/demo/seed";
 
 /**
- * As RPCs de supabase/migrations (0006, 0012, 0014, 0017, 0018) refeitas em TS para o modo
+ * As RPCs de supabase/migrations (0006, 0012, 0014, 0017, 0018, 0019) refeitas em TS para o modo
  * demonstração. Mesmas validações e mensagens; sem concorrência (um processo só).
  * Se uma RPC real mudar, esta cópia não acompanha sozinha — é só para demo.
  */
@@ -117,10 +117,14 @@ function registerSale({ p }: Json) {
     }
     customerId = appointment.customer_id;
   }
+  const saleProf: string | null = p?.professionalId || appointment?.professional_id || null;
+  const knownProf = (id: unknown) => !id || !!find("professionals", id);
+  if (!knownProf(saleProf) || items.some((i) => !knownProf(i.professionalId))) return fail("Profissional não encontrado.");
+  const pkgService = appointment?.customer_package_id ? appointment.service_id : null;
   if (receiptAlreadyUsed(txid)) return fail("Este comprovante já foi registrado.");
 
   // 1ª passada: valida tudo (estoque inclusive) antes de qualquer escrita.
-  const lines: { type: string; qty: number; price: number; desc: string; ref: Row | null }[] = [];
+  const lines: { type: string; qty: number; price: number; desc: string; ref: Row | null; item: Json }[] = [];
   let subtotal = 0;
   for (const item of items) {
     const qty = Number(item.quantity ?? 1);
@@ -152,7 +156,7 @@ function registerSale({ p }: Json) {
     }
     if (price == null || price < 0) return fail("Valor inválido.");
     subtotal += price * qty;
-    lines.push({ type: item.type, qty, price, desc, ref });
+    lines.push({ type: item.type, qty, price, desc, ref, item });
   }
   if (discount > subtotal) return fail("O desconto é maior que o valor da venda.");
   const total = subtotal - discount;
@@ -177,9 +181,25 @@ function registerSale({ p }: Json) {
       sale_date: date,
       due_date: status === "open" ? p?.dueDate || date : null,
       paid_at: status === "paid" ? now() : null,
+      professional_id: saleProf,
     })
   );
-  for (const line of lines) {
+  let allocated = 0;
+  lines.forEach((line, index) => {
+    // Rateio do desconto; o último item leva o resto do arredondamento.
+    const net =
+      index === lines.length - 1 ? total - allocated : subtotal === 0 ? 0 : Math.round((line.price * line.qty * total) / subtotal);
+    allocated += net;
+    const itemType = line.type === "product" ? "product" : "service";
+    const prof: string | null = line.item.professionalId || saleProf;
+    const brandId = line.type === "product" ? line.ref?.brand_id ?? null : null;
+    const commission =
+      !prof || line.item.noCommission || (line.type === "service" && pkgService && line.ref?.id === pkgService)
+        ? 0
+        : Math.round((net * resolveCommissionBps(prof, itemType, line.ref?.id ?? null, brandId)) / 10000);
+    const brand = brandId ? find("brands", brandId) : undefined;
+    const consigned = !!brand?.is_consigned;
+    const brandDue = consigned ? net - Math.round((net * Number(brand!.commission_bps)) / 10000) : 0;
     if (line.type === "product" && line.ref) mustUpdate("products", line.ref, { stock_quantity: line.ref.stock_quantity - line.qty });
     must(
       insertRow("sale_items", {
@@ -190,9 +210,14 @@ function registerSale({ p }: Json) {
         unit_price_cents: line.price,
         quantity: line.qty,
         total_cents: line.price * line.qty,
+        professional_id: prof,
+        commission_cents: commission,
+        brand_id: consigned ? brandId : null,
+        brand_due_cents: brandDue,
+        net_cents: net,
       })
     );
-  }
+  });
   if (paid > 0) {
     must(
       insertRow("cash_entries", {
@@ -399,7 +424,7 @@ function throwPg(error: PgError): never {
   throw Object.assign(new Error(error.message), { pgError: error });
 }
 
-/** Espelho de sell_package (0017). */
+/** Espelho de sell_package (0019). */
 function sellPackage({ p }: Json) {
   const customerId: string | null = p?.customerId || null;
   if (!customerId || !find("customers", customerId)) return fail("Escolha a cliente do pacote.");
@@ -414,7 +439,10 @@ function sellPackage({ p }: Json) {
       dueDate: p?.dueDate || undefined,
       discountCents: discount,
       notes: p?.notes,
-      items: [{ type: "custom", description: `Pacote: ${pkg.name} (${pkg.sessions} sessões)`, unitPriceCents: pkg.price_cents }],
+      professionalId: p?.professionalId || undefined,
+      items: [
+        { type: "custom", description: `Pacote: ${pkg.name} (${pkg.sessions} sessões)`, unitPriceCents: pkg.price_cents, noCommission: true },
+      ],
       payment: p?.payment ?? undefined,
     },
   }) as Json;
@@ -615,7 +643,124 @@ function closeCashDrawer({ p }: Json) {
   return { ok: true, closingId: closing.id, differenceCents: diff };
 }
 
+/** Espelho de commission_lines (0019): devido = cheio × fração recebida, arredondado sobre o acumulado. */
+function commissionLines({ p_until }: Json) {
+  const until = String(p_until);
+  const ratio = (saleId: unknown) => {
+    const sale = find("sales", saleId);
+    if (!sale) return 0;
+    if (sale.total_cents === 0) return 1;
+    const net = db()
+      .cash_entries.filter((e) => e.sale_id === saleId && e.entry_date <= until)
+      .reduce((s, e) => s + (e.direction === "in" ? e.amount_cents : -e.amount_cents), 0);
+    return Math.min(Math.max(net, 0), sale.total_cents) / sale.total_cents;
+  };
+  const groups = new Map<string, Json>();
+  for (const item of db().sale_items) {
+    const sale = find("sales", item.sale_id);
+    if (!sale || sale.sale_date > until) continue;
+    const parts: [string, unknown, number][] = [
+      ["professional", item.professional_id, Number(item.commission_cents ?? 0)],
+      ["brand", item.brand_id, Number(item.brand_due_cents ?? 0)],
+    ];
+    for (const [kind, refId, cents] of parts) {
+      if (!refId || cents <= 0) continue;
+      const key = `${kind}:${refId}:${sale.id}`;
+      const g = groups.get(key) ?? {
+        kind, ref_id: refId, sale_id: sale.id, appointment_id: null, line_date: sale.sale_date, names: [], base_cents: 0, full_cents: 0,
+      };
+      g.names.push(item.description);
+      g.base_cents += Number(item.net_cents ?? item.total_cents);
+      g.full_cents += cents;
+      groups.set(key, g);
+    }
+  }
+  const rows: Json[] = [...groups.values()].map(({ names, ...g }) => ({
+    ...g,
+    description: names.join(", "),
+    earned_base_cents: Math.round(g.base_cents * ratio(g.sale_id)),
+    earned_cents: Math.round(g.full_cents * ratio(g.sale_id)),
+  }));
+  for (const a of db().appointments) {
+    if (a.status !== "COMPLETED" || !a.customer_package_id || !a.professional_id || !(a.commission_cents > 0)) continue;
+    if (a.appointment_date > until) continue;
+    const cp = find("customer_packages", a.customer_package_id);
+    if (!cp) continue;
+    rows.push({
+      kind: "professional",
+      ref_id: a.professional_id,
+      sale_id: cp.sale_id,
+      appointment_id: a.id,
+      line_date: a.appointment_date,
+      description: `Sessão: ${cp.name}`,
+      base_cents: cp.session_value_cents,
+      earned_base_cents: Math.round(cp.session_value_cents * ratio(cp.sale_id)),
+      full_cents: a.commission_cents,
+      earned_cents: Math.round(a.commission_cents * ratio(cp.sale_id)),
+    });
+  }
+  return rows;
+}
+
+/** Espelho de commission_balances (0019). */
+function commissionBalances({ p_until }: Json) {
+  const until = String(p_until);
+  const acc = new Map<string, Json>();
+  const get = (kind: string, refId: unknown) => {
+    const key = `${kind}:${refId}`;
+    if (!acc.has(key)) acc.set(key, { kind, ref_id: refId, earned_cents: 0, paid_cents: 0 });
+    return acc.get(key)!;
+  };
+  for (const l of commissionLines({ p_until: until })) get(l.kind, l.ref_id).earned_cents += l.earned_cents;
+  for (const e of db().cash_entries) {
+    if ((!e.professional_id && !e.brand_id) || e.entry_date > until) continue;
+    const row = e.professional_id ? get("professional", e.professional_id) : get("brand", e.brand_id);
+    row.paid_cents += e.direction === "out" ? e.amount_cents : -e.amount_cents;
+  }
+  return [...acc.values()];
+}
+
+/** Espelho de pay_commission (0019). */
+function payCommission({ p }: Json) {
+  const kind = p?.kind;
+  const target = kind === "professional" ? find("professionals", p?.refId) : kind === "brand" ? find("brands", p?.refId) : undefined;
+  if (!target) return fail("Profissional ou marca não encontrado.");
+  if (!p?.method) return fail("Informe a forma de pagamento.");
+  const owed = commissionBalances({ p_until: todayDateStr() })
+    .filter((b) => b.kind === kind && b.ref_id === target.id)
+    .reduce((s, b) => s + b.earned_cents - b.paid_cents, 0);
+  const amount = Number(p?.amountCents ?? 0);
+  if (amount <= 0 || amount > owed) return fail(`O valor deve ser entre R$ 0,01 e o devido (R$ ${formatReais(Math.max(owed, 0))}).`);
+  const notes = String(p?.notes ?? "").trim();
+  const entry = must(
+    insertRow("cash_entries", {
+      entry_date: p?.date || todayDateStr(),
+      direction: "out",
+      amount_cents: amount,
+      category: kind === "professional" ? "comissao" : "repasse",
+      description: `${kind === "professional" ? "Comissão" : "Repasse"}: ${target.name}${notes ? ` — ${notes}` : ""}`,
+      payment_method: p.method,
+      professional_id: kind === "professional" ? target.id : null,
+      brand_id: kind === "brand" ? target.id : null,
+    })
+  );
+  return { ok: true, entryId: entry.id };
+}
+
+/** Espelho de undo_commission_payment (0019). */
+function undoCommissionPayment({ p_entry_id }: Json) {
+  const entry = find("cash_entries", p_entry_id);
+  if (!entry || !["comissao", "repasse"].includes(entry.category)) return fail("Pagamento não encontrado.");
+  if (isReversed(entry)) return fail("Este pagamento já foi desfeito.");
+  reverseEntries((e) => e.id === entry.id, { professional_id: entry.professional_id, brand_id: entry.brand_id }, false);
+  return { ok: true };
+}
+
 const RPCS: Record<string, (args: Json) => unknown> = {
+  commission_lines: commissionLines,
+  commission_balances: commissionBalances,
+  pay_commission: payCommission,
+  undo_commission_payment: undoCommissionPayment,
   cash_balance: cashBalance,
   generate_recurring_payables: generateRecurringPayables,
   replace_business_hours: replaceBusinessHours,

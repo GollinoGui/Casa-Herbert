@@ -21,6 +21,7 @@ import {
   adminRescheduleAppointment,
   type AdminCreateAppointmentInput,
 } from "@/lib/data/availability";
+import { getDayRoute } from "@/lib/data/day-route";
 import type { AppointmentWithRelations } from "@/types";
 
 function revalidateAppointmentPaths() {
@@ -138,4 +139,10 @@ export async function setReminderSentAction(id: string, sent: boolean) {
   const updated = await setReminderSent(id, sent);
   revalidatePath("/admin");
   return updated;
+}
+
+export async function getDayRouteAction(date: string) {
+  await requireAdmin();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Data inválida.");
+  return getDayRoute(date);
 }

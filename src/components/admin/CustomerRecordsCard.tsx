@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, ImageOff, NotebookPen, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { Camera, Columns2, ImageOff, NotebookPen, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { EmptyState } from "@/components/admin/EmptyState";
+import { BeforeAfterCompare, comparablePhotos } from "@/components/admin/BeforeAfterCompare";
 import {
   deleteCustomerRecordAction,
   deleteCustomerRecordPhotoAction,
@@ -37,6 +38,8 @@ export function CustomerRecordsCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [comparing, setComparing] = useState(false);
+  const canCompare = comparablePhotos(records).length >= 2;
   const consented = !!customer.photoConsentAt;
 
   async function toggleConsent() {
@@ -75,9 +78,16 @@ export function CustomerRecordsCard({
         <h3 className="flex items-center gap-2 font-serif text-lg text-brand-forest">
           <NotebookPen size={18} strokeWidth={1.75} className="text-brand-moss" aria-hidden="true" /> Acompanhamento capilar
         </h3>
-        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setAdding((v) => !v)}>
-          <Plus size={14} /> Novo registro
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canCompare ? (
+            <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => setComparing(true)}>
+              <Columns2 size={14} /> Antes e depois
+            </Button>
+          ) : null}
+          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setAdding((v) => !v)}>
+            <Plus size={14} /> Novo registro
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-beige bg-brand-cream/40 px-3 py-2.5 text-sm">
@@ -140,6 +150,8 @@ export function CustomerRecordsCard({
           ))}
         </ol>
       )}
+
+      {comparing ? <BeforeAfterCompare records={records} onClose={() => setComparing(false)} /> : null}
 
       {viewing ? (
         <div

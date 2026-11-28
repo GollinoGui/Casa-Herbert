@@ -60,10 +60,10 @@ const PRIMARY_KEY: Record<string, string> = {
 const pk = (table: string) => PRIMARY_KEY[table] ?? "id";
 
 const DEFAULTS: Record<string, () => Row> = {
-  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, customer_package_id: null, package_outcome: null, no_show: false, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null }),
+  appointments: () => ({ status: "PENDING", discount_cents: 0, reminder_sent_at: null, customer_package_id: null, package_outcome: null, no_show: false, customer_notes: null, admin_notes: null, confirmed_at: null, cancelled_at: null, professional_id: null, commission_cents: 0 }),
   customers: () => ({ email: null, notes: null, birth_date: null, photo_consent_at: null }),
   services: () => ({ description: null, price_cents: null, is_active: true, display_order: 0, image_id: null, image_position: null, show_on_home: true, barcode: null, return_days: null }),
-  products: () => ({ stock_quantity: 0, open_usage: 0, min_stock: null, is_active: true, barcode: null, cost_cents: null, description: null, image_id: null, image_position: null, show_on_site: false }),
+  products: () => ({ stock_quantity: 0, open_usage: 0, min_stock: null, is_active: true, barcode: null, cost_cents: null, description: null, image_id: null, image_position: null, show_on_site: false, brand_id: null }),
   blocked_slots: () => ({ is_full_day: true, start_time: null, end_time: null, notes: null, created_by: null }),
   testimonials: () => ({ rating: null, is_published: false, display_order: 0 }),
   gallery: () => ({ image_url: null, storage_path: null, caption: null, category: null, is_published: true, display_order: 0, media_id: null }),
@@ -72,10 +72,13 @@ const DEFAULTS: Record<string, () => Row> = {
   payables: () => ({ category: "outros", supplier: null, status: "open", paid_on: null, payment_method: null, recurring_bill_id: null, competence: null, purchase_id: null, notes: null }),
   recurring_bills: () => ({ category: "outros", supplier: null, is_active: true, starts_on: todayDateStr() }),
   payable_categories: () => ({ active: true, sort_order: 0 }),
-  cash_entries: () => ({ payment_method: null, sale_id: null, payable_id: null, customer_id: null, receipt_txid: null, reversal_of: null }),
+  cash_entries: () => ({ payment_method: null, sale_id: null, payable_id: null, customer_id: null, receipt_txid: null, reversal_of: null, professional_id: null, brand_id: null }),
   business_hours: () => ({ is_active: true }),
   site_image_slots: () => ({ object_position: null }),
-  sales: () => ({ appointment_id: null, customer_id: null, payment_method: null, notes: null, status: "paid", discount_cents: 0, paid_cents: 0, sale_date: todayDateStr(), due_date: null, paid_at: null, cancelled_at: null }),
+  sales: () => ({ appointment_id: null, customer_id: null, payment_method: null, notes: null, status: "paid", discount_cents: 0, paid_cents: 0, sale_date: todayDateStr(), due_date: null, paid_at: null, cancelled_at: null, professional_id: null }),
+  sale_items: () => ({ professional_id: null, commission_cents: 0, brand_id: null, brand_due_cents: 0, net_cents: null }),
+  brands: () => ({ is_consigned: true, commission_bps: 0, is_active: true }),
+  commission_rules: () => ({ professional_id: null, ref_id: null }),
   purchase_items: () => ({ product_id: null }),
   purchases: () => ({ supplier: null, notes: null }),
   service_packages: () => ({ valid_days: null, is_active: true }),
@@ -116,6 +119,7 @@ const ON_DELETE: Record<string, { cascade?: [string, string][]; setNull?: [strin
   customers: { cascade: [["waitlist", "customer_id"], ["customer_records", "customer_id"]] },
   customer_records: { cascade: [["customer_record_photos", "record_id"]] },
   service_packages: { setNull: [["customer_packages", "package_id"]] },
+  professionals: { cascade: [["commission_rules", "professional_id"]] },
 };
 
 /** Lado "um" das relações embutidas um-para-muitos: nome da FK no filho. */
@@ -194,9 +198,36 @@ export function updateRow(table: string, row: Row, patch: Row): PgError | null {
   const error = constraintError(table, next, row[pk(table)]);
   if (error) return error;
   const completed = table === "appointments" && row.status !== "COMPLETED" && next.status === "COMPLETED";
+  if (table === "appointments") packageSessionCommission(row, next);
   Object.assign(row, next);
   if (completed) consumeServiceProducts(row.service_id);
   return null;
+}
+
+/** Espelho de resolve_commission_bps (0019): item > marca > padrão do tipo; o profissional antes de "todos". */
+export function resolveCommissionBps(professionalId: unknown, itemType: "service" | "product", refId: unknown, brandId: unknown) {
+  const level = (r: Row) =>
+    r.scope === itemType && refId != null && r.ref_id === refId ? 0
+    : r.scope === "brand" && brandId != null && r.ref_id === brandId ? 1
+    : r.scope === `${itemType}_default` ? 2
+    : -1;
+  const match = db()
+    .commission_rules.filter((r) => (r.professional_id == null || r.professional_id === professionalId) && level(r) >= 0)
+    .sort((a, b) => level(a) - level(b) || Number(a.professional_id == null) - Number(b.professional_id == null))[0];
+  return match ? Number(match.rate_bps) : 0;
+}
+
+/** Espelho de trg_appointments_package_commission (0019). */
+function packageSessionCommission(row: Row, next: Row) {
+  if (next.status !== "COMPLETED" || !next.customer_package_id) {
+    next.commission_cents = 0;
+    return;
+  }
+  if (row.status === "COMPLETED" && row.customer_package_id === next.customer_package_id) return;
+  const pkg = db().customer_packages.find((p) => p.id === next.customer_package_id);
+  next.commission_cents = Math.round(
+    (Number(pkg?.session_value_cents ?? 0) * resolveCommissionBps(next.professional_id, "service", next.service_id, null)) / 10000
+  );
 }
 
 /** Espelho de fn_consume_service_products (0016): baixa a receita, acumulando a fração da unidade aberta. */

@@ -55,7 +55,7 @@ export async function getReport(dateFrom: string, dateTo: string): Promise<Repor
     fetchAll<Record<string, any>>((from, to) =>
       supabase
         .from("cash_entries")
-        .select("entry_date, direction, amount_cents, payment_method, category")
+        .select("entry_date, direction, amount_cents, payment_method, category, professional_id, brand_id")
         .gte("entry_date", dateFrom)
         .lte("entry_date", dateTo)
         .order("id")
@@ -94,7 +94,8 @@ export async function getReport(dateFrom: string, dateTo: string): Promise<Repor
     if (e.direction === "in") {
       inCents += e.amount_cents;
       if (point) point.inCents += e.amount_cents;
-      if (e.category !== "ajuste") methods.set(e.payment_method ?? "outro", (methods.get(e.payment_method ?? "outro") ?? 0) + e.amount_cents);
+      // Desfazer pagamento de comissão/repasse não é recebimento de cliente.
+      if (e.category !== "ajuste" && !e.professional_id && !e.brand_id) methods.set(e.payment_method ?? "outro", (methods.get(e.payment_method ?? "outro") ?? 0) + e.amount_cents);
     } else {
       outCents += e.amount_cents;
       if (point) point.outCents += e.amount_cents;

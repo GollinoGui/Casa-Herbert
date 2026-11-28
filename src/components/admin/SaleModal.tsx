@@ -13,12 +13,12 @@ import { registerSaleAction } from "@/lib/actions/admin/sales";
 import { listActiveProductsAction } from "@/lib/actions/admin/products";
 import { listActiveServicesAction } from "@/lib/actions/admin/services";
 import { listCustomersAction } from "@/lib/actions/admin/customers";
-import { getAppointmentProductsAction } from "@/lib/actions/admin/appointments";
+import { getAppointmentProductsAction, listProfessionalsAction } from "@/lib/actions/admin/appointments";
 import { useFinanceOptions } from "@/components/admin/FinanceOptionsProvider";
 import { formatBRL } from "@/lib/utils/money";
 import { todayDateStr } from "@/lib/utils/date-format";
 import { cn } from "@/lib/utils/cn";
-import type { AppointmentWithRelations, Customer, PaymentMethod, Product, Service } from "@/types";
+import type { AppointmentWithRelations, Customer, PaymentMethod, Product, Professional, Service } from "@/types";
 import type { SaleLineInput } from "@/lib/data/sales";
 
 export interface SaleLine {
@@ -58,6 +58,8 @@ export function SaleModal({ open, onClose, onCompleted, appointment, mode = "sal
   const [services, setServices] = useState<Service[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [professionalId, setProfessionalId] = useState("");
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [discountCents, setDiscountCents] = useState(0);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("full");
@@ -104,6 +106,11 @@ export function SaleModal({ open, onClose, onCompleted, appointment, mode = "sal
     setLines(initial);
 
     listActiveProductsAction().then(setProducts);
+    listProfessionalsAction().then((pros) => {
+      setProfessionals(pros);
+      const fromAppointment = appointment?.professionalId;
+      setProfessionalId(fromAppointment && pros.some((p) => p.id === fromAppointment) ? fromAppointment : pros[0]?.id ?? "");
+    });
     listActiveServicesAction().then(setServices);
     if (!appointment) listCustomersAction().then(setCustomers);
     if (isCheckout && appointment) {
@@ -209,6 +216,7 @@ export function SaleModal({ open, onClose, onCompleted, appointment, mode = "sal
       dueDate: paymentMode === "full" ? null : dueDate,
       discountCents,
       notes: notes || null,
+      professionalId: professionalId || null,
       items,
       payment: paidNow > 0 ? { amountCents: paidNow, method, receiptTxid } : null,
     });
@@ -359,6 +367,20 @@ export function SaleModal({ open, onClose, onCompleted, appointment, mode = "sal
             </div>
           )}
         </div>
+
+        {professionals.length > 1 ? (
+          <div>
+            <FieldLabel htmlFor="sale-professional">Quem vendeu</FieldLabel>
+            <Select id="sale-professional" value={professionalId} onChange={(e) => setProfessionalId(e.target.value)}>
+              {professionals.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-brand-graphite/50">A comissão da venda vai para essa pessoa.</p>
+          </div>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

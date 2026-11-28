@@ -13,6 +13,8 @@ export interface RegisterSaleInput {
   dueDate?: string | null;
   discountCents?: number;
   notes?: string | null;
+  /** Quem vendeu (comissão). Ausente = o profissional do atendimento. */
+  professionalId?: string | null;
   items: SaleLineInput[];
   /** Ausente = tudo fica em aberto (conta a receber). */
   payment?: { amountCents: number; method: PaymentMethod; receiptTxid?: string | null } | null;

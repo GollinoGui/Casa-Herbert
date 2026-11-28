@@ -189,3 +189,29 @@ export async function reopenPackageSession(appointmentId: string): Promise<Packa
   }
   return rpcResult(unwrap(result) as RpcResult, "Não foi possível reabrir a sessão.");
 }
+
+/**
+ * Muda a validade de um pacote em andamento (ex.: a cliente viajou e pediu mais prazo).
+ * Não aceita data antes de hoje nem antes de uma sessão que já está marcada.
+ */
+export async function extendPackageValidity(id: string, expiresOn: string, today: string): Promise<PackageActionResult> {
+  const supabase = getSupabase();
+  const pkg = unwrap(await supabase.from("customer_packages").select("id, status").eq("id", id).maybeSingle());
+  if (!pkg) return { ok: false, error: "Pacote não encontrado." };
+  if (pkg.status !== "active") return { ok: false, error: "Só dá para mudar a validade de um pacote em andamento." };
+  if (expiresOn < today) return { ok: false, error: "A nova validade não pode ser antes de hoje." };
+
+  const scheduled = unwrap(
+    await supabase
+      .from("appointments")
+      .select("appointment_date")
+      .eq("customer_package_id", id)
+      .in("status", ["PENDING", "CONFIRMED"])
+  ).reduce((max: string, r: Row) => (r.appointment_date > max ? r.appointment_date : max), "");
+  if (scheduled && expiresOn < scheduled) {
+    return { ok: false, error: "Há sessão marcada depois dessa data. Escolha uma validade que cubra as sessões marcadas." };
+  }
+
+  unwrap(await supabase.from("customer_packages").update({ expires_on: expiresOn }).eq("id", id).eq("status", "active"));
+  return { ok: true };
+}

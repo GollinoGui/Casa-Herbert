@@ -122,6 +122,8 @@ export interface Product {
   costCents: number | null;
   /** Com estoque igual ou abaixo disso, avisa no Início; null = sem aviso. */
   minStock: number | null;
+  /** Marca do produto; consignada = o salão repassa à marca o valor menos a comissão. */
+  brandId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -178,6 +180,26 @@ export interface Professional {
   id: string;
   name: string;
   isActive: boolean;
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  isConsigned: boolean;
+  /** Comissão que a marca deixa no salão, em centésimos de % (1000 = 10%). */
+  commissionBps: number;
+  isActive: boolean;
+}
+
+export type CommissionScope = "service_default" | "product_default" | "service" | "product" | "brand";
+
+export interface CommissionRule {
+  id: string;
+  /** null = vale para todos os profissionais. */
+  professionalId: string | null;
+  scope: CommissionScope;
+  refId: string | null;
+  rateBps: number;
 }
 
 export type CashDirection = "in" | "out";

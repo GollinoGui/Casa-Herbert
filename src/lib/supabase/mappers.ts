@@ -238,6 +238,7 @@ export function toProduct(r: Row): Product {
     barcode: r.barcode ?? null,
     costCents: r.cost_cents ?? null,
     minStock: r.min_stock ?? null,
+    brandId: r.brand_id ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };

@@ -28,6 +28,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   compra: "Compra",
   ajuste: "Ajuste",
   estorno: "Estorno",
+  comissao: "Comissão",
+  repasse: "Repasse de marca",
 };
 
 interface FinanceiroManagerProps {
